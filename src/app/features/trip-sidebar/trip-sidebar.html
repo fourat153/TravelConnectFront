@@ -1,0 +1,88 @@
+<div class="sidebar-backdrop" (click)="close()"></div>
+<aside class="sidebar">
+  <ng-container *ngIf="view === 'list'">
+    <div class="sidebar-header">
+      <div>
+        <h2>{{ headerTitle }}</h2>
+        <p>{{ headerSubtitle }}</p>
+      </div>
+      <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="secondary" (click)="close()" />
+    </div>
+
+    <div class="sidebar-body">
+      <div *ngIf="tripsLoading" class="state-msg">
+        <p-progressSpinner strokeWidth="4" />
+      </div>
+      <p-message *ngIf="tripsError" severity="error" variant="simple">{{ tripsError }}</p-message>
+      <div *ngIf="!tripsLoading && trips.length > 0" class="trip-list">
+        <div
+          *ngFor="let trip of trips"
+          class="trip-item"
+          [class.active]="trip.id === selectedTripId"
+          (click)="selectTrip(trip.id)">
+          <i class="pi pi-map trip-icon"></i>
+          <div class="trip-info">
+            <strong>{{ trip.title }}</strong>
+          </div>
+          <i class="pi pi-chevron-right ml-auto"></i>
+        </div>
+      </div>
+      <div *ngIf="!tripsLoading && trips.length === 0 && !tripsError" class="state-msg">
+        <i class="pi pi-map" style="font-size:2rem; color:#ccc"></i>
+        <p>{{ isFriendMode ? 'No public trips yet.' : 'No trips yet. Create your first one!' }}</p>
+      </div>
+    </div>
+
+    <!-- hide footer entirely in friend mode -->
+    <div class="sidebar-footer" *ngIf="!isFriendMode">
+      <p-button label="+ Create trip" styleClass="w-full" (click)="goToCreate()" />
+    </div>
+  </ng-container>
+
+  <!-- create view unchanged — only reachable in own-trip mode anyway -->
+  <ng-container *ngIf="view === 'create'">
+    <div class="sidebar-header">
+      <div>
+        <p-button icon="pi pi-arrow-left" label="Back" [text]="true" severity="secondary" (click)="goToList()" />
+        <h2>New trip</h2>
+      </div>
+      <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="secondary" (click)="close()" />
+    </div>
+    <div class="sidebar-body">
+      <form [formGroup]="createForm" (ngSubmit)="submitCreate()">
+        <div class="field">
+          <label for="title">Title</label>
+          <input pInputText id="title" formControlName="title" placeholder="e.g. Weekend in Tunis" class="w-full" />
+          <small class="p-error" *ngIf="createForm.get('title')?.touched && createForm.get('title')?.invalid">
+            Title is required (min 2 chars)
+          </small>
+        </div>
+        <div class="field">
+          <label>Privacy</label>
+          <div class="seg">
+            <button
+              type="button"
+              *ngFor="let opt of privacyOptions"
+              [class.active]="selectedPrivacy === opt.value"
+              (click)="setPrivacy(opt.value)">
+              <span class="dot" [style.background]="opt.color"></span>
+              {{ opt.label }}
+            </button>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <span>Include home city</span>
+            <small>Add your city as the trip's base location</small>
+          </div>
+          <p-toggleSwitch formControlName="include_home_city" />
+        </div>
+        <p-message *ngIf="createError" severity="error" [text]="createError" styleClass="w-full mt-2" />
+      </form>
+    </div>
+    <div class="sidebar-footer">
+      <p-button label="Cancel" severity="secondary" [outlined]="true" (click)="goToList()" />
+      <p-button label="Create trip" [loading]="createLoading" [disabled]="createForm.invalid" (click)="submitCreate()" />
+    </div>
+  </ng-container>
+</aside>

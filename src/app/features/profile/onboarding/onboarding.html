@@ -1,0 +1,109 @@
+<div class="overlay">
+  <div class="onboarding-card">
+
+    <div class="progress-bar">
+      <div class="progress-segment" [class.active]="step >= 1"></div>
+      <div class="progress-segment" [class.active]="step >= 2"></div>
+    </div>
+
+    @if (step === 1) {
+      <div class="step">
+        <p class="step-label">Step 1 of 2</p>
+        <h2>Where are you based?</h2>
+        <p class="subtitle">We'll center the map around your city when you open the app.</p>
+
+        <div class="search-wrap">
+          <div class="search-icon">
+            <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M10.5 10.5L13.5 13.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <input
+            type="text"
+            placeholder="Search for your city..."
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="onSearch()"
+            autocomplete="off"
+          />
+          @if (suggestions.length > 0) {
+            <ul class="suggestions">
+              @for (s of suggestions; track s.place_id) {
+                <li (click)="selectCity(s)">
+                  <span class="dot"></span>
+                  <span class="suggestion-text">{{ s.display_name }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+
+        @if (selectedCity) {
+          <div class="city-confirmed">
+            <svg viewBox="0 0 20 20" fill="none" style="width:16px;height:16px;flex-shrink:0;">
+              <path d="M5 10l4 4 6-8" stroke="#185FA5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>{{ searchQuery }}</span>
+          </div>
+        }
+
+        <button class="next-btn" [disabled]="!selectedCity" (click)="nextStep()">
+          Continue
+        </button>
+      </div>
+    }
+
+    @if (step === 2) {
+      <div class="step">
+        <p class="step-label">Step 2 of 2</p>
+        <h2>Who can see your trips?</h2>
+        <p class="subtitle">You can change this anytime from your profile settings.</p>
+
+        <div class="privacy-options">
+          @for (option of privacyOptions; track option.value) {
+            <div
+              class="privacy-card"
+              [class.selected]="selectedPrivacy === option.value"
+              (click)="selectedPrivacy = option.value"
+            >
+              <div class="privacy-icon" [ngClass]="'privacy-icon--' + option.value">
+                @if (option.value === PrivacyType.public) {
+                  <svg viewBox="0 0 20 20" fill="none">
+                    <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M2 10h16M10 2a12 12 0 0 1 0 16M10 2a12 12 0 0 0 0 16" stroke="currentColor" stroke-width="1.5"/>
+                  </svg>
+                }
+                @if (option.value === PrivacyType.friends_only) {
+                  <svg viewBox="0 0 20 20" fill="none">
+                    <circle cx="8" cy="7" r="3" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M2 17c0-3 2.7-5 6-5s6 2 6 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    <circle cx="15" cy="7" r="2.5" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M17 17c0-2-1-3.5-2.5-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                }
+                @if (option.value === PrivacyType.private) {
+                  <svg viewBox="0 0 20 20" fill="none">
+                    <rect x="5" y="9" width="10" height="8" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M7 9V7a3 3 0 1 1 6 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                }
+              </div>
+              <div class="privacy-text">
+                <strong>{{ option.label }}</strong>
+                <p>{{ option.desc }}</p>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="step2-actions">
+          <button class="back-btn" (click)="step = 1">Back</button>
+          <button class="next-btn" [disabled]="!selectedPrivacy" (click)="complete()">
+            Finish setup
+          </button>
+        </div>
+      </div>
+    }
+
+  </div>
+</div>

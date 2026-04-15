@@ -1,0 +1,26 @@
+<p>confirm-account works!</p>
+<div class="confirm-wrapper">
+  @if (status === 'loading') {
+    <div class="confirm-card">
+      <div class="spinner"></div>
+      <h2>Confirming your account...</h2>
+      <p>Please wait a moment</p>
+    </div>
+  }
+  @if (status === 'success') {
+    <div class="confirm-card">
+      <div class="icon success">✅</div>
+      <h2>Account Confirmed!</h2>
+      <p>{{ message }}</p>
+      <small>Redirecting to login...</small>
+    </div>
+  }
+  @if (status === 'error') {
+    <div class="confirm-card">
+      <div class="icon error">❌</div>
+      <h2>Confirmation Failed</h2>
+      <p>{{ message }}</p>
+      <small>Redirecting to login...</small>
+    </div>
+  }
+</div>
