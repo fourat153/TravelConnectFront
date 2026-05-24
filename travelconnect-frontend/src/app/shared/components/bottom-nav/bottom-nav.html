@@ -1,0 +1,38 @@
+<nav class="sidebar" [class.expanded]="expanded"
+     (mouseenter)="expanded = true"
+     (mouseleave)="expanded = false">
+
+  <div class="sidebar-logo">
+    <i class="pi pi-compass logo-icon"></i>
+    <span class="logo-text">TravelConnect</span>
+  </div>
+
+  <div class="sidebar-items">
+
+    <button class="sidebar-item" [class.active]="active === 'home'" (click)="select('home')">
+      <i class="pi pi-home"></i>
+      <span class="item-label">Home</span>
+    </button>
+
+    <button class="sidebar-item" [class.active]="active === 'friends'" (click)="select('friends')">
+      <i class="pi pi-users"></i>
+      <span class="item-label">Friends</span>
+    </button>
+
+    <button class="sidebar-item" [class.active]="active === 'add-stop'" (click)="select('add-stop')">
+      <i class="pi pi-plus-circle"></i>
+      <span class="item-label">Add Stop</span>
+    </button>
+
+    <button class="sidebar-item" [class.active]="active === 'my-trips'" (click)="select('my-trips')">
+      <i class="pi pi-map"></i>
+      <span class="item-label">My Trips</span>
+    </button>
+
+    <button class="sidebar-item" [class.active]="active === 'profile'" (click)="select('profile')">
+      <i class="pi pi-user"></i>
+      <span class="item-label">Profile</span>
+    </button>
+
+  </div>
+</nav>
