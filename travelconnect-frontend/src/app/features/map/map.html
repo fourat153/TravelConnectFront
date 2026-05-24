@@ -1,0 +1,91 @@
+<div class="app-shell">
+
+  <app-bottom-nav (tabChanged)="onNavTabChanged($event)"></app-bottom-nav>
+
+  <div class="map-content">
+    <div class="map-wrapper" (click)="showProfileMenu = false">
+
+      <div id="map"></div>
+
+      @if (!selectedStop) {
+  <app-trip-sidebar
+    *ngIf="isTripSidebarOpen || isFriendTripsSidebarOpen"
+    [friend]="isFriendTripsSidebarOpen ? selectedFriend : undefined"
+    (closed)="onAnySidebarClosed()"
+    (tripCreated)="onTripCreated($event)"
+    (tripSelected)="onTripSelected($event)">
+  </app-trip-sidebar>
+}
+      
+
+     
+      <div class="search-overlay">
+        <div class="search-bar">
+          <p-autoComplete
+            [(ngModel)]="searchQuery"
+            [suggestions]="suggestions"
+            (completeMethod)="onSearch()"
+            field="display_name"
+            [dropdown]="false"
+            placeholder="Search any destination..."
+            [forceSelection]="false"
+            (onSelect)="selectSuggestion($event)">
+            <ng-template let-suggestion pTemplate="item">
+              {{ suggestion.display_name }}
+            </ng-template>
+          </p-autoComplete>
+        </div>
+      </div>
+   
+      <div class="stop-panel" *ngIf="showStopPanel">
+        <div class="stop-panel-header">
+          <h3>Add a Stop</h3>
+          <button class="close-btn" (click)="cancelStop()">✕</button>
+        </div>
+        <div class="stop-panel-fields">
+          <div class="p-field">
+            <label for="stopTitle">Stop title </label>
+            <input
+              id="stopTitle"
+              type="text"
+              pInputText
+              [(ngModel)]="stopTitle"
+              placeholder="Stop title" />
+          </div>
+          <div class="p-field">
+            <label for="stopDescription">Description</label>
+            <textarea
+              id="stopDescription"
+              pInputTextarea
+              [(ngModel)]="stopDescription"
+              rows="3"
+              placeholder="Description (optional)">
+            </textarea>
+          </div>
+        </div>
+        <div class="stop-panel-actions">
+          <button class="cancel-btn" (click)="cancelStop()">Cancel</button>
+          <button class="confirm-btn" (click)="confirmStop()" [disabled]="!stopTitle">Add Pin</button>
+        </div>
+      </div>
+
+      @if (showOnboarding) {
+        <app-onboarding (completed)="onOnboardingComplete($event)" />
+      }
+
+      @if (selectedStop) {
+        <app-stop-sheet
+          [stop]="selectedStop"
+          (closed)="selectedStop = null">
+        </app-stop-sheet>
+      }
+
+    </div>
+
+    <app-friends-modal
+  (friendSelected)="onFriendSelected($event)"
+></app-friends-modal>
+
+  </div>
+
+</div>

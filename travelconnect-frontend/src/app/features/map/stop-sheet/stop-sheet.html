@@ -1,0 +1,95 @@
+
+<div class="sheet"
+  (click)="$event.stopPropagation()"
+  (wheel)="$event.stopPropagation()"
+  (touchstart)="$event.stopPropagation()"
+  (touchmove)="$event.stopPropagation()">
+
+  <div class="sheet-header">
+    <div class="header-content">
+      <div>
+        <h2>{{ stop?.title }}</h2>
+        <p class="stop-desc">{{ stop?.description }}</p>
+      </div>
+      <p-button icon="pi pi-times" [rounded]="true" [text]="true" (click)="close()" />
+    </div>
+  </div>
+
+  <div class="post-form">
+    <div class="form-top">
+      <p-avatar label="?" shape="circle" size="normal" />
+      <input
+        pInputText
+        type="text"
+        [(ngModel)]="postTitle"
+        placeholder="What's on your mind?"
+        class="post-input"
+      />
+    </div>
+
+    @if (imagePreviews.length > 0) {
+      <div class="image-previews">
+        @for (preview of imagePreviews; track preview) {
+          <img [src]="preview" class="preview-img" />
+        }
+      </div>
+    }
+
+   <div class="form-actions">
+  <p-button 
+    icon="pi pi-image" 
+    label="Photo" 
+    [text]="true" 
+    size="small"
+    (click)="fileInput.click()" />
+  <input 
+    #fileInput
+    type="file" 
+    multiple 
+    accept="image/*" 
+    (change)="onImagesSelected($event)" 
+    hidden />
+  <p-button
+    label="{{ isSubmitting ? 'Posting...' : 'Post' }}"
+    [disabled]="isSubmitting || !postTitle.trim()"
+    size="small"
+    (click)="submitPost()" />
+</div>
+  </div>
+
+  <div class="feed">
+    @if (posts.length === 0) {
+      <p class="empty">No posts yet. Be the first!</p>
+    } @else {
+      <p-timeline [value]="posts" align="alternate">
+
+        <ng-template pTemplate="marker" let-post>
+          <p-avatar  shape="circle" size="normal" styleClass="timeline-avatar" />
+        </ng-template>
+
+        <ng-template pTemplate="content" let-post>
+          <p-card styleClass="post-card">
+            <ng-template pTemplate="header">
+              <div class="post-meta">
+                <span class="post-author">hathi bch nhiz essm men token</span>
+                <span class="post-time">{{ post.created_at | date:'short' }}</span>
+              </div>
+            </ng-template>
+
+            <p class="post-title">{{ post.title }}</p>
+
+            @if (post.images.length > 0) {
+              <div class="post-images">
+                @for (img of post.images; track img.id) {
+                  <img [src]="img.link" class="post-img" />
+                }
+              </div>
+            }
+          </p-card>
+        </ng-template>
+
+      </p-timeline>
+    }
+  </div>
+
+</div>

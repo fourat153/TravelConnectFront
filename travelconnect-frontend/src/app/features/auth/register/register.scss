@@ -1,0 +1,109 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: #ebf4ff;
+}
+
+.register-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.register-card {
+  background: white;
+  border-radius: 24px;
+  padding: 3rem;
+  width: 100%;
+  max-width: 460px;
+  box-shadow: 0 8px 32px rgba(0, 120, 255, 0.08);
+
+  h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    color: #6b7280;
+    margin-bottom: 2rem;
+    font-size: 0.95rem;
+  }
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+
+  input {
+    width: 100%;
+    padding: 0.875rem 1.25rem;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 50px;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+    color: #1a1a2e;
+
+    &::placeholder {
+      color: #9ca3af;
+    }
+
+    &:focus {
+      border-color: #3b82f6;
+    }
+  }
+
+  button {
+    padding: 0.875rem;
+    background: #1a1a2e;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 0.5rem;
+
+    &:hover {
+      background: #3b82f6;
+    }
+  }
+}
+
+.login-link {
+  text-align: center;
+  margin-top: 1.5rem;
+  color: #6b7280;
+  font-size: 0.9rem;
+
+  a {
+    color: #3b82f6;
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+select {
+  width: 100%;
+  padding: 0.875rem 1.25rem;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 50px;
+  font-size: 0.95rem;
+  outline: none;
+  color: #1a1a2e;
+  background: white;
+  cursor: pointer;
+
+  &:focus {
+    border-color: #3b82f6;
+  }
+}
