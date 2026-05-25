@@ -1,0 +1,56 @@
+<div class="register-container">
+  <div class="register-card">
+    <h2>Create Account</h2>
+    <p class="subtitle">Join TravelConnect and start sharing your journey</p>
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+      <p-floatlabel>
+        <input pInputText id="firstname" formControlName="firstname" />
+        <label for="firstname">First Name</label>
+      </p-floatlabel>
+
+      <p-floatlabel>
+        <input pInputText id="lastname" formControlName="lastname" />
+        <label for="lastname">Last Name</label>
+      </p-floatlabel>
+
+      <p-floatlabel>
+        <input pInputText id="email" formControlName="email" />
+        <label for="email">Email</label>
+      </p-floatlabel>
+
+      <p-floatlabel>
+        <input pInputText type="password" id="password" formControlName="password" />
+        <label for="password">Password</label>
+      </p-floatlabel>
+
+      <p-floatlabel>
+        <input pInputText type="password" id="confirm_password" formControlName="confirm_password" />
+        <label for="confirm_password">Confirm Password</label>
+      </p-floatlabel>
+
+      <p-floatlabel>
+        <input pInputText id="phone_number" formControlName="phone_number" />
+        <label for="phone_number">Phone Number (optional)</label>
+      </p-floatlabel>
+
+      <p-select
+        id="gender"
+        formControlName="gender"
+        [options]="genderOptions"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Select Gender"
+      />
+
+      <p-button
+        type="submit"
+        label="Create Account"
+        [loading]="isLoading"
+        styleClass="submit-btn"
+      />
+    </form>
+
+    <p class="login-link">Already have an account? <a routerLink="/auth/login">Sign in</a></p>
+  </div>
+</div>
