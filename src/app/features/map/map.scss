@@ -208,3 +208,32 @@
     opacity: 1;
   }
 }
+
+@media (max-width: 768px) {
+  .map-content {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    height: 100dvh;
+    width: 100vw;
+  }
+
+  .stop-panel {
+    width: calc(100% - 2rem) !important;
+    max-width: 400px;
+    bottom: 5rem !important; /* give space for the bottom navigation bar */
+    padding: 1rem;
+  }
+
+  .search-overlay {
+    top: 1rem;
+    padding: 0 0.75rem;
+  }
+
+  .search-bar {
+    padding: 0.75rem 1rem;
+    
+    ::ng-deep .p-autocomplete-input {
+      font-size: 0.95rem !important;
+    }
+  }
+}

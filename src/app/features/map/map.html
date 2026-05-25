@@ -62,7 +62,10 @@
 
     </div>
 
-    <app-friends-modal (friendSelected)="onFriendSelected($event)"></app-friends-modal>
+    <app-friends-modal
+      [class.mobile-hidden]="!showFriendsModal"
+      (friendSelected)="onFriendSelected($event)">
+    </app-friends-modal>
 
   </div>
 

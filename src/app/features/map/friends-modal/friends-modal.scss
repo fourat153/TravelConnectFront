@@ -258,3 +258,18 @@
     font-size: 12px !important;
   }
 }
+
+@media (max-width: 768px) {
+  :host.mobile-hidden {
+    display: none !important;
+  }
+
+  .friends-sidebar {
+    width: 100vw !important;
+    height: calc(100dvh - 64px) !important;
+    top: 0 !important;
+    bottom: 64px !important;
+    border-left: none !important;
+    border-bottom: 1px solid #262626 !important;
+  }
+}
