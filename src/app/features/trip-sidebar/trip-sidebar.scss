@@ -334,3 +334,14 @@
   border-radius: 8px;
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
+
+@media (max-width: 768px) {
+  .sidebar {
+    left: 0 !important;
+    width: 100vw !important;
+    height: calc(100dvh - 64px) !important;
+    top: 0 !important;
+    border-right: none !important;
+    border-bottom: 1px solid #262626 !important;
+  }
+}
