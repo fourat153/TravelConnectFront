@@ -6,7 +6,7 @@ import { Onboarding } from '../profile/onboarding/onboarding';
 import { inject } from '@angular/core';
 import { TripSidebarComponent } from '../trip-sidebar/trip-sidebar';
 import { StopsService } from '../../core/services/stop';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 
 import { AutoCompleteModule } from 'primeng/autocomplete';
 import { DialogModule } from 'primeng/dialog';
@@ -63,6 +63,7 @@ export class Map implements AfterViewInit, OnInit {
   private AuthService = inject(AuthService);
   private onboardingService = inject(OnboardingService);
   private router: Router = inject(Router);
+  private route = inject(ActivatedRoute);
   showFriendsModal = false;
   selectedFriend?: FriendData;
   isFriendTripsSidebarOpen = false;
@@ -76,6 +77,15 @@ export class Map implements AfterViewInit, OnInit {
         this.showOnboarding = user!.has_completed_onboarding !== OnboardingStatus.Onboarded;
         this.userInitials = (user.firstname?.[0] ?? '') + (user.lastname?.[0] ?? '');
       });
+
+    this.route.queryParams.subscribe(params => {
+      const tab = params['tab'] as NavTab;
+      if (tab) {
+        setTimeout(() => {
+          this.onNavTabChanged(tab);
+        }, 400);
+      }
+    });
   }
 
   ngAfterViewInit() {
@@ -344,6 +354,10 @@ export class Map implements AfterViewInit, OnInit {
 
       case 'profile':
         this.router.navigate(['/profile']);
+        break;
+
+      case 'feed':
+        this.router.navigate(['/feed']);
         break;
     }
   }

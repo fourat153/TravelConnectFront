@@ -14,6 +14,11 @@
       <span class="item-label">Home</span>
     </button>
 
+    <button class="sidebar-item" [class.active]="active === 'feed'" (click)="select('feed')">
+      <i class="pi pi-images"></i>
+      <span class="item-label">Feed</span>
+    </button>
+
     <button class="sidebar-item" [class.active]="active === 'friends'" (click)="select('friends')">
       <i class="pi pi-users"></i>
       <span class="item-label">Friends</span>
