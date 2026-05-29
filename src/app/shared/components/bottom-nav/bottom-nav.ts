@@ -1,8 +1,8 @@
-import { Component, Output, EventEmitter } from '@angular/core';
+import { Component, Output, EventEmitter, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 
-export type NavTab = 'home' | 'friends' | 'add-stop' | 'my-trips' | 'profile';
+export type NavTab = 'home' | 'friends' | 'add-stop' | 'my-trips' | 'profile' | 'feed';
 
 @Component({
   selector: 'app-bottom-nav',
@@ -14,7 +14,7 @@ export type NavTab = 'home' | 'friends' | 'add-stop' | 'my-trips' | 'profile';
 export class BottomNavComponent {
   @Output() tabChanged = new EventEmitter<NavTab>();
 
-  active: NavTab = 'home';
+  @Input() active: NavTab = 'home';
   expanded = false;
 
   select(tab: NavTab): void {
