@@ -43,18 +43,13 @@
 
           <!-- Post Photo Container (Double click to like) -->
           <div class="post-image-container">
-            <p-carousel 
-              [value]="post.imageUrls" 
-              [numVisible]="1" 
-              [numScroll]="1" 
-              [circular]="true"
-              [showIndicators]="post.imageUrls.length > 1"
-              [showNavigators]="post.imageUrls.length > 1">
+            <p-carousel [value]="post.imageUrls" [numVisible]="1" [numScroll]="1" [circular]="true"
+              [showIndicators]="post.imageUrls.length > 1" [showNavigators]="post.imageUrls.length > 1">
               <ng-template let-imgUrl pTemplate="item">
                 <img [src]="imgUrl" [alt]="post.location" class="post-image" (dblclick)="onImageDoubleClicked(post)">
               </ng-template>
             </p-carousel>
-            
+
             <!-- Large floating heart double click animation overlay -->
             <div class="heart-animation-overlay" *ngIf="heartOverlayPostId === post.id">
               <i class="pi pi-heart-fill animated-heart"></i>
