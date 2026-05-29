@@ -1,4 +1,3 @@
-// src/app/shared/models/friend.model.ts
 
 export interface FriendData {
   friend_id: number;

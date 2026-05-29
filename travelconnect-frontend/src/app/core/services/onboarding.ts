@@ -11,7 +11,7 @@ export class OnboardingService {
 
   constructor(private http: HttpClient) {}
 
-  complete(data: { lat: number; lon: number; privacy: PrivacyType  }) {
+  complete(data: { lat: number; lon: number; privacy: PrivacyType }) {
     return this.http.post<OnboardingOut>(
       `${this.baseUrl}/users/me/onboarding`,
       { lat: data.lat, lon: data.lon, privacy: data.privacy },
