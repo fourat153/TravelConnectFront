@@ -1,0 +1,413 @@
+import { Component, AfterViewInit, NgZone, ChangeDetectorRef, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import * as L from 'leaflet';
+import { Onboarding } from '../profile/onboarding/onboarding';
+import { inject } from '@angular/core';
+import { TripSidebarComponent } from '../trip-sidebar/trip-sidebar';
+import { StopsService } from '../../core/services/stop';
+import { Router, ActivatedRoute } from '@angular/router';
+
+import { AutoCompleteModule } from 'primeng/autocomplete';
+import { DialogModule } from 'primeng/dialog';
+import { InputTextModule } from 'primeng/inputtext';
+import { TextareaModule } from 'primeng/textarea';
+import { ButtonModule } from 'primeng/button';
+
+import { StopSheetComponent } from './stop-sheet/stop-sheet';
+import { AuthService } from '../../core/services/auth';
+import { filter, take } from 'rxjs';
+import { OnboardingStatus } from '../../shared/enums/onboarding';
+import { PrivacyType } from '../../shared/enums/PrivacyType';
+import { OnboardingService } from '../../core/services/onboarding';
+import { BottomNavComponent, NavTab } from '../../shared/components/bottom-nav/bottom-nav';
+import { FriendsModalComponent } from './friends-modal/friends-modal';
+import { FriendData } from '../../shared/models/friends';
+
+@Component({
+  selector: 'app-map',
+  imports: [
+    CommonModule, FormsModule, AutoCompleteModule, DialogModule,
+    InputTextModule, TextareaModule, ButtonModule,
+    Onboarding, TripSidebarComponent, StopSheetComponent,
+    BottomNavComponent, FriendsModalComponent
+  ],
+  templateUrl: './map.html',
+  styleUrl: './map.scss',
+})
+export class Map implements AfterViewInit, OnInit {
+  private map!: L.Map;
+  private markers: L.CircleMarker[] = [];
+  private polyline!: L.Polyline;
+  private draggableMarker: L.Marker | null = null;
+  private ngZone = inject(NgZone);
+
+  selectedStop: any = null;
+  searchQuery = '';
+  suggestions: any[] = [];
+  showOnboarding = false;
+  showStopPanel = false;
+  pendingLatLng: { lat: number; lng: number } | null = null;
+  stopTitle = '';
+  stopDescription = '';
+  isTripSidebarOpen = false;
+  showProfileMenu = false;
+  currentUser: any = null;
+
+  private StopService = inject(StopsService);
+  private searchTimeout: any;
+  private cdr = inject(ChangeDetectorRef);
+  userInitials = '';
+  errorMessage: any;
+  selectedTripId: number | null = null;
+  private AuthService = inject(AuthService);
+  private onboardingService = inject(OnboardingService);
+  private router: Router = inject(Router);
+  private route = inject(ActivatedRoute);
+  showFriendsModal = false;
+  selectedFriend?: FriendData;
+  isFriendTripsSidebarOpen = false;
+
+
+  ngOnInit() {
+    this.AuthService.currentUser$
+      .pipe(filter(user => !!user), take(1))
+      .subscribe((user: any) => {
+        this.currentUser = user;
+        this.showOnboarding = user!.has_completed_onboarding !== OnboardingStatus.Onboarded;
+        this.userInitials = (user.firstname?.[0] ?? '') + (user.lastname?.[0] ?? '');
+      });
+
+    this.route.queryParams.subscribe(params => {
+      const tab = params['tab'] as NavTab;
+      if (tab) {
+        setTimeout(() => {
+          this.onNavTabChanged(tab);
+        }, 400);
+      }
+    });
+  }
+
+  ngAfterViewInit() {
+    this.map = L.map('map', {
+      zoomAnimation: true,
+      fadeAnimation: true,
+      minZoom: 3,
+      markerZoomAnimation: true,
+    }).setView([36.8065, 10.1815], 5);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap © CARTO'
+    }).addTo(this.map);
+  }
+
+
+  private async getOsrmRoute(points: L.LatLng[]): Promise<L.LatLngTuple[]> {
+    const coords = points.map(p => `${p.lng},${p.lat}`).join(';');
+    const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+
+    const res  = await fetch(url);
+    const data = await res.json();
+
+    if (data.code !== 'Ok' || !data.routes?.[0]) return [];
+
+    return data.routes[0].geometry.coordinates.map(
+      ([lng, lat]: [number, number]) => [lat, lng] as L.LatLngTuple
+    );
+  }
+
+  private async drawRoute(
+    points: L.LatLng[],
+    color = '#3b82f6'
+  ): Promise<void> {
+    if (this.polyline) this.map.removeLayer(this.polyline);
+    if (points.length < 2) return;
+
+    try {
+      const routePoints = await this.getOsrmRoute(points);
+
+      const line: L.LatLngTuple[] = routePoints.length > 0
+        ? routePoints
+        : points.map(p => [p.lat, p.lng] as L.LatLngTuple);
+
+      this.polyline = L.polyline(line, {
+        color,
+        weight: 4,
+        opacity: 0.75,
+      }).addTo(this.map);
+
+    } catch {
+      this.polyline = L.polyline(
+        points.map(p => [p.lat, p.lng] as L.LatLngTuple),
+        { color, weight: 3, dashArray: '6, 8', opacity: 0.7 }
+      ).addTo(this.map);
+    }
+  }
+
+  async updatePolyline(): Promise<void> {
+    if (this.markers.length < 2) {
+      if (this.polyline) this.map.removeLayer(this.polyline);
+      return;
+    }
+    const points = this.markers.map(m => m.getLatLng());
+    await this.drawRoute(points);
+  }
+
+
+  addDraggablePin() {
+    if (this.draggableMarker) return;
+
+    const center = this.map.getCenter();
+
+    const icon = L.divIcon({
+      className: '',
+      html: `
+        <div style="
+          background: #3b82f6;
+          width: 18px; height: 18px;
+          border-radius: 50%;
+          border: 3px solid white;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+          cursor: grab;
+        "></div>
+      `,
+      iconSize: [18, 18],
+      iconAnchor: [9, 9],
+    });
+
+    this.draggableMarker = L.marker(center, { icon, draggable: true }).addTo(this.map);
+
+    this.draggableMarker.on('dragend', () => {
+      const pos = this.draggableMarker!.getLatLng();
+      this.pendingLatLng = { lat: pos.lat, lng: pos.lng };
+    });
+
+    this.pendingLatLng = { lat: center.lat, lng: center.lng };
+    this.showStopPanel = true;
+    this.stopTitle = '';
+    this.stopDescription = '';
+  }
+
+  async confirmStop(): Promise<void> {
+    if (!this.pendingLatLng || !this.stopTitle) return;
+    const { lat, lng } = this.pendingLatLng;
+
+    if (this.draggableMarker) {
+      this.map.removeLayer(this.draggableMarker);
+      this.draggableMarker = null;
+    }
+
+    const circle = L.circleMarker([lat, lng], {
+      radius: 8,
+      fillColor: '#ef4444',
+      color: 'white',
+      weight: 3,
+      opacity: 1,
+      fillOpacity: 1,
+    }).addTo(this.map);
+
+    const stopData = {
+      lat:         this.pendingLatLng.lat,
+      long:        this.pendingLatLng.lng,
+      title:       this.stopTitle,
+      description: this.stopDescription,
+    };
+
+    this.markers.push(circle);
+    await this.updatePolyline(); 
+
+    this.StopService.createStop(stopData, this.selectedTripId!).subscribe({
+      next: (res: any) => {
+        if (res.status_code !== 200) this.errorMessage = res.message;
+      },
+      error: () => {
+        this.errorMessage = 'Something went wrong. Please try again.';
+      }
+    });
+
+    this.showStopPanel = false;
+    this.pendingLatLng = null;
+  }
+
+  cancelStop() {
+    if (this.draggableMarker) {
+      this.map.removeLayer(this.draggableMarker);
+      this.draggableMarker = null;
+    }
+    this.showStopPanel = false;
+    this.pendingLatLng = null;
+  }
+
+
+  onTripSelected(tripId: number) {
+    this.selectedTripId = tripId;
+    this.selectedStop   = null;
+
+    this.markers.forEach(m => this.map.removeLayer(m));
+    this.markers = [];
+    if (this.polyline) this.map.removeLayer(this.polyline);
+
+    this.StopService.getTripStops(this.selectedTripId).subscribe({
+      next: async (res: any) => {
+        if (res.status_code === 200) {
+          const cities: L.LatLngTuple[] = [];
+          const stops = res.stops;
+
+          for (let i = 0; i < stops.length; i++) {
+            const stop   = stops[i];
+            const circle = L.circleMarker([stop.city.lat, stop.city.long], {
+              radius: 8,
+              fillColor: '#3b82f6',
+              color: 'white',
+              weight: 3,
+              opacity: 1,
+              fillOpacity: 1,
+            }).addTo(this.map);
+
+            this.markers.push(circle);
+            cities.push([stop.city.lat, stop.city.long]);
+
+            circle.on('click', () => {
+              this.ngZone.run(() => {
+                this.selectedStop = stop;
+                this.cdr.detectChanges();
+              });
+            });
+          }
+
+          if (cities.length > 1) {
+            const points = this.markers.map(m => m.getLatLng());
+            await this.drawRoute(points, '#3b82f6');
+          }
+
+          if (cities.length > 0) {
+            this.map.fitBounds(cities, { padding: [50, 50] });
+          }
+
+          this.isTripSidebarOpen = false;
+
+        } else {
+          this.errorMessage = res.message;
+        }
+      },
+      error: () => {
+        this.errorMessage = 'Something went wrong. Please try again.';
+      }
+    });
+  }
+
+  onTripCreated(trip: any) {
+    this.isTripSidebarOpen = false;
+    setTimeout(() => this.map.invalidateSize(), 300);
+  }
+ 
+
+
+  openTripSidebar() {
+    this.isTripSidebarOpen = true;
+    setTimeout(() => {
+      this.map.invalidateSize({ animate: false });
+      window.dispatchEvent(new Event('resize'));
+    }, 250);
+  }
+
+ onAnySidebarClosed(): void {
+  this.isTripSidebarOpen        = false;
+  this.isFriendTripsSidebarOpen = false;
+  this.selectedFriend           = undefined;
+  setTimeout(() => this.map.invalidateSize({ animate: false }), 350);
+}
+
+
+  onNavTabChanged(tab: NavTab): void {
+    switch (tab) {
+      case 'home':
+        this.isTripSidebarOpen        = false;
+        this.showFriendsModal         = false;
+        this.isFriendTripsSidebarOpen = false;
+        this.showStopPanel            = false;
+        if (this.draggableMarker) {
+          this.map.removeLayer(this.draggableMarker);
+          this.draggableMarker = null;
+        }
+        setTimeout(() => this.map.invalidateSize({ animate: false }), 300);
+        break;
+
+      case 'friends':
+        this.showFriendsModal         = true;
+        this.isTripSidebarOpen        = false;
+        this.isFriendTripsSidebarOpen = false;
+        break;
+
+      case 'add-stop':
+        this.isTripSidebarOpen        = false;
+        this.showFriendsModal         = false;
+        this.isFriendTripsSidebarOpen = false;
+        this.addDraggablePin();
+        break;
+
+      case 'my-trips':
+        this.showFriendsModal         = false;
+        this.isFriendTripsSidebarOpen = false;
+        this.openTripSidebar();
+        break;
+
+      case 'profile':
+        this.router.navigate(['/profile']);
+        break;
+
+      case 'feed':
+        this.router.navigate(['/feed']);
+        break;
+    }
+  }
+
+  onFriendSelected(friend: FriendData): void {
+    this.selectedFriend  = friend;
+    this.isFriendTripsSidebarOpen = true;
+    setTimeout(() => this.map.invalidateSize({ animate: false }), 300);
+  }
+
+
+  onSearch() {
+    clearTimeout(this.searchTimeout);
+    if (!this.searchQuery || this.searchQuery.length < 3) {
+      this.suggestions = [];
+      return;
+    }
+    this.searchTimeout = setTimeout(() => {
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(this.searchQuery)}&limit=5`)
+        .then(res => res.json())
+        .then(results => { this.suggestions = results; });
+    }, 400);
+  }
+
+  selectSuggestion(suggestion: any) {
+    if (!suggestion) return;
+    this.map.setView([parseFloat(suggestion.lat), parseFloat(suggestion.lon)], 12);
+    this.searchQuery = suggestion.display_name;
+    this.suggestions = [];
+  }
+
+
+  toggleProfileMenu() {
+    this.showProfileMenu = !this.showProfileMenu;
+  }
+
+  logout() {
+    this.AuthService.logout().subscribe((res: any) => {
+      this.AuthService.currentUser$.next(null);
+      this.showProfileMenu = false;
+      this.router.navigateByUrl('/auth/login');
+    });
+  }
+
+
+  onOnboardingComplete(data: { lat: number; lon: number; privacy: PrivacyType }) {
+    this.onboardingService.complete(data).subscribe(() => {
+      this.showOnboarding = false;
+      this.map.setView([data.lat, data.lon], 10);
+    });
+  }
+}
+
