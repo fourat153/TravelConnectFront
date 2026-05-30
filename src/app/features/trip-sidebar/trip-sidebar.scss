@@ -1,8 +1,4 @@
 // ── panel ──────────────────────────────────────────────────────
-.sidebar-backdrop {
-  display: none; // no backdrop — sidebar is permanent like instagram
-}
-
 .sidebar {
   position: fixed;
   top: 0;
@@ -344,4 +340,430 @@
     border-right: none !important;
     border-bottom: 1px solid #262626 !important;
   }
+}
+/* ── Append to trip-sidebar.scss ─────────────────────────── */
+
+// ── detail section label ───────────────────────────────────────
+.detail-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #737373;
+  padding: 4px 4px 8px;
+}
+
+// ── divider ────────────────────────────────────────────────────
+.detail-divider {
+  height: 1px;
+  background: #262626;
+  margin: 16px 0;
+}
+
+// ── existing stop cards ────────────────────────────────────────
+.stop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stop-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #1a1a1a;
+  border: 1px solid #262626;
+  border-radius: 10px;
+
+  &__index {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #262626;
+    color: #737373;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__title {
+    font-size: 14px;
+    color: #f5f5f5;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__coords {
+    font-size: 11px;
+    color: #555;
+  }
+}
+
+// ── trip item arrow ────────────────────────────────────────────
+.trip-item__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #1a1a1a;
+  border: 1px solid #262626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  i {
+    font-size: 16px;
+    color: #737373;
+  }
+}
+
+.trip-item__arrow {
+  font-size: 12px;
+  color: #555;
+  margin-left: auto;
+}
+
+// ── stop input dark theme overrides ───────────────────────────
+// These override the light defaults of TripStopInputComponent
+// inside the dark sidebar context
+::ng-deep app-trip-stop-input {
+
+  .stop-input-inner {
+    background: #1a1a1a !important;
+    border-color: #333 !important;
+
+    &:focus-within {
+      border-color: #555 !important;
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.04) !important;
+    }
+
+    &.resolved {
+      border-color: #22c55e !important;
+    }
+  }
+
+  .stop-input {
+    background: transparent !important;
+    color: #fff !important;
+
+    &::placeholder {
+      color: #555 !important;
+    }
+  }
+
+  .suggestions {
+    background: #1a1a1a !important;
+    border-color: #333 !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
+  }
+
+  .suggestion-item:hover {
+    background: #262626 !important;
+  }
+
+  .suggestion-name {
+    color: #f5f5f5 !important;
+  }
+
+  .suggestion-region {
+    color: #737373 !important;
+  }
+
+  .add-stop-btn {
+    border-color: #333 !important;
+    color: #737373 !important;
+    background: transparent !important;
+
+    &:hover {
+      border-color: #555 !important;
+      color: #fff !important;
+      background: #1a1a1a !important;
+    }
+  }
+
+  .swap-btn {
+    border-color: #333 !important;
+    color: #737373 !important;
+
+    &:hover {
+      border-color: #555 !important;
+      color: #fff !important;
+      background: #1a1a1a !important;
+    }
+  }
+
+  .drag-handle,
+  .remove-btn {
+    color: #555 !important;
+
+    &:hover {
+      background: #262626 !important;
+      color: #fff !important;
+    }
+  }
+
+  .stop-line {
+    background: #333 !important;
+  }
+
+  .icon-circle {
+    border-color: #737373 !important;
+    background: #000 !important;
+  }
+
+  .icon-pin {
+    color: #737373 !important;
+  }
+
+  .drag-placeholder {
+    border-color: #333 !important;
+    background: #111 !important;
+  }
+}
+
+/* ── Append to trip-sidebar.scss ─────────────────────────── */
+
+// ── detail section label ───────────────────────────────────────
+.detail-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #737373;
+  padding: 0 4px 8px;
+}
+
+// ── divider ────────────────────────────────────────────────────
+.detail-divider {
+  height: 1px;
+  background: #262626;
+  margin: 16px 0;
+}
+
+// ── existing stop cards ────────────────────────────────────────
+.stop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stop-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #1a1a1a;
+  border: 1px solid #262626;
+  border-radius: 10px;
+
+  &__index {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #262626;
+    color: #737373;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__title {
+    font-size: 14px;
+    color: #f5f5f5;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+// ── trip item ──────────────────────────────────────────────────
+.trip-item__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #1a1a1a;
+  border: 1px solid #262626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  i {
+    font-size: 16px;
+    color: #737373;
+  }
+}
+
+.trip-item__arrow {
+  font-size: 12px;
+  color: #555;
+  margin-left: auto;
+}
+
+// ── state msg small variant ────────────────────────────────────
+.state-msg.small {
+  padding: 20px;
+  font-size: 13px;
+}
+
+// ── add stop search ────────────────────────────────────────────
+.add-stop-search {
+  position: relative;
+}
+
+.add-stop-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 0 10px;
+  transition: border-color 0.15s;
+
+  &:focus-within {
+    border-color: #555;
+  }
+
+  &.resolved {
+    border-color: #22c55e;
+  }
+}
+
+.add-stop-icon {
+  font-size: 0.8rem;
+  color: #555;
+  flex-shrink: 0;
+}
+
+.add-stop-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 10px 0;
+  font-size: 14px;
+  color: #f5f5f5;
+
+  &::placeholder {
+    color: #555;
+  }
+}
+
+.add-stop-status {
+  font-size: 0.8rem;
+  color: #555;
+  flex-shrink: 0;
+}
+
+.resolved-icon {
+  color: #22c55e !important;
+}
+
+.add-stop-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 50%;
+  color: #555;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+
+  i { font-size: 0.65rem; }
+
+  &:hover {
+    background: #262626;
+    color: #fff;
+  }
+}
+
+// ── suggestions dropdown ───────────────────────────────────────
+.stop-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.stop-suggestion-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.1s;
+
+  i {
+    font-size: 0.75rem;
+    color: #555;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    background: #262626;
+  }
+}
+
+.stop-suggestion-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.stop-suggestion-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #f5f5f5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stop-suggestion-region {
+  font-size: 11px;
+  color: #737373;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

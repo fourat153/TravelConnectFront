@@ -1,5 +1,7 @@
-<div class="sidebar-backdrop" (click)="close()"></div>
-<aside class="sidebar">
+<aside class="sidebar" (click)="$event.stopPropagation()">
+  <!-- ══════════════════════════════════════════════════════════
+       LIST VIEW
+  ══════════════════════════════════════════════════════════ -->
   <ng-container *ngIf="view === 'list'">
     <div class="sidebar-header">
       <div>
@@ -13,85 +15,189 @@
       <div *ngIf="tripsLoading" class="state-msg">
         <p-progressSpinner strokeWidth="4" />
       </div>
+
       <p-message *ngIf="tripsError" severity="error" variant="simple">{{ tripsError }}</p-message>
+
       <div *ngIf="!tripsLoading && trips.length > 0" class="trip-list">
         <div
           *ngFor="let trip of trips"
           class="trip-item"
           [class.active]="trip.id === selectedTripId"
-          (click)="selectTrip(trip.id)">
-          <i class="pi pi-map trip-icon"></i>
+          (click)="selectTrip(trip)">
+          <div class="trip-item__icon">
+            <i class="pi pi-map"></i>
+          </div>
           <div class="trip-info">
             <strong>{{ trip.title }}</strong>
           </div>
-          <i class="pi pi-chevron-right ml-auto"></i>
+          <i class="pi pi-chevron-right trip-item__arrow"></i>
         </div>
       </div>
+
       <div *ngIf="!tripsLoading && trips.length === 0 && !tripsError" class="state-msg">
-        <i class="pi pi-map" style="font-size:2rem; color:#ccc"></i>
+        <i class="pi pi-map"></i>
         <p>{{ isFriendMode ? 'No public trips yet.' : 'No trips yet. Create your first one!' }}</p>
       </div>
     </div>
 
-    <!-- hide footer entirely in friend mode -->
     <div class="sidebar-footer" *ngIf="!isFriendMode">
       <p-button label="+ Create trip" styleClass="w-full" (click)="goToCreate()" />
     </div>
   </ng-container>
 
-  <!-- create view unchanged — only reachable in own-trip mode anyway -->
- <!-- Replace your existing create ng-container with this -->
-<ng-container *ngIf="view === 'create'">
-  <div class="sidebar-header">
-    <div>
-      <p-button icon="pi pi-arrow-left" label="Back" [text]="true" severity="secondary" (click)="goToList()" />
-      <h2>New trip</h2>
+  <!-- ══════════════════════════════════════════════════════════
+       DETAIL VIEW
+  ══════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="view === 'detail'">
+    <div class="sidebar-header">
+      <div>
+        <p-button icon="pi pi-arrow-left" label="Back" [text]="true" severity="secondary" (click)="goToList()" />
+        <h2>{{ activeTrip?.title }}</h2>
+      </div>
+      <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="secondary" (click)="close()" />
     </div>
-    <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="secondary" (click)="close()" />
-  </div>
 
-  <div class="sidebar-body">
-    <form [formGroup]="createForm" (ngSubmit)="submitCreate()">
+    <div class="sidebar-body">
 
-      <!-- Title -->
-      <div class="field">
-        <label for="title">Title</label>
-        <input pInputText id="title" formControlName="title" placeholder="e.g. Weekend in Tunis" class="w-full" />
-        <small class="p-error" *ngIf="createForm.get('title')?.touched && createForm.get('title')?.invalid">
-          Title is required (min 2 chars)
-        </small>
+      <!-- loading -->
+      <div *ngIf="detailLoading" class="state-msg">
+        <p-progressSpinner strokeWidth="4" />
       </div>
 
-      <!-- Privacy -->
-      <div class="field">
-        <label>Privacy</label>
-        <div class="seg">
-          <button
-            type="button"
-            *ngFor="let opt of privacyOptions"
-            [class.active]="selectedPrivacy === opt.value"
-            (click)="setPrivacy(opt.value)">
-            <span class="dot" [style.background]="opt.color"></span>
-            {{ opt.label }}
-          </button>
+      <ng-container *ngIf="!detailLoading">
+
+        <!-- ── existing stops list ── -->
+        <div class="stop-list" *ngIf="detailStops.length > 0">
+          <div *ngFor="let stop of detailStops; let i = index" class="stop-card">
+            <div class="stop-card__index">{{ i + 1 }}</div>
+            <div class="stop-card__body">
+              <span class="stop-card__title">{{ stop.title }}</span>
+            </div>
+          </div>
         </div>
+
+        <div class="state-msg small" *ngIf="detailStops.length === 0 && !detailError">
+          <i class="pi pi-map-marker"></i>
+          <p>No stops yet. Add your first one below.</p>
+        </div>
+
+        <p-message *ngIf="detailError" severity="error" variant="simple">{{ detailError }}</p-message>
+
+        <!-- ── add stop input (own trips only) ── -->
+        <ng-container *ngIf="!isFriendMode">
+          <div class="detail-divider"></div>
+          <div class="detail-section-label">Add a stop</div>
+
+          <div class="add-stop-search">
+            <div class="add-stop-input-wrap" [class.resolved]="resolvedPlace">
+              <i class="pi pi-map-marker add-stop-icon"></i>
+              <input
+                type="text"
+                [(ngModel)]="stopQuery"
+                (input)="onStopInput()"
+                (focus)="stopShowDropdown = stopSuggestions.length > 0"
+                (blur)="hideStopDropdown()"
+                placeholder="Search for a city or place..."
+                class="add-stop-input"
+                autocomplete="off" />
+              <i *ngIf="stopSearchLoading" class="pi pi-spin pi-spinner add-stop-status"></i>
+              <i *ngIf="resolvedPlace && !stopSearchLoading" class="pi pi-check-circle add-stop-status resolved-icon"></i>
+              <button *ngIf="stopQuery && !stopSearchLoading" class="add-stop-clear" type="button" (click)="clearStopInput()">
+                <i class="pi pi-times"></i>
+              </button>
+            </div>
+
+            <!-- suggestions dropdown -->
+            <ul *ngIf="stopShowDropdown" class="stop-suggestions">
+              <li
+                *ngFor="let s of stopSuggestions"
+                class="stop-suggestion-item"
+                (mousedown)="selectStopSuggestion(s)">
+                <i class="pi pi-map-marker"></i>
+                <div class="stop-suggestion-text">
+                  <span class="stop-suggestion-name">{{ s.display_name.split(',')[0] }}</span>
+                  <span class="stop-suggestion-region">{{ s.display_name.split(',').slice(1,3).join(',') }}</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <p-message
+            *ngIf="addStopError"
+            severity="error"
+            [text]="addStopError"
+            styleClass="w-full mt-2" />
+        </ng-container>
+
+      </ng-container>
+    </div>
+
+    <!-- footer: add stop button -->
+    <div class="sidebar-footer" *ngIf="!isFriendMode">
+      <p-button
+        label="Add stop"
+        styleClass="w-full"
+        [loading]="addStopLoading"
+        [disabled]="!resolvedPlace"
+        (click)="addStop()" />
+    </div>
+  </ng-container>
+
+  <!-- ══════════════════════════════════════════════════════════
+       CREATE VIEW
+  ══════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="view === 'create'">
+    <div class="sidebar-header">
+      <div>
+        <p-button icon="pi pi-arrow-left" label="Back" [text]="true" severity="secondary" (click)="goToList()" />
+        <h2>New trip</h2>
       </div>
+      <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="secondary" (click)="close()" />
+    </div>
 
-      <!-- ── Route stops (NEW) ───────────────────────────────── -->
-      <div class="field">
-        <label>Route</label>
-        <app-trip-stop-input (stopsChange)="onStopsChange($event)" />
-      </div>
-      <!-- ─────────────────────────────────────────────────────── -->
+    <div class="sidebar-body">
+      <form [formGroup]="createForm" (ngSubmit)="submitCreate()">
 
-      <p-message *ngIf="createError" severity="error" [text]="createError" styleClass="w-full mt-2" />
+        <div class="field">
+          <label for="title">Title</label>
+          <input pInputText id="title" formControlName="title" placeholder="e.g. Weekend in Tunis" class="w-full" />
+          <small class="p-error" *ngIf="createForm.get('title')?.touched && createForm.get('title')?.invalid">
+            Title is required (min 2 chars)
+          </small>
+        </div>
 
-    </form>
-  </div>
+        <div class="field">
+          <label>Privacy</label>
+          <div class="seg">
+            <button
+              type="button"
+              *ngFor="let opt of privacyOptions"
+              [class.active]="selectedPrivacy === opt.value"
+              (click)="setPrivacy(opt.value)">
+              <span class="dot" [style.background]="opt.color"></span>
+              {{ opt.label }}
+            </button>
+          </div>
+        </div>
 
-  <div class="sidebar-footer">
-    <p-button label="Cancel" severity="secondary" [outlined]="true" (click)="goToList()" />
-    <p-button label="Create trip" [loading]="createLoading" [disabled]="createForm.invalid" (click)="submitCreate()" />
-  </div>
-</ng-container>
+        <div class="field">
+          <label>Route</label>
+          <app-trip-stop-input (stopsChange)="onStopsChange($event)" />
+        </div>
+
+        <p-message *ngIf="createError" severity="error" [text]="createError" styleClass="w-full mt-2" />
+
+      </form>
+    </div>
+
+    <div class="sidebar-footer">
+      <p-button label="Cancel" severity="secondary" [outlined]="true" (click)="goToList()" />
+      <p-button
+        label="Create trip"
+        [loading]="createLoading"
+        [disabled]="createForm.invalid"
+        (click)="submitCreate()" />
+    </div>
+  </ng-container>
+
 </aside>

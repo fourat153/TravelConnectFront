@@ -287,7 +287,6 @@ const icon = L.divIcon({
             this.map.fitBounds(cities, { padding: [50, 50] });
           }
 
-          this.isTripSidebarOpen = false;
 
         } else {
           this.errorMessage = res.message;
@@ -482,4 +481,25 @@ const icon = L.divIcon({
       this.map.setView([data.lat, data.lon], 10);
     });
   }
+  onStopAdded(stop: { lat: number; lon: number; title: string }): void {
+  const circle = L.circleMarker([stop.lat, stop.lon], {
+    radius: 8,
+    fillColor: '#3b82f6',
+    color: 'white',
+    weight: 3,
+    opacity: 1,
+    fillOpacity: 1,
+  }).addTo(this.map);
+
+  circle.on('click', () => {
+    this.ngZone.run(() => {
+      this.selectedStop = { title: stop.title, city: { lat: stop.lat, long: stop.lon } };
+      this.cdr.detectChanges();
+    });
+  });
+
+  this.markers.push(circle);
+  this.updatePolyline();
+  this.map.panTo([stop.lat, stop.lon]);
+}
 }

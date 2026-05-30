@@ -4,15 +4,15 @@
     <div class="map-wrapper" (click)="showProfileMenu = false">
       <div id="map"></div>
 
-      @if (!selectedStop) {
-        <app-trip-sidebar
-          *ngIf="isTripSidebarOpen || isFriendTripsSidebarOpen"
-          [friend]="isFriendTripsSidebarOpen ? selectedFriend : undefined"
-          (closed)="onAnySidebarClosed()"
-          (tripCreated)="onTripCreated($event)"
-          (tripSelected)="onTripSelected($event)">
-        </app-trip-sidebar>
-      }
+      @if (!selectedStop && (isTripSidebarOpen || isFriendTripsSidebarOpen)) {
+      <app-trip-sidebar
+        [friend]="isFriendTripsSidebarOpen ? selectedFriend : undefined"
+        (closed)="onAnySidebarClosed()"
+        (tripCreated)="onTripCreated($event)"
+        (tripSelected)="onTripSelected($event)"
+        (stopAdded)="onStopAdded($event)">
+      </app-trip-sidebar>
+    }
 
       <div class="search-overlay">
         <div class="search-bar">

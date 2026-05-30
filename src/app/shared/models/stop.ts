@@ -7,14 +7,15 @@ export interface StopCreate{
     description: string,
 }
 
-export interface StopOut{
-    id: number, 
-    trip_id: number, 
-    title: string,
-    description: string,
-    order: number,
-    city: CityData
+export interface StopOut {
+  id:          number;
+  trip_id:     number;
+  title:       string;
+  description?: string;
+  order:       number;
+  city:        CityData;
 }
+
 
 export interface StopBaseOut{
     id: number, 
@@ -25,6 +26,9 @@ export interface StopBaseOut{
     status_code: number;
     message: string;
 }
-export interface StopsOut{
-    stops: StopOut[]
+export interface StopsOut {
+  status_code: number;
+  message:     string;
+  stops?:      StopOut[];
 }
+ 

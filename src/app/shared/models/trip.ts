@@ -1,7 +1,8 @@
-    export interface CityData {
-    id: number;
-    name: string;
-    }
+export interface CityData {
+  id:    number;
+  lat?:  number;
+  long?: number;
+}
 export interface StopInput {
   label: string;
   lat:   number;
