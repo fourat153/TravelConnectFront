@@ -3,6 +3,7 @@
 export interface FriendData {
   friend_id: number;
   username:  string;
+  profile_picture?: string;
 }
 
 export interface FriendsOut {

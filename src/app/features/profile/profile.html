@@ -1,0 +1,147 @@
+<div class="profile-layout">
+  <!-- Sidebar Navigation -->
+  <app-bottom-nav active="profile" (tabChanged)="onNavTabChanged($event)"></app-bottom-nav>
+
+  <!-- Main Profile Content -->
+  <div class="profile-main-content">
+    <div class="profile-container">
+      <!-- Status messages -->
+      <div *ngIf="successMessage" class="alert alert-success">
+        <i class="pi pi-check-circle"></i>
+        <span>{{ successMessage }}</span>
+      </div>
+
+      <div *ngIf="errorMessage" class="alert alert-danger">
+        <i class="pi pi-exclamation-circle"></i>
+        <span>{{ errorMessage }}</span>
+      </div>
+
+      <div class="profile-card">
+        <!-- Left Section: Profile Avatar & Upload -->
+        <div class="avatar-section">
+          <div class="avatar-wrapper" [class.editable]="isEditMode" (click)="triggerFileInput(fileInput)">
+            <img *ngIf="imagePreview; else defaultAvatar" [src]="imagePreview" alt="Profile Picture"
+              class="avatar-img" />
+            <ng-template #defaultAvatar>
+              <div class="avatar-placeholder">
+                {{ userInitials || 'TR' }}
+              </div>
+            </ng-template>
+            <div *ngIf="isEditMode" class="avatar-overlay">
+              <i class="pi pi-camera"></i>
+              <span>Upload Photo</span>
+            </div>
+          </div>
+          <input type="file" #fileInput class="hidden-file-input" (change)="onFileSelected($event)" accept="image/*" />
+          <h2 class="user-fullname">{{ user?.firstname }} {{ user?.lastname }}</h2>
+          <p class="user-email-text">{{ user?.email }}</p>
+          <div class="status-badge" *ngIf="user?.has_completed_onboarding === 'Onboarded'">
+            <i class="pi pi-verified"></i> Onboarded
+          </div>
+          <p-button 
+            label="Logout" 
+            icon="pi pi-sign-out" 
+            styleClass="p-button-danger p-button-outlined p-button-sm mt-3 w-full" 
+            (onClick)="logout()">
+          </p-button>
+        </div>
+
+        <!-- Right Section: Details Form -->
+        <div class="details-section">
+          <div class="section-title">
+            <h3>Personal Information</h3>
+            <button class="btn btn-secondary edit-btn" (click)="toggleEditMode()">
+              <i class="pi" [ngClass]="isEditMode ? 'pi-times' : 'pi-pencil'"></i>
+              {{ isEditMode ? 'Cancel' : 'Edit Profile' }}
+            </button>
+          </div>
+
+          <form (submit)="saveProfile()" #profileForm="ngForm" class="profile-form">
+            <div class="form-grid">
+              <!-- First Name -->
+              <div class="form-group">
+                <label for="firstname">First Name</label>
+                <div class="input-container" [class.readonly]="!isEditMode">
+                  <i class="pi pi-user field-icon"></i>
+                  <input type="text" id="firstname" name="firstname" [(ngModel)]="editForm.firstname"
+                    [readonly]="!isEditMode" required />
+                </div>
+              </div>
+
+              <!-- Last Name -->
+              <div class="form-group">
+                <label for="lastname">Last Name</label>
+                <div class="input-container" [class.readonly]="!isEditMode">
+                  <i class="pi pi-user field-icon"></i>
+                  <input type="text" id="lastname" name="lastname" [(ngModel)]="editForm.lastname"
+                    [readonly]="!isEditMode" required />
+                </div>
+              </div>
+
+              <!-- Email -->
+              <div class="form-group">
+                <label for="email">Email Address</label>
+                <div class="input-container" [class.readonly]="!isEditMode">
+                  <i class="pi pi-envelope field-icon"></i>
+                  <input type="email" id="email" name="email" [(ngModel)]="editForm.email" [readonly]="!isEditMode"
+                    required />
+                </div>
+              </div>
+
+              <!-- Phone Number -->
+              <div class="form-group">
+                <label for="phone_number">Phone Number</label>
+                <div class="input-container" [class.readonly]="!isEditMode">
+                  <i class="pi pi-phone field-icon"></i>
+                  <input type="tel" id="phone_number" name="phone_number" placeholder="e.g. +1 555-0199"
+                    [(ngModel)]="editForm.phone_number" [readonly]="!isEditMode" />
+                </div>
+              </div>
+
+              <!-- Gender -->
+              <div class="form-group">
+                <label for="gender">Gender</label>
+                <div class="input-container" [class.readonly]="!isEditMode">
+                  <i class="pi pi-users field-icon"></i>
+                  <select id="gender" name="gender" [(ngModel)]="editForm.gender" [disabled]="!isEditMode">
+                    <option value="" disabled selected>Select Gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Home City -->
+              <div class="form-group city-form-group">
+                <label for="city">Home City</label>
+                <div class="input-container" [class.readonly]="!isEditMode">
+                  <i class="pi pi-map-marker field-icon"></i>
+                  <input type="text" id="city" name="city" placeholder="Search home city..."
+                    [(ngModel)]="citySearchQuery" (input)="onCitySearch()" [readonly]="!isEditMode" />
+                </div>
+
+                <!-- Suggestions dropdown -->
+                <div class="suggestions-dropdown" *ngIf="isEditMode && citySuggestions.length > 0">
+                  <div class="suggestion-item" *ngFor="let suggestion of citySuggestions"
+                    (click)="selectCity(suggestion)">
+                    <i class="pi pi-map-marker"></i>
+                    <span>{{ suggestion.display_name }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="form-actions" *ngIf="isEditMode">
+              <button type="submit" class="btn btn-primary" [disabled]="isSaving">
+                <i class="pi pi-spin pi-spinner" *ngIf="isSaving"></i>
+                <i class="pi pi-save" *ngIf="!isSaving"></i>
+                {{ isSaving ? 'Saving...' : 'Save Changes' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

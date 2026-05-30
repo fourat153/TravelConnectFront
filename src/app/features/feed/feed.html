@@ -36,7 +36,7 @@
                 </span>
               </div>
             </div>
-            <button class="post-options-btn">
+            <button class="post-options-btn" (click)="confirmDelete(post)">
               <i class="pi pi-ellipsis-h"></i>
             </button>
           </div>
@@ -102,7 +102,16 @@
 
           <!-- Add Comment Input Box -->
           <div class="add-comment-container">
-            <i class="pi pi-face-smile comment-emoji-icon"></i>
+            <div class="emoji-picker-wrapper">
+              <i class="pi pi-face-smile comment-emoji-icon" (click)="toggleEmojiPicker(post.id)"></i>
+              
+              <!-- Popover Emoji Picker -->
+              <div class="emoji-picker-popover" *ngIf="activeEmojiPickerPostId === post.id">
+                <span class="emoji-item" *ngFor="let emoji of popularEmojis" (click)="addEmoji(post.id, emoji)">
+                  {{ emoji }}
+                </span>
+              </div>
+            </div>
             <input #commentInput type="text" placeholder="Add a comment..." class="comment-input-field"
               [(ngModel)]="commentInputs[post.id]" (keyup.enter)="submitComment(post)">
             <button class="comment-post-btn" [disabled]="!commentInputs[post.id] || !commentInputs[post.id].trim()"
@@ -122,8 +131,8 @@
 
       <div class="user-profile-row">
         <div class="user-avatar-circle">
-          <span *ngIf="!currentUser?.avatar">{{ currentUserInitials }}</span>
-          <img *ngIf="currentUser?.avatar" [src]="currentUser.avatar" [alt]="getDisplayName(currentUser)">
+          <span *ngIf="!currentUser?.profile_picture">{{ currentUserInitials }}</span>
+          <img *ngIf="currentUser?.profile_picture" [src]="currentUser.profile_picture" [alt]="getDisplayName(currentUser)">
         </div>
         <div class="user-meta-info">
           <span class="user-fullname">{{ getDisplayName(currentUser) }}</span>
