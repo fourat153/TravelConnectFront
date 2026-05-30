@@ -13,7 +13,7 @@
   z-index: 901;
   background: white;
   border-radius: 20px 20px 0 0;
-  box-shadow: 0 -4px 24px rgba(0,0,0,0.15);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
   max-height: 70vh;
   display: flex;
   flex-direction: column;
@@ -21,8 +21,13 @@
 }
 
 @keyframes slideUp {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0); }
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
 }
 
 .sheet-handle {
@@ -43,8 +48,17 @@
     align-items: flex-start;
     margin-top: 8px;
 
-    h2 { margin: 0; font-size: 16px; font-weight: 600; }
-    p  { margin: 4px 0 0; font-size: 13px; color: #666; }
+    h2 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    p {
+      margin: 4px 0 0;
+      font-size: 13px;
+      color: #666;
+    }
   }
 
   .close-btn {
@@ -74,7 +88,9 @@
     font-size: 14px;
     outline: none;
 
-    &:focus { border-color: #3b82f6; }
+    &:focus {
+      border-color: #3b82f6;
+    }
   }
 
   .image-previews {
@@ -114,7 +130,10 @@
       cursor: pointer;
       font-weight: 600;
 
-      &:disabled { opacity: 0.5; cursor: not-allowed; }
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
     }
   }
 }
@@ -145,9 +164,21 @@
     margin-bottom: 8px;
   }
 
-  .post-author { font-weight: 600; font-size: 14px; display: block; }
-  .post-time   { font-size: 11px; color: #999; }
-  .post-title  { font-size: 14px; margin: 0 0 8px; }
+  .post-author {
+    font-weight: 600;
+    font-size: 14px;
+    display: block;
+  }
+
+  .post-time {
+    font-size: 11px;
+    color: #999;
+  }
+
+  .post-title {
+    font-size: 14px;
+    margin: 0 0 8px;
+  }
 
   .post-images {
     display: grid;

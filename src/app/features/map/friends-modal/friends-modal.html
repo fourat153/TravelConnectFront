@@ -45,10 +45,18 @@
         (click)="select(friend)"
       >
         <p-avatar
-          [label]="initials(friend.username)"
+          *ngIf="friend.profile_picture; else initialAvatar"
+          [image]="friend.profile_picture"
           shape="circle"
           styleClass="friend-avatar"
         />
+        <ng-template #initialAvatar>
+          <p-avatar
+            [label]="initials(friend.username)"
+            shape="circle"
+            styleClass="friend-avatar"
+          />
+        </ng-template>
         <div class="friend-info">
           <span class="friend-name">{{ friend.username }}</span>
         </div>
