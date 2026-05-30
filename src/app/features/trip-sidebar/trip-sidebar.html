@@ -40,49 +40,58 @@
   </ng-container>
 
   <!-- create view unchanged — only reachable in own-trip mode anyway -->
-  <ng-container *ngIf="view === 'create'">
-    <div class="sidebar-header">
-      <div>
-        <p-button icon="pi pi-arrow-left" label="Back" [text]="true" severity="secondary" (click)="goToList()" />
-        <h2>New trip</h2>
+ <!-- Replace your existing create ng-container with this -->
+<ng-container *ngIf="view === 'create'">
+  <div class="sidebar-header">
+    <div>
+      <p-button icon="pi pi-arrow-left" label="Back" [text]="true" severity="secondary" (click)="goToList()" />
+      <h2>New trip</h2>
+    </div>
+    <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="secondary" (click)="close()" />
+  </div>
+
+  <div class="sidebar-body">
+    <form [formGroup]="createForm" (ngSubmit)="submitCreate()">
+
+      <!-- Title -->
+      <div class="field">
+        <label for="title">Title</label>
+        <input pInputText id="title" formControlName="title" placeholder="e.g. Weekend in Tunis" class="w-full" />
+        <small class="p-error" *ngIf="createForm.get('title')?.touched && createForm.get('title')?.invalid">
+          Title is required (min 2 chars)
+        </small>
       </div>
-      <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="secondary" (click)="close()" />
-    </div>
-    <div class="sidebar-body">
-      <form [formGroup]="createForm" (ngSubmit)="submitCreate()">
-        <div class="field">
-          <label for="title">Title</label>
-          <input pInputText id="title" formControlName="title" placeholder="e.g. Weekend in Tunis" class="w-full" />
-          <small class="p-error" *ngIf="createForm.get('title')?.touched && createForm.get('title')?.invalid">
-            Title is required (min 2 chars)
-          </small>
+
+      <!-- Privacy -->
+      <div class="field">
+        <label>Privacy</label>
+        <div class="seg">
+          <button
+            type="button"
+            *ngFor="let opt of privacyOptions"
+            [class.active]="selectedPrivacy === opt.value"
+            (click)="setPrivacy(opt.value)">
+            <span class="dot" [style.background]="opt.color"></span>
+            {{ opt.label }}
+          </button>
         </div>
-        <div class="field">
-          <label>Privacy</label>
-          <div class="seg">
-            <button
-              type="button"
-              *ngFor="let opt of privacyOptions"
-              [class.active]="selectedPrivacy === opt.value"
-              (click)="setPrivacy(opt.value)">
-              <span class="dot" [style.background]="opt.color"></span>
-              {{ opt.label }}
-            </button>
-          </div>
-        </div>
-        <div class="toggle-row">
-          <div>
-            <span>Include home city</span>
-            <small>Add your city as the trip's base location</small>
-          </div>
-          <p-toggleSwitch formControlName="include_home_city" />
-        </div>
-        <p-message *ngIf="createError" severity="error" [text]="createError" styleClass="w-full mt-2" />
-      </form>
-    </div>
-    <div class="sidebar-footer">
-      <p-button label="Cancel" severity="secondary" [outlined]="true" (click)="goToList()" />
-      <p-button label="Create trip" [loading]="createLoading" [disabled]="createForm.invalid" (click)="submitCreate()" />
-    </div>
-  </ng-container>
+      </div>
+
+      <!-- ── Route stops (NEW) ───────────────────────────────── -->
+      <div class="field">
+        <label>Route</label>
+        <app-trip-stop-input (stopsChange)="onStopsChange($event)" />
+      </div>
+      <!-- ─────────────────────────────────────────────────────── -->
+
+      <p-message *ngIf="createError" severity="error" [text]="createError" styleClass="w-full mt-2" />
+
+    </form>
+  </div>
+
+  <div class="sidebar-footer">
+    <p-button label="Cancel" severity="secondary" [outlined]="true" (click)="goToList()" />
+    <p-button label="Create trip" [loading]="createLoading" [disabled]="createForm.invalid" (click)="submitCreate()" />
+  </div>
+</ng-container>
 </aside>

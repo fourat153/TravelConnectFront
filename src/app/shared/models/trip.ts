@@ -2,12 +2,22 @@
     id: number;
     name: string;
     }
+export interface StopInput {
+  label: string;
+  lat:   number;
+  lon:   number;
+  order: number;
+}
 
-    export interface TripCreate {
-    title: string;
-    privacy: 'public' | 'friends_only' | 'private';
-    include_home_city: boolean;
-    }
+    
+export interface TripCreate {
+  title:             string;
+  privacy:           'public' | 'friends_only' | 'private';
+  include_home_city: boolean;
+  stops:             StopInput[];
+}
+ 
+
 
     export interface TripOut {
     id: number;

@@ -5,6 +5,8 @@ import { FriendsOut } from '../../shared/models/friends';
 import { environment } from '../../../environments/environment';
 import { TripsOut } from '../../shared/models/trip';
 
+import { FriendFirstStop } from '../../shared/models/friends';
+
 @Injectable({ providedIn: 'root' })
 export class FriendService {
   private baseUrl = environment.apiUrl;
@@ -27,4 +29,14 @@ export class FriendService {
       { withCredentials: true }
     );
   }
+
+  // Add this import to the top of friends.ts service (with existing imports):
+
+// Add this method inside the FriendService class:
+getFriendFirstStop(friendId: number): Observable<FriendFirstStop> {
+  return this.http.get<FriendFirstStop>(
+    `${this.baseUrl}/trips/friend/${friendId}/first-stop`,
+    { withCredentials: true }
+  );
+}
 }

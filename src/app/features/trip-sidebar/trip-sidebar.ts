@@ -3,13 +3,14 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { CommonModule } from '@angular/common';
 import { TripService } from '../../core/services/trip';
 import { FriendService } from '../../core/services/friends';
-import { TripOut } from '../../shared/models/trip';
+import { TripCreate, TripOut } from '../../shared/models/trip';
 import { FriendData } from '../../shared/models/friends';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { MessageModule } from 'primeng/message';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { TripStop, TripStopInputComponent } from '../../shared/components/trip-stop-input/trip-stop-input.component';
 
 type View = 'list' | 'create';
 
@@ -26,6 +27,7 @@ type View = 'list' | 'create';
     ProgressSpinnerModule,
     MessageModule,
     ToggleSwitchModule,
+    TripStopInputComponent
   ]
 })
 export class TripSidebarComponent implements OnInit, OnChanges {
@@ -41,6 +43,9 @@ export class TripSidebarComponent implements OnInit, OnChanges {
   trips: TripOut[] = [];
   tripsLoading = false;
   tripsError = '';
+  tripStops: TripStop[] = [];
+ 
+
 
   createForm: FormGroup;
   createLoading = false;
@@ -133,11 +138,7 @@ export class TripSidebarComponent implements OnInit, OnChanges {
     this.tripSelected.emit(tripId);
   }
 
-  goToCreate(): void {
-    this.view = 'create';
-    this.createForm.reset({ title: '', privacy: 'public', include_home_city: false });
-    this.createError = '';
-  }
+
 
   goToList(): void { this.view = 'list'; }
 
@@ -151,27 +152,54 @@ export class TripSidebarComponent implements OnInit, OnChanges {
     return this.createForm.get('privacy')!.value;
   }
 
-  submitCreate(): void {
-    if (this.createForm.invalid || this.createLoading) return;
-    this.createLoading = true;
-    this.createError   = '';
+ 
 
-    this.tripService.createTrip(this.createForm.value).subscribe({
-      next: (res) => {
-        this.createLoading = false;
-        if (res.status_code === 201 && res.id) {
-          const newTrip: TripOut = { id: res.id, title: res.title!, city: res.city };
-          this.trips.unshift(newTrip);
-          this.tripCreated.emit(newTrip);
-          this.goToList();
-        } else {
-          this.createError = res.message;
-        }
-      },
-      error: () => {
-        this.createLoading = false;
-        this.createError   = 'Something went wrong. Try again.';
+  onStopsChange(stops: TripStop[]): void {
+  this.tripStops = stops;
+}
+ 
+// 5. REPLACE submitCreate() with this:
+submitCreate(): void {
+  if (this.createForm.invalid || this.createLoading) return;
+  this.createLoading = true;
+  this.createError   = '';
+ 
+  const payload: TripCreate = {
+    ...this.createForm.value,
+    stops: this.tripStops.map((stop, index) => ({
+      label: stop.label,
+      lat:   stop.lat,
+      lon:   stop.lon,
+      order: index,          
+    })),
+  };
+ 
+  this.tripService.createTrip(payload).subscribe({
+    next: (res) => {
+      this.createLoading = false;
+      if (res.status_code === 201 && res.id) {
+        const newTrip: TripOut = { id: res.id, title: res.title!, city: res.city };
+        this.trips.unshift(newTrip);
+        this.tripCreated.emit(newTrip);
+        this.goToList();
+      } else {
+        this.createError = res.message;
       }
-    });
-  }
+    },
+    error: () => {
+      this.createLoading = false;
+      this.createError   = 'Something went wrong. Try again.';
+    }
+  });
+}
+
+ 
+// 6. RESET tripStops when going back to list — update goToCreate():
+goToCreate(): void {
+  this.view = 'create';
+  this.tripStops = [];
+  this.createForm.reset({ title: '', privacy: 'public', include_home_city: false });
+  this.createError = '';
+}
+
 }

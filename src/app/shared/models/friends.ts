@@ -14,3 +14,9 @@ export interface FriendsOut {
   page_size?:     number;
   page_number?:   number;
 }
+
+export interface FriendFirstStop {
+  lat:        number;
+  lon:        number;
+  stop_title: string;
+}

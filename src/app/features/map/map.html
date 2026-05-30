@@ -1,25 +1,29 @@
 <div class="app-shell">
-
   <app-bottom-nav (tabChanged)="onNavTabChanged($event)"></app-bottom-nav>
-
   <div class="map-content">
     <div class="map-wrapper" (click)="showProfileMenu = false">
-
       <div id="map"></div>
 
       @if (!selectedStop) {
-      <app-trip-sidebar *ngIf="isTripSidebarOpen || isFriendTripsSidebarOpen"
-        [friend]="isFriendTripsSidebarOpen ? selectedFriend : undefined" (closed)="onAnySidebarClosed()"
-        (tripCreated)="onTripCreated($event)" (tripSelected)="onTripSelected($event)">
-      </app-trip-sidebar>
+        <app-trip-sidebar
+          *ngIf="isTripSidebarOpen || isFriendTripsSidebarOpen"
+          [friend]="isFriendTripsSidebarOpen ? selectedFriend : undefined"
+          (closed)="onAnySidebarClosed()"
+          (tripCreated)="onTripCreated($event)"
+          (tripSelected)="onTripSelected($event)">
+        </app-trip-sidebar>
       }
-
-
 
       <div class="search-overlay">
         <div class="search-bar">
-          <p-autoComplete [(ngModel)]="searchQuery" [suggestions]="suggestions" (completeMethod)="onSearch()"
-            field="display_name" [dropdown]="false" placeholder="Search any destination..." [forceSelection]="false"
+          <p-autoComplete
+            [(ngModel)]="searchQuery"
+            [suggestions]="suggestions"
+            (completeMethod)="onSearch()"
+            field="display_name"
+            [dropdown]="false"
+            placeholder="Search any destination..."
+            [forceSelection]="false"
             (onSelect)="selectSuggestion($event)">
             <ng-template let-suggestion pTemplate="item">
               {{ suggestion.display_name }}
@@ -35,7 +39,7 @@
         </div>
         <div class="stop-panel-fields">
           <div class="p-field">
-            <label for="stopTitle">Stop title </label>
+            <label for="stopTitle">Stop title</label>
             <input id="stopTitle" type="text" pInputText [(ngModel)]="stopTitle" placeholder="Stop title" />
           </div>
           <div class="p-field">
@@ -52,21 +56,14 @@
       </div>
 
       @if (showOnboarding) {
-      <app-onboarding (completed)="onOnboardingComplete($event)" />
+        <app-onboarding (completed)="onOnboardingComplete($event)" />
       }
 
       @if (selectedStop) {
-      <app-stop-sheet [stop]="selectedStop" (closed)="selectedStop = null">
-      </app-stop-sheet>
+        <app-stop-sheet [stop]="selectedStop" (closed)="selectedStop = null">
+        </app-stop-sheet>
       }
 
     </div>
-
-    <app-friends-modal
-      [class.mobile-hidden]="!showFriendsModal"
-      (friendSelected)="onFriendSelected($event)">
-    </app-friends-modal>
-
   </div>
-
 </div>

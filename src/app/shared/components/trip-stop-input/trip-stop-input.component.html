@@ -1,0 +1,117 @@
+<p>trip-stop-input works!</p>
+<div class="stop-input-wrapper">
+
+  <!-- ── Stop rows ─────────────────────────────────────────── -->
+  <div
+    cdkDropList
+    [cdkDropListData]="rows"
+    (cdkDropListDropped)="drop($event)"
+    class="stop-list">
+
+    <div
+      *ngFor="let row of rows; let i = index; let last = last"
+      cdkDrag
+      [cdkDragData]="row"
+      class="stop-row">
+
+      <!-- drag handle -->
+      <div cdkDragHandle class="drag-handle" title="Drag to reorder">
+        <i class="pi pi-bars"></i>
+      </div>
+
+      <!-- stop icon -->
+      <div class="stop-icon">
+        <ng-container *ngIf="isOrigin(i)">
+          <span class="icon-circle"></span>
+        </ng-container>
+        <ng-container *ngIf="isDestination(i)">
+          <i class="pi pi-map-marker icon-pin"></i>
+        </ng-container>
+        <ng-container *ngIf="isWaypoint(i)">
+          <span class="icon-waypoint">{{ waypointLetter(i) }}</span>
+        </ng-container>
+      </div>
+
+      <!-- connecting line (not on last row) -->
+      <div *ngIf="!last" class="stop-line"></div>
+
+      <!-- input wrapper -->
+      <div class="stop-input-group">
+        <div class="stop-input-inner" [class.resolved]="row.resolved">
+
+          <input
+            type="text"
+            [(ngModel)]="row.query"
+            (input)="onInput(row)"
+            (focus)="row.showDropdown = row.suggestions.length > 0"
+            (blur)="hideDropdown(row)"
+            [placeholder]="isOrigin(i) ? 'Starting point' : isDestination(i) ? 'Destination' : 'Add stop'"
+            class="stop-input"
+            autocomplete="off" />
+
+          <!-- loading spinner -->
+          <i *ngIf="row.loading" class="pi pi-spin pi-spinner input-icon"></i>
+
+          <!-- resolved check -->
+          <i *ngIf="row.resolved && !row.loading" class="pi pi-check-circle input-icon resolved-icon"></i>
+
+          <!-- clear button -->
+          <button
+            *ngIf="row.query && !row.loading"
+            type="button"
+            class="clear-btn"
+            (click)="clearRow(row)">
+            <i class="pi pi-times"></i>
+          </button>
+        </div>
+
+        <!-- suggestions dropdown -->
+        <ul *ngIf="row.showDropdown" class="suggestions">
+          <li
+            *ngFor="let s of row.suggestions"
+            (mousedown)="selectSuggestion(row, s)"
+            class="suggestion-item">
+            <i class="pi pi-map-marker suggestion-icon"></i>
+            <div class="suggestion-text">
+              <span class="suggestion-name">{{ s.display_name.split(',')[0] }}</span>
+              <span class="suggestion-region">{{ s.display_name.split(',').slice(1, 3).join(',') }}</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- remove button (only if more than 2 rows) -->
+      <button
+        *ngIf="rows.length > 2"
+        type="button"
+        class="remove-btn"
+        (click)="removeStop(i)"
+        title="Remove stop">
+        <i class="pi pi-times"></i>
+      </button>
+
+      <!-- drag placeholder -->
+      <div *cdkDragPlaceholder class="drag-placeholder"></div>
+    </div>
+
+  </div>
+
+  <!-- ── Swap button (only when 2 stops) ───────────────────── -->
+  <div *ngIf="showSwap" class="swap-row">
+    <button type="button" class="swap-btn" (click)="swap()" title="Swap origin and destination">
+      <i class="pi pi-arrow-right-arrow-left"></i>
+      <span>Swap</span>
+    </button>
+  </div>
+
+  <!-- ── Add a stop ─────────────────────────────────────────── -->
+  <button
+    *ngIf="canAddStop"
+    type="button"
+    class="add-stop-btn"
+    (click)="addStop()">
+    <i class="pi pi-plus"></i>
+    <span>Add a stop</span>
+  </button>
+
+</div>
