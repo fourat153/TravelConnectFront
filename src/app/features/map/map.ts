@@ -41,6 +41,7 @@ export class Map implements AfterViewInit, OnInit {
   private polyline!: L.Polyline;
   private draggableMarker: L.Marker | null = null;
   private friendPinMarkers: L.Marker[] = [];
+  private friendPolylines: L.Polyline[] = [];
   private ngZone = inject(NgZone);
 
   selectedStop: any = null;
@@ -62,6 +63,7 @@ export class Map implements AfterViewInit, OnInit {
   userInitials = '';
   errorMessage: any;
   selectedTripId: number | null = null;
+  selectedTrip: any = null;
   private AuthService = inject(AuthService);
   private onboardingService = inject(OnboardingService);
   private router: Router = inject(Router);
@@ -114,15 +116,54 @@ export class Map implements AfterViewInit, OnInit {
       next: (res) => {
         if (!res.data?.length) return;
 
+        const colors = ['#f43f5e', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899', '#06b6d4', '#14b8a6', '#3b82f6'];
+
         res.data.forEach((friend) => {
-          this.friendService.getFriendFirstStop(friend.friend_id).subscribe({
-            next: (stop) => {
-              this.ngZone.run(() => {
-                this.placeFriendPin(friend, stop.lat, stop.lon, stop.stop_title);
+          this.friendService.getFriendTrips(friend.friend_id).subscribe({
+            next: (tripRes) => {
+              const trips = tripRes.trips;
+              if (!trips || trips.length === 0) return;
+
+              // Take the last trip in the list
+              const lastTrip = trips[trips.length - 1];
+              const tripId = lastTrip.id;
+
+              // Fetch stops for this trip
+              this.StopService.getTripStops(tripId).subscribe({
+                next: (stopsRes) => {
+                  const stops = stopsRes.stops;
+                  if (!stops || stops.length === 0) return;
+
+                  // Sort stops by order
+                  stops.sort((a, b) => a.order - b.order);
+
+                  const points: L.LatLng[] = [];
+                  const friendColor = colors[friend.friend_id % colors.length];
+
+                  stops.forEach((stop, index) => {
+                    const lat = stop.city?.lat;
+                    const lon = stop.city?.long;
+                    if (lat === undefined || lon === undefined) return;
+
+                    const latLng = new L.LatLng(lat, lon);
+                    points.push(latLng);
+
+                    this.ngZone.run(() => {
+                      if (index === stops.length - 1) {
+                        this.placeFriendPin(friend, lat, lon, stop.title, friendColor);
+                      } else {
+                        this.placeFriendStopPin(friend, lat, lon, stop.title, friendColor);
+                      }
+                    });
+                  });
+                },
+                error: () => {
+                  // silent skip
+                }
               });
             },
             error: () => {
-              // friend has no trips/stops yet — skip silently
+              // silent skip
             }
           });
         });
@@ -133,23 +174,22 @@ export class Map implements AfterViewInit, OnInit {
     });
   }
 
-  private placeFriendPin(friend: FriendData, lat: number, lon: number, stopTitle: string): void {
+  private placeFriendPin(friend: FriendData, lat: number, lon: number, stopTitle: string, color: string): void {
     const initials = friend.username.slice(0, 2).toUpperCase();
 
-
-const icon = L.divIcon({
-  className: '',
-  html: `
-    <div class="friend-pin">
-      <div class="friend-pin__avatar">${initials}</div>
-      <div class="friend-pin__tail"></div>
-      <div class="friend-pin__label">${friend.username}</div>
-    </div>
-  `,
-  iconSize: [90, 72],
-  iconAnchor: [45, 50],   
-  popupAnchor: [0, -72],
-});
+    const icon = L.divIcon({
+      className: '',
+      html: `
+        <div class="friend-pin">
+          <div class="friend-pin__avatar" style="background: ${color}; border-color: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 0 1.5px ${color};">${initials}</div>
+          <div class="friend-pin__tail" style="border-top-color: ${color};"></div>
+          <div class="friend-pin__label" style="background: ${color};">${friend.username}</div>
+        </div>
+      `,
+      iconSize: [90, 72],
+      iconAnchor: [45, 50],
+      popupAnchor: [0, -72],
+    });
 
     const marker = L.marker([lat, lon], { icon }).addTo(this.map);
 
@@ -168,16 +208,67 @@ const icon = L.divIcon({
     this.friendPinMarkers.push(marker);
   }
 
+  private placeFriendStopPin(friend: FriendData, lat: number, lon: number, stopTitle: string, color: string): void {
+    const circle = L.circleMarker([lat, lon], {
+      radius: 6,
+      fillColor: color,
+      color: 'white',
+      weight: 2.5,
+      opacity: 1,
+      fillOpacity: 1,
+    }).addTo(this.map);
+
+    circle.bindTooltip(`${friend.username}: ${stopTitle}`, {
+      direction: 'top',
+      offset: [0, -10],
+      className: 'friend-stop-tooltip',
+    });
+
+    circle.on('click', () => {
+      this.ngZone.run(() => {
+        this.onFriendPinClicked(friend);
+      });
+    });
+
+    this.friendPinMarkers.push(circle as any);
+  }
+
+  private async drawFriendRoute(points: L.LatLng[], color: string): Promise<L.Polyline | null> {
+    if (points.length < 2) return null;
+
+    try {
+      const routePoints = await this.getOsrmRoute(points);
+
+      const line: L.LatLngTuple[] = routePoints.length > 0
+        ? routePoints
+        : points.map(p => [p.lat, p.lng] as L.LatLngTuple);
+
+      return L.polyline(line, {
+        color,
+        weight: 4,
+        opacity: 0.8,
+      }).addTo(this.map);
+
+    } catch {
+      return L.polyline(
+        points.map(p => [p.lat, p.lng] as L.LatLngTuple),
+        { color, weight: 3, dashArray: '6, 8', opacity: 0.7 }
+      ).addTo(this.map);
+    }
+  }
+
   clearFriendPins(): void {
     this.friendPinMarkers.forEach(m => this.map.removeLayer(m));
     this.friendPinMarkers = [];
+    this.friendPolylines.forEach(p => this.map.removeLayer(p));
+    this.friendPolylines = [];
     this.friendPinsVisible = false;
   }
 
   onFriendPinClicked(friend: FriendData): void {
-    this.selectedFriend           = friend;
+    this.selectedFriend = friend;
     this.isFriendTripsSidebarOpen = true;
-    this.isTripSidebarOpen        = false;
+    this.isTripSidebarOpen = false;
     setTimeout(() => this.map.invalidateSize({ animate: false }), 300);
   }
 
@@ -186,9 +277,9 @@ const icon = L.divIcon({
   onNavTabChanged(tab: NavTab): void {
     switch (tab) {
       case 'home':
-        this.isTripSidebarOpen        = false;
+        this.isTripSidebarOpen = false;
         this.isFriendTripsSidebarOpen = false;
-        this.showStopPanel            = false;
+        this.showStopPanel = false;
         this.clearFriendPins();
         if (this.draggableMarker) {
           this.map.removeLayer(this.draggableMarker);
@@ -198,13 +289,13 @@ const icon = L.divIcon({
         break;
 
       case 'friends':
-        this.isTripSidebarOpen        = false;
+        this.isTripSidebarOpen = false;
         this.isFriendTripsSidebarOpen = false;
         this.loadFriendPins();
         break;
 
       case 'add-stop':
-        this.isTripSidebarOpen        = false;
+        this.isTripSidebarOpen = false;
         this.isFriendTripsSidebarOpen = false;
         this.addDraggablePin();
         break;
@@ -228,10 +319,29 @@ const icon = L.divIcon({
   // ── Sidebar ──────────────────────────────────────────────────
 
   onAnySidebarClosed(): void {
-    this.isTripSidebarOpen        = false;
+    this.isTripSidebarOpen = false;
     this.isFriendTripsSidebarOpen = false;
-    this.selectedFriend           = undefined;
+    this.selectedFriend = undefined;
+    this.selectedTripId = null;
+    this.selectedTrip = null;
+    this.selectedStop = null;
+    this.markers.forEach(m => this.map.removeLayer(m));
+    this.markers = [];
+    if (this.polyline) {
+      this.map.removeLayer(this.polyline);
+    }
     setTimeout(() => this.map.invalidateSize({ animate: false }), 350);
+  }
+
+  onBackToList(): void {
+    this.selectedTripId = null;
+    this.selectedTrip = null;
+    this.selectedStop = null;
+    this.markers.forEach(m => this.map.removeLayer(m));
+    this.markers = [];
+    if (this.polyline) {
+      this.map.removeLayer(this.polyline);
+    }
   }
 
   openTripSidebar(): void {
@@ -244,7 +354,7 @@ const icon = L.divIcon({
 
   onTripSelected(tripId: number): void {
     this.selectedTripId = tripId;
-    this.selectedStop   = null;
+    this.selectedStop = null;
 
     this.markers.forEach(m => this.map.removeLayer(m));
     this.markers = [];
@@ -257,7 +367,7 @@ const icon = L.divIcon({
           const stops = res.stops;
 
           for (let i = 0; i < stops.length; i++) {
-            const stop   = stops[i];
+            const stop = stops[i];
             const circle = L.circleMarker([stop.city.lat, stop.city.long], {
               radius: 8,
               fillColor: '#3b82f6',
@@ -358,9 +468,9 @@ const icon = L.divIcon({
     }).addTo(this.map);
 
     const stopData = {
-      lat:         this.pendingLatLng.lat,
-      long:        this.pendingLatLng.lng,
-      title:       this.stopTitle,
+      lat: this.pendingLatLng.lat,
+      long: this.pendingLatLng.lng,
+      title: this.stopTitle,
       description: this.stopDescription,
     };
 
@@ -395,7 +505,7 @@ const icon = L.divIcon({
     const coords = points.map(p => `${p.lng},${p.lat}`).join(';');
     const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
 
-    const res  = await fetch(url);
+    const res = await fetch(url);
     const data = await res.json();
 
     if (data.code !== 'Ok' || !data.routes?.[0]) return [];
@@ -482,24 +592,44 @@ const icon = L.divIcon({
     });
   }
   onStopAdded(stop: { lat: number; lon: number; title: string }): void {
-  const circle = L.circleMarker([stop.lat, stop.lon], {
-    radius: 8,
-    fillColor: '#3b82f6',
-    color: 'white',
-    weight: 3,
-    opacity: 1,
-    fillOpacity: 1,
-  }).addTo(this.map);
+    const circle = L.circleMarker([stop.lat, stop.lon], {
+      radius: 8,
+      fillColor: '#3b82f6',
+      color: 'white',
+      weight: 3,
+      opacity: 1,
+      fillOpacity: 1,
+    }).addTo(this.map);
 
-  circle.on('click', () => {
-    this.ngZone.run(() => {
-      this.selectedStop = { title: stop.title, city: { lat: stop.lat, long: stop.lon } };
-      this.cdr.detectChanges();
+    circle.on('click', () => {
+      this.ngZone.run(() => {
+        this.selectedStop = { title: stop.title, city: { lat: stop.lat, long: stop.lon } };
+        this.cdr.detectChanges();
+      });
     });
-  });
 
-  this.markers.push(circle);
-  this.updatePolyline();
-  this.map.panTo([stop.lat, stop.lon]);
-}
+    this.markers.push(circle);
+    this.updatePolyline();
+    this.map.panTo([stop.lat, stop.lon]);
+  }
+
+  onTripObjectSelected(trip: any): void {
+    this.selectedTrip = trip;
+  }
+
+  onStopSelectedFromSidebar(stop: any): void {
+    this.selectedStop = stop;
+    this.cdr.detectChanges();
+  }
+
+  get activeStopFriendName(): string {
+    if (this.isFriendTripsSidebarOpen && this.selectedFriend) {
+      return this.selectedFriend.username;
+    }
+    return this.currentUser?.username || '';
+  }
+
+  get activeStopTripDate(): string {
+    return this.selectedTrip?.created_at || '';
+  }
 }

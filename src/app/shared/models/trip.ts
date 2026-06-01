@@ -25,6 +25,7 @@ export interface TripCreate {
     title: string;
     city?: CityData;
     privacy_id?: number;
+    created_at?: string;
     }
 
     export interface TripBaseOut {
@@ -33,6 +34,7 @@ export interface TripCreate {
     city?: CityData;
     status_code: number;
     message: string;
+    created_at?: string;
     }
 
     export interface TripsOut {
