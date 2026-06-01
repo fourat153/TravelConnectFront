@@ -396,3 +396,87 @@
     max-height: 60vh !important;
   }
 }
+
+.stop-title-bold {
+  font-weight: 800;
+  font-size: 20px;
+  color: #111;
+  margin: 0;
+}
+
+.stop-meta {
+  font-size: 13px;
+  color: #666;
+  margin: 4px 0 0;
+}
+
+.stop-desc {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #444;
+}
+
+.custom-slider {
+  position: relative;
+  max-width: 400px;
+  margin: 0 auto;
+
+  .slider-container {
+    width: 100%;
+    height: 250px;
+    overflow: hidden;
+    border-radius: 8px;
+    position: relative;
+  }
+
+  .slider-img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+  }
+
+  .slider-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+
+    &.prev {
+      left: 10px;
+    }
+
+    &.next {
+      right: 10px;
+    }
+  }
+
+  .slider-btn-icon {
+    font-size: 14px;
+  }
+
+  .slider-dots {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .slider-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+}
