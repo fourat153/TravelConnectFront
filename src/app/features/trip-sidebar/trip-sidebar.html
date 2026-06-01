@@ -29,6 +29,9 @@
           </div>
           <div class="trip-info">
             <strong>{{ trip.title }}</strong>
+            <span class="trip-date" *ngIf="trip.created_at">
+              Created on {{ trip.created_at | date:'mediumDate' }}
+            </span>
           </div>
           <i class="pi pi-chevron-right trip-item__arrow"></i>
         </div>
@@ -47,12 +50,13 @@
 
   <!-- ══════════════════════════════════════════════════════════
        DETAIL VIEW
-  ══════════════════════════════════════════════════════════ -->
+   ══════════════════════════════════════════════════════════ -->
   <ng-container *ngIf="view === 'detail'">
     <div class="sidebar-header">
       <div>
         <p-button icon="pi pi-arrow-left" label="Back" [text]="true" severity="secondary" (click)="goToList()" />
         <h2>{{ activeTrip?.title }}</h2>
+        <p *ngIf="activeTrip?.created_at">Created on {{ activeTrip?.created_at | date:'mediumDate' }}</p>
       </div>
       <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="secondary" (click)="close()" />
     </div>
@@ -68,7 +72,7 @@
 
         <!-- ── existing stops list ── -->
         <div class="stop-list" *ngIf="detailStops.length > 0">
-          <div *ngFor="let stop of detailStops; let i = index" class="stop-card">
+          <div *ngFor="let stop of detailStops; let i = index" class="stop-card" (click)="onStopClick(stop)" style="cursor: pointer;">
             <div class="stop-card__index">{{ i + 1 }}</div>
             <div class="stop-card__body">
               <span class="stop-card__title">{{ stop.title }}</span>

@@ -4,14 +4,20 @@
   <div class="sheet-header">
     <div class="header-content">
       <div>
-        <h2>{{ stop?.title }}</h2>
-        <p class="stop-desc">{{ stop?.description }}</p>
+        <h2 class="stop-title-bold" style="font-weight: 800; font-size: 20px; color: #111; margin: 0;">{{ stop?.title }}
+        </h2>
+        <p class="stop-meta" style="font-size: 13px; color: #666; margin: 4px 0 0;">
+          <span>By {{ friendName || 'Ahmed Liouane' }}</span>
+          <span *ngIf="tripDate"> • Created on {{ tripDate | date:'mediumDate' }}</span>
+        </p>
+        <p class="stop-desc" *ngIf="stop?.description" style="margin-top: 6px; font-size: 13px; color: #444;">{{
+          stop?.description }}</p>
       </div>
-      <p-button icon="pi pi-times" [rounded]="true" [text]="true" (click)="close()" />
+      <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="secondary" (click)="close()" />
     </div>
   </div>
 
-  <div class="post-form">
+  <div class="post-form" *ngIf="!friendName">
     <div class="form-top">
       <p-avatar label="?" shape="circle" size="normal" />
       <input pInputText type="text" [(ngModel)]="postTitle" placeholder="What's on your mind?" class="post-input" />
@@ -35,36 +41,91 @@
 
   <div class="feed">
     @if (posts.length === 0) {
-    <p class="empty">No posts yet. Be the first!</p>
+    <p class="empty">No photos yet</p>
     } @else {
-    <p-timeline [value]="posts" align="alternate">
+    <div class="instagram-feed">
+      <div *ngFor="let post of posts" class="instagram-post-card">
 
-      <ng-template pTemplate="marker" let-post>
-        <p-avatar shape="circle" size="normal" styleClass="timeline-avatar" />
-      </ng-template>
-
-      <ng-template pTemplate="content" let-post>
-        <p-card styleClass="post-card">
-          <ng-template pTemplate="header">
-            <div class="post-meta">
-              <span class="post-author">hathi bch nhiz essm men token</span>
-              <span class="post-time">{{ post.created_at | date:'short' }}</span>
-            </div>
-          </ng-template>
-
-          <p class="post-title">{{ post.title }}</p>
-
-          @if (post.images.length > 0) {
-          <div class="post-images">
-            @for (img of post.images; track img.id) {
-            <img [src]="img.link" class="post-img" />
-            }
+        <!-- Post Header -->
+        <div class="instagram-post-header">
+          <p-avatar [label]="getInitials(friendName || 'Ahmed Liouane')" shape="circle" size="normal"
+            class="author-avatar" />
+          <div class="post-header-info">
+            <span class="post-author-name">{{ friendName || 'Ahmed Liouane' }}</span>
+            <span class="post-date-time">{{ post.created_at | date:'short' }}</span>
           </div>
-          }
-        </p-card>
-      </ng-template>
+        </div>
 
-    </p-timeline>
+        <!-- Post Title/Heading at the top -->
+        <div class="post-title-top">
+          <h3>{{ post.title }}</h3>
+        </div>
+
+        <!-- Post Photos (Custom Image Slider) -->
+        <div class="custom-slider" *ngIf="post.images && post.images.length > 0" style="position: relative; max-width: 400px; margin: 0 auto;">
+          <div style="width: 100%; height: 250px; overflow: hidden; border-radius: 8px; position: relative;">
+            <img [src]="post.images[currentImageIndex[post.id] || 0]?.link" style="width: 100%; height: 100%; display: block; object-fit: cover;" />
+            
+            <!-- Left Arrow -->
+            <button *ngIf="post.images.length > 1" (click)="prevImage(post)" 
+              style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10;">
+              <i class="pi pi-chevron-left" style="font-size: 14px;"></i>
+            </button>
+            
+            <!-- Right Arrow -->
+            <button *ngIf="post.images.length > 1" (click)="nextImage(post)" 
+              style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10;">
+              <i class="pi pi-chevron-right" style="font-size: 14px;"></i>
+            </button>
+          </div>
+
+          <!-- Dot Indicators -->
+          <div *ngIf="post.images.length > 1" style="display: flex; justify-content: center; gap: 6px; margin-top: 8px;">
+            <span *ngFor="let img of post.images; let i = index" 
+              (click)="setImageIndex(post, i)"
+              [style.background]="(currentImageIndex[post.id] || 0) === i ? '#3b82f6' : '#ccc'"
+              style="width: 8px; height: 8px; border-radius: 50%; cursor: pointer; transition: background 0.15s;">
+            </span>
+          </div>
+        </div>
+
+        <!-- Post Description Text below the photos -->
+        <div class="post-description-section">
+          <p class="description-text">{{ post.title }}</p>
+        </div>
+
+        <!-- Like Button -->
+        <div class="post-actions-row">
+          <button class="like-btn" [class.liked]="post.has_liked" (click)="toggleLike(post)">
+            <i class="pi" [ngClass]="post.has_liked ? 'pi-heart-fill' : 'pi-heart'"></i>
+            <span class="likes-count">{{ post.likes_count || 0 }}</span>
+          </button>
+        </div>
+
+        <!-- Comments Section -->
+        <div class="post-comments-container">
+          <div class="comments-list" *ngIf="post.comments && post.comments.length > 0">
+            <div *ngFor="let comment of post.comments" class="comment-item">
+              <span class="commenter-name">{{ comment.username }}</span>
+              <span class="comment-text">{{ comment.text }}</span>
+            </div>
+          </div>
+          <div class="no-comments-msg" *ngIf="!post.comments || post.comments.length === 0">
+            No comments yet.
+          </div>
+
+          <!-- Add Comment Input Bar -->
+          <div class="comment-input-bar">
+            <input type="text" [(ngModel)]="commentInputs[post.id]" placeholder="Add a comment..." class="comment-input"
+              (keyup.enter)="addComment(post)" />
+            <button class="comment-send-btn" (click)="addComment(post)" [disabled]="!commentInputs[post.id]?.trim()">
+              <i class="pi pi-send"></i>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
     }
   </div>
 

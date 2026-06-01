@@ -57,7 +57,10 @@ export class TripSidebarComponent implements OnInit, OnChanges {
   @Output() closed       = new EventEmitter<void>();
   @Output() tripCreated  = new EventEmitter<TripOut>();
   @Output() tripSelected = new EventEmitter<number>();
+  @Output() tripObjectSelected = new EventEmitter<TripOut>();
+  @Output() stopSelected = new EventEmitter<any>();
   @Output() stopAdded = new EventEmitter<{ lat: number; lon: number; title: string }>();
+  @Output() backToList = new EventEmitter<void>();
   view: View = 'list';
 
   // ── list ─────────────────────────────────────────────────────
@@ -180,6 +183,7 @@ export class TripSidebarComponent implements OnInit, OnChanges {
     this.activeTrip     = trip;
     this.selectedTripId = trip.id;
     this.tripSelected.emit(trip.id);
+    this.tripObjectSelected.emit(trip);
     this.openDetail(trip.id);
   }
 
@@ -297,9 +301,14 @@ export class TripSidebarComponent implements OnInit, OnChanges {
   goToList(): void {
     this.view       = 'list';
     this.activeTrip = undefined;
+    this.backToList.emit();
   }
 
   close(): void { this.closed.emit(); }
+
+  onStopClick(stop: any): void {
+    this.stopSelected.emit(stop);
+  }
 
   setPrivacy(value: string): void {
     this.createForm.get('privacy')!.setValue(value);
@@ -328,7 +337,7 @@ export class TripSidebarComponent implements OnInit, OnChanges {
       next: (res) => {
         this.createLoading = false;
         if (res.status_code === 201 && res.id) {
-          const newTrip: TripOut = { id: res.id, title: res.title!, city: res.city };
+          const newTrip: TripOut = { id: res.id, title: res.title!, city: res.city, created_at: res.created_at };
           this.trips.unshift(newTrip);
           this.tripCreated.emit(newTrip);
           this.goToList();
