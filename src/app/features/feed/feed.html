@@ -206,13 +206,35 @@
       <i class="pi pi-exclamation-triangle"></i> {{ imageError }}
     </div>
 
-    <!-- Location Field -->
-    <div class="form-field">
-      <label for="locationInput">Trip Location</label>
-      <div class="input-icon-wrapper">
-        <i class="pi pi-map-marker location-field-icon"></i>
-        <input id="locationInput" type="text" pInputText placeholder="e.g. Kyoto, Japan or Rome, Italy"
-          [(ngModel)]="newLocation" class="dialog-input">
+    <div [formGroup]="createForm">
+      <!-- Trip Title -->
+      <div class="form-field">
+        <label for="title">Trip Title</label>
+        <input pInputText id="title" formControlName="title" placeholder="e.g. Weekend in Tunis" class="dialog-input w-full" />
+        <small class="p-error" *ngIf="createForm.get('title')?.touched && createForm.get('title')?.invalid">
+          Title is required (min 2 chars)
+        </small>
+      </div>
+
+      <!-- Privacy -->
+      <div class="form-field">
+        <label>Privacy</label>
+        <div class="seg">
+          <button
+            type="button"
+            *ngFor="let opt of privacyOptions"
+            [class.active]="selectedPrivacy === opt.value"
+            (click)="setPrivacy(opt.value)">
+            <span class="dot" [style.background]="opt.color"></span>
+            {{ opt.label }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Route -->
+      <div class="form-field">
+        <label>Route</label>
+        <app-trip-stop-input (stopsChange)="onStopsChange($event)" />
       </div>
     </div>
 
