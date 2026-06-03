@@ -1,10 +1,12 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { BottomNavComponent, NavTab } from '../../shared/components/bottom-nav/bottom-nav';
 import { AuthService } from '../../core/services/auth';
 import { FeedService, FeedPost } from '../../core/services/feed';
+import { TripService } from '../../core/services/trip';
+import { TripStopInputComponent, TripStop } from '../../shared/components/trip-stop-input/trip-stop-input.component';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
@@ -17,12 +19,14 @@ import { CarouselModule } from 'primeng/carousel';
   imports: [
     CommonModule,
     FormsModule,
+    ReactiveFormsModule,
     BottomNavComponent,
     DialogModule,
     InputTextModule,
     TextareaModule,
     ButtonModule,
-    CarouselModule
+    CarouselModule,
+    TripStopInputComponent
   ],
   templateUrl: './feed.html',
   styleUrl: './feed.scss'
@@ -31,6 +35,8 @@ export class FeedComponent implements OnInit {
   private router = inject(Router);
   private authService = inject(AuthService);
   private feedService = inject(FeedService);
+  private tripService = inject(TripService);
+  private fb = inject(FormBuilder);
   private cdr = inject(ChangeDetectorRef);
 
   posts: FeedPost[] = [];
@@ -53,6 +59,15 @@ export class FeedComponent implements OnInit {
   selectedImages: File[] = [];
   imageError = '';
 
+  // Trip Form Properties
+  createForm!: FormGroup;
+  tripStops: TripStop[] = [];
+  privacyOptions = [
+    { value: 'public',       label: 'Public',  color: '#27A168' },
+    { value: 'friends_only', label: 'Friends', color: '#178FD8' },
+    { value: 'private',      label: 'Private', color: '#888780' },
+  ];
+
   // Store active comment input text per post ID
   commentInputs: { [postId: number]: string } = {};
 
@@ -64,6 +79,12 @@ export class FeedComponent implements OnInit {
   popularEmojis = ['😀', '✈️', '🌍', '🏖️', '📸', '😍', '❤️', '🔥', '🙌', '✨', '🍕', '🗺️', '🥳', '😎', '👍', '👏', '🌟', '🍹', '🚗', '🏔️'];
 
   ngOnInit() {
+    this.createForm = this.fb.group({
+      title:             ['', [Validators.required, Validators.minLength(2)]],
+      privacy:           ['public'],
+      include_home_city: [false],
+    });
+
     this.authService.currentUser$.subscribe(user => {
       if (user) {
         this.currentUser = user;
@@ -252,6 +273,18 @@ export class FeedComponent implements OnInit {
     this.selectedImages.splice(index, 1);
   }
 
+  onStopsChange(stops: TripStop[]): void {
+    this.tripStops = stops;
+  }
+
+  setPrivacy(value: string): void {
+    this.createForm.get('privacy')!.setValue(value);
+  }
+
+  get selectedPrivacy(): string {
+    return this.createForm.get('privacy')!.value;
+  }
+
   openCreateModal(): void {
     this.showCreateModal = true;
     this.newDescription = '';
@@ -259,6 +292,8 @@ export class FeedComponent implements OnInit {
     this.newImageUrlsBase64 = [];
     this.selectedImages = [];
     this.imageError = '';
+    this.tripStops = [];
+    this.createForm?.reset({ title: '', privacy: 'public', include_home_city: false });
   }
 
   submitPost(): void {
@@ -266,44 +301,55 @@ export class FeedComponent implements OnInit {
       this.imageError = 'At least one trip photo is required.';
       return;
     }
+    if (this.createForm.invalid) {
+      this.imageError = 'Trip Title is required (min 2 chars).';
+      return;
+    }
 
-    const locationName = this.newLocation.trim() || 'Unknown Location';
-    const description = this.newDescription.trim();
+    const payload = {
+      ...this.createForm.value,
+      stops: this.tripStops.map((stop, index) => ({
+        label: stop.label,
+        lat:   stop.lat,
+        lon:   stop.lon,
+        order: index,
+      })),
+    };
 
-    // Run Nominatim geocoding on the location name first
-    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}&limit=1`)
-      .then(res => res.json())
-      .then(data => {
-        let lat = 0.0;
-        let lon = 0.0;
-        if (data && data.length > 0) {
-          lat = parseFloat(data[0].lat);
-          lon = parseFloat(data[0].lon);
+    this.tripService.createTrip(payload).subscribe({
+      next: (tripRes) => {
+        if (tripRes.status_code === 201 && tripRes.id) {
+          // Trip created successfully! Now create the feed post.
+          let locationName = tripRes.title || 'Unknown Location';
+          let lat = 0.0;
+          let lon = 0.0;
+
+          if (this.tripStops.length > 0) {
+            const lastStop = this.tripStops[this.tripStops.length - 1];
+            locationName = lastStop.label || locationName;
+            lat = lastStop.lat || 0.0;
+            lon = lastStop.lon || 0.0;
+          }
+
+          const description = this.newDescription.trim();
+
+          this.feedService.createFeedPost(description, locationName, lat, lon, this.selectedImages).subscribe({
+            next: () => {
+              this.showCreateModal = false;
+              this.loadFeed();
+            },
+            error: (err) => {
+              console.error(err);
+              this.imageError = 'Failed to create feed post. Please try again.';
+            }
+          });
+        } else {
+          this.imageError = tripRes.message || 'Failed to create trip.';
         }
-
-        this.feedService.createFeedPost(description, locationName, lat, lon, this.selectedImages).subscribe({
-          next: () => {
-            this.showCreateModal = false;
-            this.loadFeed();
-          },
-          error: (err) => {
-            console.error(err);
-            this.imageError = 'Failed to create post. Please try again.';
-          }
-        });
-      })
-      .catch(() => {
-        // Fallback to default coordinates
-        this.feedService.createFeedPost(description, locationName, 0.0, 0.0, this.selectedImages).subscribe({
-          next: () => {
-            this.showCreateModal = false;
-            this.loadFeed();
-          },
-          error: (err) => {
-            console.error(err);
-            this.imageError = 'Failed to create post. Please try again.';
-          }
-        });
-      });
+      },
+      error: () => {
+        this.imageError = 'Something went wrong while creating the trip. Try again.';
+      }
+    });
   }
 }
