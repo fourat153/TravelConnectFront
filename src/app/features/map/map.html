@@ -13,7 +13,8 @@
         (tripObjectSelected)="onTripObjectSelected($event)"
         (stopSelected)="onStopSelectedFromSidebar($event)"
         (stopAdded)="onStopAdded($event)"
-        (backToList)="onBackToList()">
+        (backToList)="onBackToList()"
+        (stopsReordered)="onStopsReordered($event)">
       </app-trip-sidebar>
     }
 
@@ -66,6 +67,7 @@
         <app-stop-sheet
           [stop]="selectedStop"
           [friendName]="activeStopFriendName"
+          [friendProfilePicture]="selectedFriend?.profile_picture || ''"
           [tripDate]="activeStopTripDate"
           (closed)="selectedStop = null">
         </app-stop-sheet>

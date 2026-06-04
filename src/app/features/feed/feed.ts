@@ -63,9 +63,9 @@ export class FeedComponent implements OnInit {
   createForm!: FormGroup;
   tripStops: TripStop[] = [];
   privacyOptions = [
-    { value: 'public',       label: 'Public',  color: '#27A168' },
+    { value: 'public', label: 'Public', color: '#27A168' },
     { value: 'friends_only', label: 'Friends', color: '#178FD8' },
-    { value: 'private',      label: 'Private', color: '#888780' },
+    { value: 'private', label: 'Private', color: '#888780' },
   ];
 
   // Store active comment input text per post ID
@@ -80,8 +80,8 @@ export class FeedComponent implements OnInit {
 
   ngOnInit() {
     this.createForm = this.fb.group({
-      title:             ['', [Validators.required, Validators.minLength(2)]],
-      privacy:           ['public'],
+      title: ['', [Validators.required, Validators.minLength(2)]],
+      privacy: ['public'],
       include_home_city: [false],
     });
 
@@ -144,8 +144,8 @@ export class FeedComponent implements OnInit {
     post.likesCount = post.hasLiked ? post.likesCount + 1 : post.likesCount - 1;
     this.cdr.detectChanges();
 
-    const request$ = originalHasLiked 
-      ? this.feedService.unlikePost(post.id) 
+    const request$ = originalHasLiked
+      ? this.feedService.unlikePost(post.id)
       : this.feedService.likePost(post.id);
 
     request$.subscribe({
@@ -310,8 +310,8 @@ export class FeedComponent implements OnInit {
       ...this.createForm.value,
       stops: this.tripStops.map((stop, index) => ({
         label: stop.label,
-        lat:   stop.lat,
-        lon:   stop.lon,
+        lat: stop.lat,
+        lon: stop.lon,
         order: index,
       })),
     };

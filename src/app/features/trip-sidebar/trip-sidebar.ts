@@ -17,6 +17,7 @@ import { TripStopInputComponent, TripStop } from '../../shared/components/trip-s
 import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
+import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 
 interface NominatimResult {
   place_id: number;
@@ -48,6 +49,7 @@ type View = 'list' | 'detail' | 'create';
     MessageModule,
     ToggleSwitchModule,
     TripStopInputComponent,
+    DragDropModule,
   ]
 })
 export class TripSidebarComponent implements OnInit, OnChanges {
@@ -61,6 +63,7 @@ export class TripSidebarComponent implements OnInit, OnChanges {
   @Output() stopSelected = new EventEmitter<any>();
   @Output() stopAdded = new EventEmitter<{ lat: number; lon: number; title: string }>();
   @Output() backToList = new EventEmitter<void>();
+  @Output() stopsReordered = new EventEmitter<StopOut[]>();
   view: View = 'list';
 
   // ── list ─────────────────────────────────────────────────────
@@ -308,6 +311,11 @@ export class TripSidebarComponent implements OnInit, OnChanges {
 
   onStopClick(stop: any): void {
     this.stopSelected.emit(stop);
+  }
+
+  onStopDrop(event: CdkDragDrop<StopOut[]>): void {
+    moveItemInArray(this.detailStops, event.previousIndex, event.currentIndex);
+    this.stopsReordered.emit(this.detailStops);
   }
 
   setPrivacy(value: string): void {

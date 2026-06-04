@@ -1,7 +1,8 @@
-import { Component, Input, Output, EventEmitter, OnInit, inject, ChangeDetectorRef, AfterViewInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, inject, ChangeDetectorRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PostService } from '../../../core/services/post';
+import { AuthService } from '../../../core/services/auth';
 import { PostOut } from '../../../shared/models/post';
 
 import { TimelineModule } from 'primeng/timeline';
@@ -17,14 +18,19 @@ import { GalleriaModule } from 'primeng/galleria';
   templateUrl: './stop-sheet.html',
   styleUrl: './stop-sheet.scss'
 })
-export class StopSheetComponent implements OnInit {
+export class StopSheetComponent implements OnInit, OnChanges {
   @Input() stop: any = null;
   @Input() friendName: string = '';
+  @Input() friendProfilePicture: string = '';
   @Input() tripDate: string = '';
   @Output() closed = new EventEmitter<void>();
 
   private postService = inject(PostService);
+  private authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
+  
+  currentUser: any = null;
+  currentUserInitials = '';
   
   posts: PostOut[] = [];
   postTitle = '';
@@ -62,7 +68,35 @@ export class StopSheetComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.loadPosts();
+    this.authService.currentUser$.subscribe((user: any) => {
+      if (user) {
+        this.currentUser = user;
+        this.currentUserInitials = (user.firstname?.[0] ?? '') + (user.lastname?.[0] ?? '');
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  get authorPhoto(): string | undefined {
+    return this.friendName ? this.friendProfilePicture : this.currentUser?.profile_picture;
+  }
+
+  get authorInitials(): string {
+    return this.friendName ? this.getInitials(this.friendName) : this.currentUserInitials;
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['stop'] && this.stop) {
+      this.posts = [];
+      this.postTitle = '';
+      this.selectedImages = [];
+      this.imagePreviews = [];
+      this.isSubmitting = false;
+      this.errorMessage = '';
+      this.commentInputs = {};
+      this.currentImageIndex = {};
+      this.loadPosts();
+    }
   }
   
   loadPosts() {

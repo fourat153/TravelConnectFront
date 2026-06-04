@@ -17,7 +17,10 @@
 
   <div class="post-form" *ngIf="!friendName">
     <div class="form-top">
-      <p-avatar label="?" shape="circle" size="normal" />
+      <p-avatar *ngIf="currentUser?.profile_picture; else myInitialsAvatar" [image]="currentUser.profile_picture" shape="circle" size="normal" />
+      <ng-template #myInitialsAvatar>
+        <p-avatar [label]="currentUserInitials" shape="circle" size="normal" />
+      </ng-template>
       <input pInputText type="text" [(ngModel)]="postTitle" placeholder="What's on your mind?" class="post-input" />
     </div>
 
@@ -46,10 +49,12 @@
 
         <!-- Post Header -->
         <div class="instagram-post-header">
-          <p-avatar [label]="getInitials(friendName)" shape="circle" size="normal"
-            class="author-avatar" />
+          <p-avatar *ngIf="authorPhoto; else authorInitialsAvatar" [image]="authorPhoto" shape="circle" size="normal" class="author-avatar" />
+          <ng-template #authorInitialsAvatar>
+            <p-avatar [label]="authorInitials" shape="circle" size="normal" class="author-avatar" />
+          </ng-template>
           <div class="post-header-info">
-            <span class="post-author-name">{{ friendName }}</span>
+            <span class="post-author-name">{{ friendName || currentUser?.username }}</span>
             <span class="post-date-time">{{ post.created_at | date:'short' }}</span>
           </div>
         </div>
@@ -66,12 +71,12 @@
             
             <!-- Left Arrow -->
             <button *ngIf="post.images.length > 1" (click)="prevImage(post)" class="slider-btn prev">
-              <i class="pi pi-chevron-left" class="slider-btn-icon"></i>
+              <i class="pi pi-chevron-left slider-btn-icon"></i>
             </button>
             
             <!-- Right Arrow -->
             <button *ngIf="post.images.length > 1" (click)="nextImage(post)" class="slider-btn next">
-              <i class="pi pi-chevron-right" class="slider-btn-icon"></i>
+              <i class="pi pi-chevron-right slider-btn-icon"></i>
             </button>
           </div>
 
@@ -112,6 +117,10 @@
 
           <!-- Add Comment Input Bar -->
           <div class="comment-input-bar">
+            <p-avatar *ngIf="currentUser?.profile_picture; else myCommentInitialsAvatar" [image]="currentUser.profile_picture" shape="circle" style="width: 24px; height: 24px; font-size: 11px; flex-shrink: 0;" />
+            <ng-template #myCommentInitialsAvatar>
+              <p-avatar [label]="currentUserInitials" shape="circle" style="width: 24px; height: 24px; font-size: 11px; flex-shrink: 0;" />
+            </ng-template>
             <input type="text" [(ngModel)]="commentInputs[post.id]" placeholder="Add a comment..." class="comment-input"
               (keyup.enter)="addComment(post)" />
             <button class="comment-send-btn" (click)="addComment(post)" [disabled]="!commentInputs[post.id]?.trim()">
