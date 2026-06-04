@@ -13,10 +13,13 @@ body {
   font-family: 'Inter', sans-serif;
   background: #ebf4ff;
 }
+
 .leaflet-tile {
   image-rendering: auto;
 }
-html, body {
+
+html,
+body {
   overflow: hidden;
   height: 100%;
   width: 100%;
@@ -24,11 +27,13 @@ html, body {
   padding: 0;
 }
 
-app-root, app-map {
+app-root,
+app-map {
   display: block;
   height: 100%;
   position: relative;
 }
+
 /* ── Add to src/styles.scss ───────────────────────────────── */
 
 .friend-pin {

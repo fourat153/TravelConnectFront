@@ -622,6 +622,40 @@ export class Map implements AfterViewInit, OnInit {
     this.cdr.detectChanges();
   }
 
+  async onStopsReordered(stops: any[]): Promise<void> {
+    this.markers.forEach(m => this.map.removeLayer(m));
+    this.markers = [];
+    if (this.polyline) this.map.removeLayer(this.polyline);
+
+    const cities: L.LatLngTuple[] = [];
+    for (let i = 0; i < stops.length; i++) {
+      const stop = stops[i];
+      const circle = L.circleMarker([stop.city.lat, stop.city.long], {
+        radius: 8,
+        fillColor: '#3b82f6',
+        color: 'white',
+        weight: 3,
+        opacity: 1,
+        fillOpacity: 1,
+      }).addTo(this.map);
+
+      this.markers.push(circle);
+      cities.push([stop.city.lat, stop.city.long]);
+
+      circle.on('click', () => {
+        this.ngZone.run(() => {
+          this.selectedStop = stop;
+          this.cdr.detectChanges();
+        });
+      });
+    }
+
+    if (cities.length > 1) {
+      const points = this.markers.map(m => m.getLatLng());
+      await this.drawRoute(points, '#3b82f6');
+    }
+  }
+
   get activeStopFriendName(): string {
     if (this.isFriendTripsSidebarOpen && this.selectedFriend) {
       return this.selectedFriend.username;

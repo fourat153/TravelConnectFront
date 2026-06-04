@@ -104,7 +104,7 @@
           <div class="add-comment-container">
             <div class="emoji-picker-wrapper">
               <i class="pi pi-face-smile comment-emoji-icon" (click)="toggleEmojiPicker(post.id)"></i>
-              
+
               <!-- Popover Emoji Picker -->
               <div class="emoji-picker-popover" *ngIf="activeEmojiPickerPostId === post.id">
                 <span class="emoji-item" *ngFor="let emoji of popularEmojis" (click)="addEmoji(post.id, emoji)">
@@ -132,7 +132,8 @@
       <div class="user-profile-row">
         <div class="user-avatar-circle">
           <span *ngIf="!currentUser?.profile_picture">{{ currentUserInitials }}</span>
-          <img *ngIf="currentUser?.profile_picture" [src]="currentUser.profile_picture" [alt]="getDisplayName(currentUser)">
+          <img *ngIf="currentUser?.profile_picture" [src]="currentUser.profile_picture"
+            [alt]="getDisplayName(currentUser)">
         </div>
         <div class="user-meta-info">
           <span class="user-fullname">{{ getDisplayName(currentUser) }}</span>
@@ -210,7 +211,8 @@
       <!-- Trip Title -->
       <div class="form-field">
         <label for="title">Trip Title</label>
-        <input pInputText id="title" formControlName="title" placeholder="e.g. Weekend in Tunis" class="dialog-input w-full" />
+        <input pInputText id="title" formControlName="title" placeholder="e.g. Weekend in Tunis"
+          class="dialog-input w-full" />
         <small class="p-error" *ngIf="createForm.get('title')?.touched && createForm.get('title')?.invalid">
           Title is required (min 2 chars)
         </small>
@@ -220,10 +222,7 @@
       <div class="form-field">
         <label>Privacy</label>
         <div class="seg">
-          <button
-            type="button"
-            *ngFor="let opt of privacyOptions"
-            [class.active]="selectedPrivacy === opt.value"
+          <button type="button" *ngFor="let opt of privacyOptions" [class.active]="selectedPrivacy === opt.value"
             (click)="setPrivacy(opt.value)">
             <span class="dot" [style.background]="opt.color"></span>
             {{ opt.label }}
