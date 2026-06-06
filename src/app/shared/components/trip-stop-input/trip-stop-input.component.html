@@ -1,4 +1,3 @@
-<p>trip-stop-input works!</p>
 <div class="stop-input-wrapper">
 
   <!-- ── Stop rows ─────────────────────────────────────────── -->
@@ -78,6 +77,44 @@
             </div>
           </li>
         </ul>
+
+        <!-- Stop photos section -->
+        <div class="stop-photos-section" *ngIf="allowPhotos">
+          <input
+            #stopFileInput
+            type="file"
+            (change)="onStopFilesSelected(row, $event)"
+            accept="image/*"
+            multiple
+            style="display: none;" />
+
+          <button
+            type="button"
+            class="add-photos-btn"
+            (click)="stopFileInput.click()">
+            <i class="pi pi-camera"></i>
+            <span>+ Add photos</span>
+          </button>
+
+          <div class="stop-photos-thumbnails" *ngIf="row.photoPreviews && row.photoPreviews.length > 0">
+            <div class="photo-thumbnail" *ngFor="let preview of row.photoPreviews; let imgIdx = index">
+              <img [src]="preview" class="thumb-img" alt="Stop photo preview">
+              <button
+                type="button"
+                class="remove-photo-btn"
+                (click)="removeStopPhoto(row, imgIdx); $event.stopPropagation()">
+                <i class="pi pi-times"></i>
+              </button>
+            </div>
+          </div>
+
+          <input
+            type="text"
+            [(ngModel)]="row.description"
+            (input)="emit()"
+            placeholder="Write something about this stop..."
+            class="stop-desc-input" />
+        </div>
       </div>
 
       <!-- remove button (only if more than 2 rows) -->

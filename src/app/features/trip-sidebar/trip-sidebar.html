@@ -71,8 +71,8 @@
       <ng-container *ngIf="!detailLoading">
 
         <!-- ── existing stops list ── -->
-        <div class="stop-list" *ngIf="detailStops.length > 0">
-          <div *ngFor="let stop of detailStops; let i = index" class="stop-card" (click)="onStopClick(stop)" style="cursor: pointer;">
+        <div class="stop-list" *ngIf="detailStops.length > 0" cdkDropList (cdkDropListDropped)="onStopDrop($event)">
+          <div *ngFor="let stop of detailStops; let i = index" class="stop-card" (click)="onStopClick(stop)" style="cursor: pointer;" cdkDrag>
             <div class="stop-card__index">{{ i + 1 }}</div>
             <div class="stop-card__body">
               <span class="stop-card__title">{{ stop.title }}</span>

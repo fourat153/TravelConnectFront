@@ -20,6 +20,7 @@ export interface FeedPost {
   hasLiked: boolean;
   comments: PostComment[];
   createdAt: string;
+  tripTitle?: string;
 }
 
 @Injectable({
@@ -74,7 +75,7 @@ export class FeedService {
     formData.append('location', location);
     formData.append('lat', lat.toString());
     formData.append('long', lon.toString()); // Backend expects long
-    
+
     images.forEach(image => {
       formData.append('images', image);
     });

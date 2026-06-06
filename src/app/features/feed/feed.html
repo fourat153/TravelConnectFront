@@ -1,5 +1,130 @@
 <!-- Right suggestions sidebar (desktop only) -->
 <aside class="feed-right-sidebar">
+<div class="app-shell">
+
+  <app-bottom-nav active="feed" (tabChanged)="onNavTabChanged($event)"></app-bottom-nav>
+
+  <div class="feed-content">
+
+    <div class="feed-main-container">
+
+      <!-- Top header bar for Feed -->
+      <header class="feed-header">
+        <div class="logo-wrapper">
+          <i class="pi pi-compass logo-icon"></i>
+          <span class="logo-text">TravelConnect</span>
+        </div>
+        <button class="share-trip-btn" (click)="openCreateModal()">
+          <i class="pi pi-plus-circle"></i>
+          <span>Share Trip</span>
+        </button>
+      </header>
+
+      <!-- Feed Posts list -->
+      <div class="posts-list">
+
+        <div class="post-card" *ngFor="let post of posts">
+
+          <!-- Post Header -->
+          <div class="post-header">
+            <div class="post-author-info">
+              <div class="author-avatar-wrapper">
+                <img [src]="post.authorAvatar" [alt]="post.authorName" class="author-avatar">
+              </div>
+              <div class="author-meta">
+                <span class="author-name">{{ post.authorName }}</span>
+                <span class="post-location">
+                  <i class="pi pi-map-marker"></i> {{ post.location }}<ng-container *ngIf="post.tripTitle"> · {{ post.tripTitle }}</ng-container>
+                </span>
+              </div>
+            </div>
+            <button class="post-options-btn" (click)="confirmDelete(post)">
+              <i class="pi pi-ellipsis-h"></i>
+            </button>
+          </div>
+
+          <!-- Post Photo Container (Double click to like) -->
+          <div class="post-image-container">
+            <p-carousel [value]="post.imageUrls" [numVisible]="1" [numScroll]="1" [circular]="true"
+              [showIndicators]="post.imageUrls.length > 1" [showNavigators]="post.imageUrls.length > 1">
+              <ng-template let-imgUrl pTemplate="item">
+                <img [src]="imgUrl" [alt]="post.location" class="post-image" (dblclick)="onImageDoubleClicked(post)">
+              </ng-template>
+            </p-carousel>
+
+            <!-- Large floating heart double click animation overlay -->
+            <div class="heart-animation-overlay" *ngIf="heartOverlayPostId === post.id">
+              <i class="pi pi-heart-fill animated-heart"></i>
+            </div>
+          </div>
+
+          <!-- Action buttons (Like, Comment, Share) -->
+          <div class="post-actions">
+            <div class="left-actions">
+              <button class="action-btn like-btn" [class.liked]="post.hasLiked" (click)="toggleLike(post)">
+                <i [class]="post.hasLiked ? 'pi pi-heart-fill' : 'pi pi-heart'"></i>
+              </button>
+              <button class="action-btn comment-btn" (click)="commentInput.focus()">
+                <i class="pi pi-comment"></i>
+              </button>
+              <button class="action-btn share-btn">
+                <i class="pi pi-send"></i>
+              </button>
+            </div>
+            <button class="action-btn bookmark-btn">
+              <i class="pi pi-bookmark"></i>
+            </button>
+          </div>
+
+          <!-- Likes Count -->
+          <div class="post-likes-info">
+            <span class="likes-text">{{ post.likesCount }} likes</span>
+          </div>
+
+          <!-- Post Caption -->
+          <div class="post-caption">
+            <span class="caption-author">{{ post.authorName }}</span>
+            <span class="caption-text">{{ post.description }}</span>
+          </div>
+
+          <!-- Comments Area -->
+          <div class="post-comments-section" *ngIf="post.comments.length > 0">
+            <div class="comments-list">
+              <div class="comment-item" *ngFor="let comment of post.comments">
+                <span class="comment-author">{{ comment.username }}</span>
+                <span class="comment-text">{{ comment.text }}</span>
+                <span class="comment-time">{{ comment.createdAt }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="post-time-ago">
+            <span>{{ post.createdAt }}</span>
+          </div>
+
+          <!-- Add Comment Input Box -->
+          <div class="add-comment-container">
+            <div class="emoji-picker-wrapper">
+              <i class="pi pi-face-smile comment-emoji-icon" (click)="toggleEmojiPicker(post.id)"></i>
+
+              <!-- Popover Emoji Picker -->
+              <div class="emoji-picker-popover" *ngIf="activeEmojiPickerPostId === post.id">
+                <span class="emoji-item" *ngFor="let emoji of popularEmojis" (click)="addEmoji(post.id, emoji)">
+                  {{ emoji }}
+                </span>
+              </div>
+            </div>
+            <input #commentInput type="text" placeholder="Add a comment..." class="comment-input-field"
+              [(ngModel)]="commentInputs[post.id]" (keyup.enter)="submitComment(post)">
+            <button class="comment-post-btn" [disabled]="!commentInputs[post.id] || !commentInputs[post.id].trim()"
+              (click)="submitComment(post)">
+              Post
+            </button>
+          </div>
+
+        </div>
+
+      </div>
 
   <div class="user-profile-row">
     <div class="user-avatar-circle">
@@ -11,6 +136,48 @@
       <span class="user-subtext">{{ currentUser?.email }}</span>
     </div>
     <button class="switch-profile-btn" (click)="onNavTabChanged('profile')">Profile</button>
+
+    <!-- Right suggestions sidebar (desktop only) -->
+    <aside class="feed-right-sidebar">
+
+      <div class="user-profile-row">
+        <div class="user-avatar-circle">
+          <span *ngIf="!currentUser?.profile_picture">{{ currentUserInitials }}</span>
+          <img *ngIf="currentUser?.profile_picture" [src]="currentUser.profile_picture"
+            [alt]="getDisplayName(currentUser)">
+        </div>
+        <div class="user-meta-info">
+          <span class="user-fullname">{{ getDisplayName(currentUser) }}</span>
+          <span class="user-subtext">{{ currentUser?.email }}</span>
+        </div>
+        <button class="switch-profile-btn" (click)="onNavTabChanged('profile')">Profile</button>
+      </div>
+
+      <div class="suggestions-header">
+        <span class="suggestions-title">Suggestions for you</span>
+        <button class="see-all-btn">See All</button>
+      </div>
+
+      <div class="suggestions-list">
+        <div class="suggestion-row" *ngFor="let sug of suggestions">
+          <div class="sug-avatar-wrapper">
+            <img [src]="sug.avatar" [alt]="sug.name" class="sug-avatar">
+          </div>
+          <div class="sug-info">
+            <span class="sug-name">{{ sug.name }}</span>
+            <span class="sug-subtext">Followed by {{ sug.mutualFriends }} friends</span>
+          </div>
+          <button class="connect-btn">Connect</button>
+        </div>
+      </div>
+
+      <footer class="feed-sidebar-footer">
+        <p>About • Help • Press • API • Jobs • Privacy • Terms</p>
+        <p class="copyright">© 2026 TRAVELCONNECT FROM DEEPMIND</p>
+      </footer>
+
+    </aside>
+
   </div>
 
   <div class="suggestions-header">
@@ -39,6 +206,33 @@
           <div *ngIf="!sug.profile_picture" class="sug-initials">
             {{ sug.firstname[0] }}{{ sug.lastname[0] }}
           </div>
+    </div>
+
+    <!-- Image Error message -->
+    <div class="form-error-msg" *ngIf="imageError">
+      <i class="pi pi-exclamation-triangle"></i> {{ imageError }}
+    </div>
+
+    <div [formGroup]="createForm">
+      <!-- Trip Title -->
+      <div class="form-field">
+        <label for="title">Trip Title</label>
+        <input pInputText id="title" formControlName="title" placeholder="e.g. Weekend in Tunis"
+          class="dialog-input w-full" />
+        <small class="p-error" *ngIf="createForm.get('title')?.touched && createForm.get('title')?.invalid">
+          Title is required (min 2 chars)
+        </small>
+      </div>
+
+      <!-- Privacy -->
+      <div class="form-field">
+        <label>Privacy</label>
+        <div class="seg">
+          <button type="button" *ngFor="let opt of privacyOptions" [class.active]="selectedPrivacy === opt.value"
+            (click)="setPrivacy(opt.value)">
+            <span class="dot" [style.background]="opt.color"></span>
+            {{ opt.label }}
+          </button>
         </div>
         <div class="sug-info">
           <span class="sug-name">{{ getFullName(sug) }}</span>
@@ -52,6 +246,28 @@
 
       <p class="no-suggestions" *ngIf="suggestions.length === 0">No suggestions right now.</p>
     </ng-container>
+      <!-- Route -->
+      <div class="form-field">
+        <label>Route</label>
+        <app-trip-stop-input [allowPhotos]="true" (stopsChange)="onStopsChange($event)" />
+      </div>
+    </div>
+
+    <!-- Caption/Description Field -->
+    <div class="form-field">
+      <label for="captionInput">Trip Description</label>
+      <textarea id="captionInput" pInputTextarea rows="4" placeholder="Write a description about your trip stop..."
+        [(ngModel)]="newDescription" class="dialog-textarea">
+      </textarea>
+    </div>
+
+    <!-- Actions Footer -->
+    <div class="form-actions-footer">
+      <button class="dialog-cancel-btn" (click)="showCreateModal = false">Cancel</button>
+      <button class="dialog-submit-btn" [disabled]="(!hasAnyStopPhotos() && newImageUrlsBase64.length === 0) || createForm.invalid" (click)="submitPost()">
+        Share Trip
+      </button>
+    </div>
 
   </div>
 

@@ -14,6 +14,7 @@ import { ButtonModule } from 'primeng/button';
 import { CarouselModule } from 'primeng/carousel';
 import { SuggestionsService } from '../../core/services/suggestions';
 import {SuggestionUser } from '../../shared/models/user';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-feed',
@@ -61,9 +62,9 @@ export class FeedComponent implements OnInit {
   createForm!: FormGroup;
   tripStops: TripStop[] = [];
   privacyOptions = [
-    { value: 'public',       label: 'Public',  color: '#27A168' },
+    { value: 'public', label: 'Public', color: '#27A168' },
     { value: 'friends_only', label: 'Friends', color: '#178FD8' },
-    { value: 'private',      label: 'Private', color: '#888780' },
+    { value: 'private', label: 'Private', color: '#888780' },
   ];
 
   // Store active comment input text per post ID
@@ -78,8 +79,8 @@ export class FeedComponent implements OnInit {
 
   ngOnInit() {
     this.createForm = this.fb.group({
-      title:             ['', [Validators.required, Validators.minLength(2)]],
-      privacy:           ['public'],
+      title: ['', [Validators.required, Validators.minLength(2)]],
+      privacy: ['public'],
       include_home_city: [false],
     });
 
@@ -152,8 +153,8 @@ getFullName(user: SuggestionUser): string {
     post.likesCount = post.hasLiked ? post.likesCount + 1 : post.likesCount - 1;
     this.cdr.detectChanges();
 
-    const request$ = originalHasLiked 
-      ? this.feedService.unlikePost(post.id) 
+    const request$ = originalHasLiked
+      ? this.feedService.unlikePost(post.id)
       : this.feedService.likePost(post.id);
 
     request$.subscribe({
@@ -304,8 +305,13 @@ getFullName(user: SuggestionUser): string {
     this.createForm?.reset({ title: '', privacy: 'public', include_home_city: false });
   }
 
+  hasAnyStopPhotos(): boolean {
+    return this.tripStops.some(s => s.photos && s.photos.length > 0);
+  }
+
   submitPost(): void {
-    if (this.selectedImages.length === 0) {
+    const stopsWithPhotos = this.tripStops.filter(s => s.photos && s.photos.length > 0);
+    if (stopsWithPhotos.length === 0 && this.selectedImages.length === 0) {
       this.imageError = 'At least one trip photo is required.';
       return;
     }
@@ -318,8 +324,8 @@ getFullName(user: SuggestionUser): string {
       ...this.createForm.value,
       stops: this.tripStops.map((stop, index) => ({
         label: stop.label,
-        lat:   stop.lat,
-        lon:   stop.lon,
+        lat: stop.lat,
+        lon: stop.lon,
         order: index,
       })),
     };
@@ -327,30 +333,50 @@ getFullName(user: SuggestionUser): string {
     this.tripService.createTrip(payload).subscribe({
       next: (tripRes) => {
         if (tripRes.status_code === 201 && tripRes.id) {
-          // Trip created successfully! Now create the feed post.
-          let locationName = tripRes.title || 'Unknown Location';
-          let lat = 0.0;
-          let lon = 0.0;
-
-          if (this.tripStops.length > 0) {
-            const lastStop = this.tripStops[this.tripStops.length - 1];
-            locationName = lastStop.label || locationName;
-            lat = lastStop.lat || 0.0;
-            lon = lastStop.lon || 0.0;
-          }
-
+          // Trip created successfully! Now create feed posts.
+          const postObservables = [];
           const description = this.newDescription.trim();
 
-          this.feedService.createFeedPost(description, locationName, lat, lon, this.selectedImages).subscribe({
-            next: () => {
-              this.showCreateModal = false;
-              this.loadFeed();
-            },
-            error: (err) => {
-              console.error(err);
-              this.imageError = 'Failed to create feed post. Please try again.';
+          // 1. Create global photo post if any global photos exist
+          if (this.selectedImages.length > 0) {
+            let locationName = tripRes.title || 'Unknown Location';
+            let lat = 0.0;
+            let lon = 0.0;
+
+            if (this.tripStops.length > 0) {
+              const lastStop = this.tripStops[this.tripStops.length - 1];
+              locationName = lastStop.label || locationName;
+              lat = lastStop.lat || 0.0;
+              lon = lastStop.lon || 0.0;
             }
+            postObservables.push(this.feedService.createFeedPost(description, locationName, lat, lon, this.selectedImages));
+          }
+
+          // 2. Create feed post for each stop that has photos
+          stopsWithPhotos.forEach(stop => {
+            const locationName = stop.label || 'Unknown Location';
+            const lat = stop.lat || 0.0;
+            const lon = stop.lon || 0.0;
+            const images = stop.photos || [];
+            const stopDescription = (stop.description || '').trim() || description;
+            postObservables.push(this.feedService.createFeedPost(stopDescription, locationName, lat, lon, images));
           });
+
+          if (postObservables.length > 0) {
+            forkJoin(postObservables).subscribe({
+              next: () => {
+                this.showCreateModal = false;
+                this.loadFeed();
+              },
+              error: (err) => {
+                console.error(err);
+                this.imageError = 'Failed to create feed posts. Please try again.';
+              }
+            });
+          } else {
+            this.showCreateModal = false;
+            this.loadFeed();
+          }
         } else {
           this.imageError = tripRes.message || 'Failed to create trip.';
         }
