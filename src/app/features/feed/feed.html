@@ -1,3 +1,5 @@
+<!-- Right suggestions sidebar (desktop only) -->
+<aside class="feed-right-sidebar">
 <div class="app-shell">
 
   <app-bottom-nav active="feed" (tabChanged)="onNavTabChanged($event)"></app-bottom-nav>
@@ -124,7 +126,16 @@
 
       </div>
 
+  <div class="user-profile-row">
+    <div class="user-avatar-circle">
+      <span *ngIf="!currentUser?.profile_picture">{{ currentUserInitials }}</span>
+      <img *ngIf="currentUser?.profile_picture" [src]="currentUser.profile_picture" [alt]="getDisplayName(currentUser)">
     </div>
+    <div class="user-meta-info">
+      <span class="user-fullname">{{ getDisplayName(currentUser) }}</span>
+      <span class="user-subtext">{{ currentUser?.email }}</span>
+    </div>
+    <button class="switch-profile-btn" (click)="onNavTabChanged('profile')">Profile</button>
 
     <!-- Right suggestions sidebar (desktop only) -->
     <aside class="feed-right-sidebar">
@@ -169,37 +180,32 @@
 
   </div>
 
-</div>
+  <div class="suggestions-header">
+    <span class="suggestions-title">Suggestions for you</span>
+    <button class="see-all-btn">See All</button>
+  </div>
 
-<!-- PrimeNG Modal Dialog for Sharing a New Trip Post -->
-<p-dialog [(visible)]="showCreateModal" [modal]="true" [draggable]="false" [resizable]="false"
-  header="Create New Trip Post"
-  [style]="{ width: '500px', 'max-width': '95vw', 'border-radius': '20px', overflow: 'hidden' }">
+  <div class="suggestions-list">
 
-  <div class="create-post-form">
-
-    <!-- Image Selector / Preview Container -->
-    <div class="image-select-area">
-      <input #fileInput type="file" (change)="onFileSelected($event)" accept="image/*" multiple style="display: none;">
-
-      <div class="placeholder-content" *ngIf="newImageUrlsBase64.length === 0" (click)="triggerImageUpload(fileInput)">
-        <i class="pi pi-images upload-icon"></i>
-        <span>Click to select images from your trip</span>
-        <span class="upload-hint">You can select multiple photos (PNG, JPG, JPEG)</span>
-      </div>
-
-      <div class="multi-preview-container" *ngIf="newImageUrlsBase64.length > 0">
-        <div class="preview-thumb-card" *ngFor="let img of newImageUrlsBase64; let i = index">
-          <img [src]="img" alt="Trip upload preview" class="preview-thumbnail">
-          <button class="remove-thumb-btn" (click)="removeUploadedImage(i); $event.stopPropagation()">
-            <i class="pi pi-times"></i>
-          </button>
-        </div>
-        <div class="add-more-card" (click)="triggerImageUpload(fileInput)">
-          <i class="pi pi-plus"></i>
-          <span>Add More</span>
+    <!-- skeleton — only while loading -->
+    <ng-container *ngIf="suggestionsLoading">
+      <div class="suggestion-row skeleton" *ngFor="let i of [1,2,3]">
+        <div class="sug-avatar-wrapper"></div>
+        <div class="sug-info">
+          <div class="name-skel"></div>
+          <div class="sub-skel"></div>
         </div>
       </div>
+    </ng-container>
+
+    <!-- real data -->
+    <ng-container *ngIf="!suggestionsLoading">
+      <div class="suggestion-row" *ngFor="let sug of suggestions">
+        <div class="sug-avatar-wrapper">
+          <img *ngIf="sug.profile_picture" [src]="sug.profile_picture" [alt]="getFullName(sug)" class="sug-avatar" />
+          <div *ngIf="!sug.profile_picture" class="sug-initials">
+            {{ sug.firstname[0] }}{{ sug.lastname[0] }}
+          </div>
     </div>
 
     <!-- Image Error message -->
@@ -228,8 +234,18 @@
             {{ opt.label }}
           </button>
         </div>
+        <div class="sug-info">
+          <span class="sug-name">{{ getFullName(sug) }}</span>
+          <span class="sug-subtext">
+            Followed by {{ sug.mutual_friends_count }}
+            {{ sug.mutual_friends_count === 1 ? 'friend' : 'friends' }}
+          </span>
+        </div>
+        <button class="connect-btn" (click)="connect(sug.id)">Connect</button>
       </div>
 
+      <p class="no-suggestions" *ngIf="suggestions.length === 0">No suggestions right now.</p>
+    </ng-container>
       <!-- Route -->
       <div class="form-field">
         <label>Route</label>
@@ -255,4 +271,9 @@
 
   </div>
 
-</p-dialog>
+  <footer class="feed-sidebar-footer">
+    <p>About • Help • Press • API • Jobs • Privacy • Terms</p>
+    <p class="copyright">© 2026 TRAVELCONNECT FROM DEEPMIND</p>
+  </footer>
+
+</aside>

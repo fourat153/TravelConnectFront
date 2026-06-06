@@ -12,6 +12,8 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { ButtonModule } from 'primeng/button';
 import { CarouselModule } from 'primeng/carousel';
+import { SuggestionsService } from '../../core/services/suggestions';
+import {SuggestionUser } from '../../shared/models/user';
 import { forkJoin } from 'rxjs';
 
 @Component({
@@ -37,6 +39,7 @@ export class FeedComponent implements OnInit {
   private authService = inject(AuthService);
   private feedService = inject(FeedService);
   private tripService = inject(TripService);
+  private suggestionsService = inject(SuggestionsService);
   private fb = inject(FormBuilder);
   private cdr = inject(ChangeDetectorRef);
 
@@ -45,12 +48,7 @@ export class FeedComponent implements OnInit {
   currentUser: any = null;
   currentUserInitials = '';
 
-  // Suggestions panel data
-  suggestions = [
-    { name: 'Sarah Jenkins', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80', mutualFriends: 3 },
-    { name: 'Marcus Chen', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&auto=format&fit=crop&q=80', mutualFriends: 5 },
-    { name: 'Elena Rostova', avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=100&auto=format&fit=crop&q=80', mutualFriends: 1 }
-  ];
+  suggestions: SuggestionUser[] = [];
 
   // Create post modal state
   showCreateModal = false;
@@ -90,17 +88,19 @@ export class FeedComponent implements OnInit {
       if (user) {
         this.currentUser = user;
         this.currentUserInitials = (user.firstname?.[0] ?? '') + (user.lastname?.[0] ?? '');
-      } else {
-        // Fallback user if auth session is not active/available (helps in local UI testing)
-        this.currentUser = { firstname: 'Traveler', lastname: 'Connect', email: 'traveler@travelconnect.com' };
-        this.currentUserInitials = 'TC';
-      }
+      } 
+      
     });
 
     this.feedService.getPosts().subscribe(posts => {
       this.posts = posts;
       this.cdr.detectChanges();
     });
+          this.suggestionsService.getSuggestions().subscribe(data => {
+        this.suggestions = data;
+        this.cdr.detectChanges();
+            });
+      this.suggestionsService.loadSuggestions();
 
     // Explicitly load feed posts when visiting feed page
     this.loadFeed();
@@ -109,6 +109,14 @@ export class FeedComponent implements OnInit {
   loadFeed(): void {
     this.feedService.loadPosts();
   }
+  connect(userId: number): void {
+      // TODO: wire to friendshipService.sendRequest() once implemented
+      this.suggestionsService.removeSuggestion(userId);
+    }
+
+getFullName(user: SuggestionUser): string {
+  return `${user.firstname} ${user.lastname}`;
+}
 
   getDisplayName(user: any): string {
     if (!user) return 'Traveler';
