@@ -1,5 +1,6 @@
 import {
   Component,
+  Input,
   Output,
   EventEmitter,
   OnDestroy,
@@ -25,6 +26,8 @@ export interface TripStop {
   label: string;
   lat: number;
   lon: number;
+  photos?: File[];
+  description?: string;
 }
 
 interface StopRow {
@@ -34,6 +37,9 @@ interface StopRow {
   suggestions: NominatimResult[];
   showDropdown: boolean;
   loading: boolean;
+  photos?: File[];
+  photoPreviews?: string[];
+  description?: string;
 }
 
 interface NominatimResult {
@@ -51,6 +57,7 @@ interface NominatimResult {
   imports: [CommonModule, FormsModule, DragDropModule],
 })
 export class TripStopInputComponent implements OnDestroy {
+  @Input() allowPhotos = false;
   @Output() stopsChange = new EventEmitter<TripStop[]>();
 
   readonly MAX_STOPS = 30;
@@ -61,7 +68,7 @@ export class TripStopInputComponent implements OnDestroy {
     this.makeRow(),
   ];
 
-  private searchSubjects = new Map<string, Subject<string>>();
+  private searchTimeouts = new Map<string, any>();
 
   constructor(private http: HttpClient) {}
 
@@ -74,6 +81,9 @@ export class TripStopInputComponent implements OnDestroy {
       suggestions: [],
       showDropdown: false,
       loading: false,
+      photos: [],
+      photoPreviews: [],
+      description: '',
     };
   }
 
@@ -104,45 +114,44 @@ export class TripStopInputComponent implements OnDestroy {
   onInput(row: StopRow): void {
     row.resolved = null;
 
-    if (!this.searchSubjects.has(row.id)) {
-      const subject = new Subject<string>();
-      this.searchSubjects.set(row.id, subject);
+    // Clear any pending timeout for this row
+    if (this.searchTimeouts.has(row.id)) {
+      clearTimeout(this.searchTimeouts.get(row.id));
+    }
 
-      subject
+    if (row.query.trim().length < 2) {
+      row.suggestions = [];
+      row.showDropdown = false;
+      return;
+    }
+
+    row.loading = true;
+
+    const timeoutId = setTimeout(() => {
+      this.http
+        .get<NominatimResult[]>(
+          `https://nominatim.openstreetmap.org/search`,
+          {
+            params: {
+              q: row.query,
+              format: 'json',
+              limit: '5',
+              addressdetails: '1',
+            },
+            headers: { Accept: 'application/json' },
+          }
+        )
         .pipe(
-          debounceTime(300),
-          distinctUntilChanged(),
-          switchMap((q) => {
-            if (q.trim().length < 2) {
-              row.suggestions = [];
-              row.showDropdown = false;
-              return of([]);
-            }
-            row.loading = true;
-            return this.http
-              .get<NominatimResult[]>(
-                `https://nominatim.openstreetmap.org/search`,
-                {
-                  params: {
-                    q,
-                    format: 'json',
-                    limit: '5',
-                    addressdetails: '1',
-                  },
-                  headers: { Accept: 'application/json' },
-                }
-              )
-              .pipe(catchError(() => of([])));
-          })
+          catchError(() => of([]))
         )
         .subscribe((results: NominatimResult[]) => {
           row.loading = false;
           row.suggestions = results;
           row.showDropdown = results.length > 0;
         });
-    }
+    }, 400);
 
-    this.searchSubjects.get(row.id)!.next(row.query);
+    this.searchTimeouts.set(row.id, timeoutId);
   }
 
   selectSuggestion(row: StopRow, suggestion: NominatimResult): void {
@@ -167,6 +176,9 @@ export class TripStopInputComponent implements OnDestroy {
     row.resolved = null;
     row.suggestions = [];
     row.showDropdown = false;
+    row.photos = [];
+    row.photoPreviews = [];
+    row.description = '';
     this.emit();
   }
 
@@ -189,8 +201,10 @@ export class TripStopInputComponent implements OnDestroy {
   removeStop(index: number): void {
     if (this.rows.length <= this.MIN_STOPS) return;
     const row = this.rows[index];
-    this.searchSubjects.get(row.id)?.complete();
-    this.searchSubjects.delete(row.id);
+    if (this.searchTimeouts.has(row.id)) {
+      clearTimeout(this.searchTimeouts.get(row.id));
+      this.searchTimeouts.delete(row.id);
+    }
     this.rows.splice(index, 1);
     this.emit();
   }
@@ -199,6 +213,9 @@ export class TripStopInputComponent implements OnDestroy {
     const [a, b] = [this.rows[0], this.rows[1]];
     [this.rows[0].query, this.rows[1].query] = [b.query, a.query];
     [this.rows[0].resolved, this.rows[1].resolved] = [b.resolved, a.resolved];
+    [this.rows[0].photos, this.rows[1].photos] = [b.photos || [], a.photos || []];
+    [this.rows[0].photoPreviews, this.rows[1].photoPreviews] = [b.photoPreviews || [], a.photoPreviews || []];
+    [this.rows[0].description, this.rows[1].description] = [b.description || '', a.description || ''];
     this.emit();
   }
 
@@ -209,18 +226,53 @@ export class TripStopInputComponent implements OnDestroy {
     this.emit();
   }
 
+  // ── stop photo actions ───────────────────────────────────────
+
+  onStopFilesSelected(row: StopRow, event: any): void {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    if (!row.photos) row.photos = [];
+    if (!row.photoPreviews) row.photoPreviews = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (!file.type.startsWith('image/')) continue;
+
+      row.photos.push(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        row.photoPreviews!.push(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+    this.emit();
+  }
+
+  removeStopPhoto(row: StopRow, index: number): void {
+    if (row.photos) row.photos.splice(index, 1);
+    if (row.photoPreviews) row.photoPreviews.splice(index, 1);
+    this.emit();
+  }
+
   // ── emit resolved stops ──────────────────────────────────────
 
-  private emit(): void {
+  emit(): void {
     const resolved = this.rows
       .filter((r) => r.resolved !== null)
-      .map((r) => r.resolved!);
+      .map((r) => {
+        if (r.resolved) {
+          r.resolved.photos = r.photos || [];
+          r.resolved.description = r.description || '';
+        }
+        return r.resolved!;
+      });
     this.stopsChange.emit(resolved);
   }
 
   // ── cleanup ──────────────────────────────────────────────────
 
   ngOnDestroy(): void {
-    this.searchSubjects.forEach((s) => s.complete());
+    this.searchTimeouts.forEach((timeout) => clearTimeout(timeout));
   }
 }

@@ -20,6 +20,7 @@ export interface FeedPost {
   hasLiked: boolean;
   comments: PostComment[];
   createdAt: string;
+  tripTitle?: string;
 }
 
 @Injectable({
