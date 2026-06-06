@@ -32,7 +32,7 @@
               <div class="author-meta">
                 <span class="author-name">{{ post.authorName }}</span>
                 <span class="post-location">
-                  <i class="pi pi-map-marker"></i> {{ post.location }}
+                  <i class="pi pi-map-marker"></i> {{ post.location }}<ng-container *ngIf="post.tripTitle"> · {{ post.tripTitle }}</ng-container>
                 </span>
               </div>
             </div>
@@ -233,13 +233,13 @@
       <!-- Route -->
       <div class="form-field">
         <label>Route</label>
-        <app-trip-stop-input (stopsChange)="onStopsChange($event)" />
+        <app-trip-stop-input [allowPhotos]="true" (stopsChange)="onStopsChange($event)" />
       </div>
     </div>
 
     <!-- Caption/Description Field -->
     <div class="form-field">
-      <label for="captionInput">Post Description</label>
+      <label for="captionInput">Trip Description</label>
       <textarea id="captionInput" pInputTextarea rows="4" placeholder="Write a description about your trip stop..."
         [(ngModel)]="newDescription" class="dialog-textarea">
       </textarea>
@@ -248,7 +248,7 @@
     <!-- Actions Footer -->
     <div class="form-actions-footer">
       <button class="dialog-cancel-btn" (click)="showCreateModal = false">Cancel</button>
-      <button class="dialog-submit-btn" [disabled]="newImageUrlsBase64.length === 0" (click)="submitPost()">
+      <button class="dialog-submit-btn" [disabled]="(!hasAnyStopPhotos() && newImageUrlsBase64.length === 0) || createForm.invalid" (click)="submitPost()">
         Share Trip
       </button>
     </div>

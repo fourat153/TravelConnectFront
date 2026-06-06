@@ -351,3 +351,111 @@
 .stop-list.cdk-drop-list-dragging .stop-row:not(.cdk-drag-placeholder) {
   transition: transform 200ms ease;
 }
+
+// ── Stop Photos ──────────────────────────────────────────────
+
+.stop-photos-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 2px 0;
+}
+
+.add-photos-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--p-surface-300, #d1d5db);
+  border-radius: 6px;
+  background: var(--p-surface-50, #f9fafb);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--p-surface-600, #4b5563);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+
+  i {
+    font-size: 0.8rem;
+  }
+
+  &:hover {
+    background: var(--p-surface-100, #f3f4f6);
+    border-color: var(--p-primary-color, #3b82f6);
+    color: var(--p-primary-color, #3b82f6);
+  }
+}
+
+.stop-photos-thumbnails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.photo-thumbnail {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--p-surface-300, #d1d5db);
+  background: var(--p-surface-100, #f3f4f6);
+
+  .thumb-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .remove-photo-btn {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.65rem;
+    transition: background 0.15s;
+
+    i {
+      font-size: 0.6rem;
+    }
+
+    &:hover {
+      background: var(--p-red-500, #ef4444);
+    }
+  }
+}
+
+.stop-desc-input {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 0.82rem;
+  border: 1.5px solid var(--p-surface-300, #d1d5db);
+  border-radius: 6px;
+  outline: none;
+  background: var(--p-surface-0, #fff);
+  color: var(--p-surface-900, #111827);
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+
+  &::placeholder {
+    color: var(--p-surface-400, #9ca3af);
+  }
+
+  &:focus {
+    border-color: var(--p-primary-color, #3b82f6);
+  }
+}
+
+
