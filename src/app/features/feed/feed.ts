@@ -49,6 +49,7 @@ export class FeedComponent implements OnInit {
   currentUserInitials = '';
 
   suggestions: SuggestionUser[] = [];
+  suggestionsLoading = false;
 
   // Create post modal state
   showCreateModal = false;
@@ -96,11 +97,22 @@ export class FeedComponent implements OnInit {
       this.posts = posts;
       this.cdr.detectChanges();
     });
-          this.suggestionsService.getSuggestions().subscribe(data => {
+
+    this.suggestionsLoading = true;
+    this.suggestionsService.getSuggestions().subscribe({
+      next: (data) => {
         this.suggestions = data;
+        if (data && data.length > 0) {
+          this.suggestionsLoading = false;
+        }
         this.cdr.detectChanges();
-            });
-      this.suggestionsService.loadSuggestions();
+      },
+      error: () => {
+        this.suggestionsLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
+    this.suggestionsService.loadSuggestions();
 
     // Explicitly load feed posts when visiting feed page
     this.loadFeed();
@@ -114,9 +126,9 @@ export class FeedComponent implements OnInit {
       this.suggestionsService.removeSuggestion(userId);
     }
 
-getFullName(user: SuggestionUser): string {
-  return `${user.firstname} ${user.lastname}`;
-}
+  getFullName(user: SuggestionUser): string {
+    return `${user.firstname} ${user.lastname}`;
+  }
 
   getDisplayName(user: any): string {
     if (!user) return 'Traveler';
@@ -311,7 +323,7 @@ getFullName(user: SuggestionUser): string {
 
   submitPost(): void {
     const stopsWithPhotos = this.tripStops.filter(s => s.photos && s.photos.length > 0);
-    if (stopsWithPhotos.length === 0 && this.selectedImages.length === 0) {
+    if (stopsWithPhotos.length === 0) {
       this.imageError = 'At least one trip photo is required.';
       return;
     }
@@ -334,31 +346,15 @@ getFullName(user: SuggestionUser): string {
       next: (tripRes) => {
         if (tripRes.status_code === 201 && tripRes.id) {
           // Trip created successfully! Now create feed posts.
-          const postObservables = [];
-          const description = this.newDescription.trim();
+          const postObservables: any[] = [];
 
-          // 1. Create global photo post if any global photos exist
-          if (this.selectedImages.length > 0) {
-            let locationName = tripRes.title || 'Unknown Location';
-            let lat = 0.0;
-            let lon = 0.0;
-
-            if (this.tripStops.length > 0) {
-              const lastStop = this.tripStops[this.tripStops.length - 1];
-              locationName = lastStop.label || locationName;
-              lat = lastStop.lat || 0.0;
-              lon = lastStop.lon || 0.0;
-            }
-            postObservables.push(this.feedService.createFeedPost(description, locationName, lat, lon, this.selectedImages));
-          }
-
-          // 2. Create feed post for each stop that has photos
+          // Create feed post for each stop that has photos
           stopsWithPhotos.forEach(stop => {
             const locationName = stop.label || 'Unknown Location';
             const lat = stop.lat || 0.0;
             const lon = stop.lon || 0.0;
             const images = stop.photos || [];
-            const stopDescription = (stop.description || '').trim() || description;
+            const stopDescription = (stop.description || '').trim() || tripRes.title || 'Trip stop';
             postObservables.push(this.feedService.createFeedPost(stopDescription, locationName, lat, lon, images));
           });
 

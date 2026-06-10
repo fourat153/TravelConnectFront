@@ -1,5 +1,3 @@
-<!-- Right suggestions sidebar (desktop only) -->
-<aside class="feed-right-sidebar">
 <div class="app-shell">
 
   <app-bottom-nav active="feed" (tabChanged)="onNavTabChanged($event)"></app-bottom-nav>
@@ -126,16 +124,7 @@
 
       </div>
 
-  <div class="user-profile-row">
-    <div class="user-avatar-circle">
-      <span *ngIf="!currentUser?.profile_picture">{{ currentUserInitials }}</span>
-      <img *ngIf="currentUser?.profile_picture" [src]="currentUser.profile_picture" [alt]="getDisplayName(currentUser)">
     </div>
-    <div class="user-meta-info">
-      <span class="user-fullname">{{ getDisplayName(currentUser) }}</span>
-      <span class="user-subtext">{{ currentUser?.email }}</span>
-    </div>
-    <button class="switch-profile-btn" (click)="onNavTabChanged('profile')">Profile</button>
 
     <!-- Right suggestions sidebar (desktop only) -->
     <aside class="feed-right-sidebar">
@@ -143,8 +132,7 @@
       <div class="user-profile-row">
         <div class="user-avatar-circle">
           <span *ngIf="!currentUser?.profile_picture">{{ currentUserInitials }}</span>
-          <img *ngIf="currentUser?.profile_picture" [src]="currentUser.profile_picture"
-            [alt]="getDisplayName(currentUser)">
+          <img *ngIf="currentUser?.profile_picture" [src]="currentUser.profile_picture" [alt]="getDisplayName(currentUser)">
         </div>
         <div class="user-meta-info">
           <span class="user-fullname">{{ getDisplayName(currentUser) }}</span>
@@ -159,16 +147,39 @@
       </div>
 
       <div class="suggestions-list">
-        <div class="suggestion-row" *ngFor="let sug of suggestions">
-          <div class="sug-avatar-wrapper">
-            <img [src]="sug.avatar" [alt]="sug.name" class="sug-avatar">
+
+        <!-- skeleton — only while loading -->
+        <ng-container *ngIf="suggestionsLoading">
+          <div class="suggestion-row skeleton" *ngFor="let i of [1,2,3]">
+            <div class="sug-avatar-wrapper"></div>
+            <div class="sug-info">
+              <div class="name-skel"></div>
+              <div class="sub-skel"></div>
+            </div>
           </div>
-          <div class="sug-info">
-            <span class="sug-name">{{ sug.name }}</span>
-            <span class="sug-subtext">Followed by {{ sug.mutualFriends }} friends</span>
+        </ng-container>
+
+        <!-- real data -->
+        <ng-container *ngIf="!suggestionsLoading">
+          <div class="suggestion-row" *ngFor="let sug of suggestions">
+            <div class="sug-avatar-wrapper">
+              <img *ngIf="sug.profile_picture" [src]="sug.profile_picture" [alt]="getFullName(sug)" class="sug-avatar" />
+              <div *ngIf="!sug.profile_picture" class="sug-initials">
+                {{ sug.firstname[0] }}{{ sug.lastname[0] }}
+              </div>
+            </div>
+            <div class="sug-info">
+              <span class="sug-name">{{ getFullName(sug) }}</span>
+              <span class="sug-subtext">
+                Followed by {{ sug.mutual_friends_count }}
+                {{ sug.mutual_friends_count === 1 ? 'friend' : 'friends' }}
+              </span>
+            </div>
+            <button class="connect-btn" (click)="connect(sug.id)">Connect</button>
           </div>
-          <button class="connect-btn">Connect</button>
-        </div>
+
+          <p class="no-suggestions" *ngIf="suggestions.length === 0">No suggestions right now.</p>
+        </ng-container>
       </div>
 
       <footer class="feed-sidebar-footer">
@@ -180,33 +191,14 @@
 
   </div>
 
-  <div class="suggestions-header">
-    <span class="suggestions-title">Suggestions for you</span>
-    <button class="see-all-btn">See All</button>
-  </div>
+</div>
 
-  <div class="suggestions-list">
+<!-- PrimeNG Modal Dialog for Sharing a New Trip Post -->
+<p-dialog [(visible)]="showCreateModal" [modal]="true" [draggable]="false" [resizable]="false"
+  header="Create New Trip Post"
+  [style]="{ width: '500px', 'max-width': '95vw', 'border-radius': '20px', overflow: 'hidden' }">
 
-    <!-- skeleton — only while loading -->
-    <ng-container *ngIf="suggestionsLoading">
-      <div class="suggestion-row skeleton" *ngFor="let i of [1,2,3]">
-        <div class="sug-avatar-wrapper"></div>
-        <div class="sug-info">
-          <div class="name-skel"></div>
-          <div class="sub-skel"></div>
-        </div>
-      </div>
-    </ng-container>
-
-    <!-- real data -->
-    <ng-container *ngIf="!suggestionsLoading">
-      <div class="suggestion-row" *ngFor="let sug of suggestions">
-        <div class="sug-avatar-wrapper">
-          <img *ngIf="sug.profile_picture" [src]="sug.profile_picture" [alt]="getFullName(sug)" class="sug-avatar" />
-          <div *ngIf="!sug.profile_picture" class="sug-initials">
-            {{ sug.firstname[0] }}{{ sug.lastname[0] }}
-          </div>
-    </div>
+  <div class="create-post-form">
 
     <!-- Image Error message -->
     <div class="form-error-msg" *ngIf="imageError">
@@ -234,18 +226,8 @@
             {{ opt.label }}
           </button>
         </div>
-        <div class="sug-info">
-          <span class="sug-name">{{ getFullName(sug) }}</span>
-          <span class="sug-subtext">
-            Followed by {{ sug.mutual_friends_count }}
-            {{ sug.mutual_friends_count === 1 ? 'friend' : 'friends' }}
-          </span>
-        </div>
-        <button class="connect-btn" (click)="connect(sug.id)">Connect</button>
       </div>
 
-      <p class="no-suggestions" *ngIf="suggestions.length === 0">No suggestions right now.</p>
-    </ng-container>
       <!-- Route -->
       <div class="form-field">
         <label>Route</label>
@@ -253,27 +235,14 @@
       </div>
     </div>
 
-    <!-- Caption/Description Field -->
-    <div class="form-field">
-      <label for="captionInput">Trip Description</label>
-      <textarea id="captionInput" pInputTextarea rows="4" placeholder="Write a description about your trip stop..."
-        [(ngModel)]="newDescription" class="dialog-textarea">
-      </textarea>
-    </div>
-
     <!-- Actions Footer -->
     <div class="form-actions-footer">
       <button class="dialog-cancel-btn" (click)="showCreateModal = false">Cancel</button>
-      <button class="dialog-submit-btn" [disabled]="(!hasAnyStopPhotos() && newImageUrlsBase64.length === 0) || createForm.invalid" (click)="submitPost()">
+      <button class="dialog-submit-btn" [disabled]="!hasAnyStopPhotos() || createForm.invalid" (click)="submitPost()">
         Share Trip
       </button>
     </div>
 
   </div>
 
-  <footer class="feed-sidebar-footer">
-    <p>About • Help • Press • API • Jobs • Privacy • Terms</p>
-    <p class="copyright">© 2026 TRAVELCONNECT FROM DEEPMIND</p>
-  </footer>
-
-</aside>
+</p-dialog>
