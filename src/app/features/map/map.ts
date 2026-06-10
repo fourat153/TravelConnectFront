@@ -16,7 +16,7 @@ import { ButtonModule } from 'primeng/button';
 
 import { StopSheetComponent } from './stop-sheet/stop-sheet';
 import { AuthService } from '../../core/services/auth';
-import { filter, take, forkJoin } from 'rxjs';
+import { filter, take, forkJoin, of, map, switchMap, catchError } from 'rxjs';
 import { OnboardingStatus } from '../../shared/enums/onboarding';
 import { PrivacyType } from '../../shared/enums/PrivacyType';
 import { OnboardingService } from '../../core/services/onboarding';
@@ -112,61 +112,41 @@ export class Map implements AfterViewInit, OnInit {
     this.clearFriendPins();
     this.friendPinsVisible = true;
 
-    this.friendService.getMyFriends(1, 50).subscribe({
-      next: (res) => {
-        if (!res.data?.length) return;
+    this.friendService.getMyFriends(1, 50).pipe(
+      switchMap((res) => {
+        if (!res.data?.length) {
+          return of([]);
+        }
 
         const colors = ['#f43f5e', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899', '#06b6d4', '#14b8a6', '#3b82f6'];
 
-        res.data.forEach((friend) => {
-          this.friendService.getFriendTrips(friend.friend_id).subscribe({
-            next: (tripRes) => {
+        const friendStopsObservables = res.data.map((friend) => {
+          const friendColor = colors[friend.friend_id % colors.length];
+          return this.friendService.getFriendTrips(friend.friend_id).pipe(
+            switchMap((tripRes) => {
               const trips = tripRes.trips;
-              if (!trips || trips.length === 0) return;
-
-              // Take the last trip in the list
+              if (!trips || trips.length === 0) {
+                return of({ friend, stops: [], color: friendColor });
+              }
               const lastTrip = trips[trips.length - 1];
-              const tripId = lastTrip.id;
-
-              // Fetch stops for this trip
-              this.StopService.getTripStops(tripId).subscribe({
-                next: (stopsRes) => {
-                  const stops = stopsRes.stops;
-                  if (!stops || stops.length === 0) return;
-
-                  // Sort stops by order
+              return this.StopService.getTripStops(lastTrip.id).pipe(
+                map((stopsRes) => {
+                  const stops = stopsRes.stops || [];
                   stops.sort((a, b) => a.order - b.order);
-
-                  const points: L.LatLng[] = [];
-                  const friendColor = colors[friend.friend_id % colors.length];
-
-                  stops.forEach((stop, index) => {
-                    const lat = stop.city?.lat;
-                    const lon = stop.city?.long;
-                    if (lat === undefined || lon === undefined) return;
-
-                    const latLng = new L.LatLng(lat, lon);
-                    points.push(latLng);
-
-                    this.ngZone.run(() => {
-                      if (index === stops.length - 1) {
-                        this.placeFriendPin(friend, lat, lon, stop.title, friendColor);
-                      } else {
-                        this.placeFriendStopPin(friend, lat, lon, stop.title, friendColor);
-                      }
-                    });
-                  });
-                },
-                error: () => {
-                  // silent skip
-                }
-              });
-            },
-            error: () => {
-              // silent skip
-            }
-          });
+                  return { friend, stops, color: friendColor };
+                }),
+                catchError(() => of({ friend, stops: [], color: friendColor }))
+              );
+            }),
+            catchError(() => of({ friend, stops: [], color: friendColor }))
+          );
         });
+
+        return forkJoin(friendStopsObservables);
+      })
+    ).subscribe({
+      next: (friendsDataList) => {
+        this.renderFriendPins(friendsDataList);
       },
       error: () => {
         this.errorMessage = 'Could not load friends.';
@@ -174,7 +154,88 @@ export class Map implements AfterViewInit, OnInit {
     });
   }
 
-  private placeFriendPin(friend: FriendData, lat: number, lon: number, stopTitle: string, color: string): void {
+  private renderFriendPins(friendsDataList: Array<{ friend: FriendData; stops: any[]; color: string }>): void {
+    const avatarsToPlace: Array<{
+      friend: FriendData;
+      lat: number;
+      lon: number;
+      stopTitle: string;
+      color: string;
+      tripId: number;
+      stop: any;
+    }> = [];
+
+    friendsDataList.forEach(({ friend, stops, color }) => {
+      if (!stops || stops.length === 0) return;
+
+      stops.forEach((stop, index) => {
+        const lat = stop.city?.lat;
+        const lon = stop.city?.long;
+        if (lat === undefined || lon === undefined) return;
+
+        if (index === stops.length - 1) {
+          avatarsToPlace.push({
+            friend,
+            lat,
+            lon,
+            stopTitle: stop.title,
+            color,
+            tripId: stop.trip_id,
+            stop,
+          });
+        } else {
+          this.ngZone.run(() => {
+            this.placeFriendStopPin(friend, lat, lon, stop.title, color, stop.trip_id, stop);
+          });
+        }
+      });
+    });
+
+    const groups: Array<typeof avatarsToPlace> = [];
+
+    avatarsToPlace.forEach((avatar) => {
+      let grouped = false;
+      for (const group of groups) {
+        const first = group[0];
+        const dist = this.map.distance([avatar.lat, avatar.lon], [first.lat, first.lon]);
+        if (dist < 15000) {
+          group.push(avatar);
+          grouped = true;
+          break;
+        }
+      }
+      if (!grouped) {
+        groups.push([avatar]);
+      }
+    });
+
+    groups.forEach((group) => {
+      const N = group.length;
+      if (N === 1) {
+        const a = group[0];
+        this.ngZone.run(() => {
+          this.placeFriendPin(a.friend, a.lat, a.lon, a.stopTitle, a.color, a.tripId, a.stop);
+        });
+      } else {
+        const centerLat = group.reduce((sum, a) => sum + a.lat, 0) / N;
+        const centerLon = group.reduce((sum, a) => sum + a.lon, 0) / N;
+
+        const radius = 0.15;
+
+        group.forEach((a, i) => {
+          const angle = (2 * Math.PI * i) / N;
+          const offsetLat = Math.sin(angle) * radius;
+          const offsetLon = (Math.cos(angle) * radius) / Math.cos((centerLat * Math.PI) / 180);
+
+          this.ngZone.run(() => {
+            this.placeFriendPin(a.friend, centerLat + offsetLat, centerLon + offsetLon, a.stopTitle, a.color, a.tripId, a.stop);
+          });
+        });
+      }
+    });
+  }
+
+  private placeFriendPin(friend: FriendData, lat: number, lon: number, stopTitle: string, color: string, tripId: number, stop: any): void {
     const initials = friend.username.slice(0, 2).toUpperCase();
 
     const icon = L.divIcon({
@@ -192,6 +253,8 @@ export class Map implements AfterViewInit, OnInit {
     });
 
     const marker = L.marker([lat, lon], { icon }).addTo(this.map);
+    (marker as any).friendId = friend.friend_id;
+    (marker as any).isAvatar = true;
 
     marker.bindTooltip(stopTitle, {
       direction: 'top',
@@ -206,9 +269,10 @@ export class Map implements AfterViewInit, OnInit {
     });
 
     this.friendPinMarkers.push(marker);
+    this.updateFriendPinsVisibility();
   }
 
-  private placeFriendStopPin(friend: FriendData, lat: number, lon: number, stopTitle: string, color: string): void {
+  private placeFriendStopPin(friend: FriendData, lat: number, lon: number, stopTitle: string, color: string, tripId: number, stop: any): void {
     const circle = L.circleMarker([lat, lon], {
       radius: 6,
       fillColor: color,
@@ -217,6 +281,8 @@ export class Map implements AfterViewInit, OnInit {
       opacity: 1,
       fillOpacity: 1,
     }).addTo(this.map);
+    (circle as any).friendId = friend.friend_id;
+    (circle as any).isAvatar = false;
 
     circle.bindTooltip(`${friend.username}: ${stopTitle}`, {
       direction: 'top',
@@ -226,11 +292,12 @@ export class Map implements AfterViewInit, OnInit {
 
     circle.on('click', () => {
       this.ngZone.run(() => {
-        this.onFriendPinClicked(friend);
+        this.onFriendPinClicked(friend, tripId, stop);
       });
     });
 
     this.friendPinMarkers.push(circle as any);
+    this.updateFriendPinsVisibility();
   }
 
   private async drawFriendRoute(points: L.LatLng[], color: string): Promise<L.Polyline | null> {
@@ -265,16 +332,82 @@ export class Map implements AfterViewInit, OnInit {
     this.friendPinsVisible = false;
   }
 
-  onFriendPinClicked(friend: FriendData): void {
-    this.selectedFriend = friend;
-    this.isFriendTripsSidebarOpen = true;
-    this.isTripSidebarOpen = false;
+  updateFriendPinsVisibility(): void {
+    this.friendPinMarkers.forEach((marker) => {
+      const fId = (marker as any).friendId;
+      if (!this.selectedFriend) {
+        // No friend is selected, so all should be on the map
+        if (!this.map.hasLayer(marker)) {
+          marker.addTo(this.map);
+        }
+        this.updateAvatarHighlight(marker, false);
+      } else {
+        // A friend is selected. Only show this friend's markers.
+        if (fId === this.selectedFriend.friend_id) {
+          if (!this.map.hasLayer(marker)) {
+            marker.addTo(this.map);
+          }
+          const isAvatar = (marker as any).isAvatar;
+          this.updateAvatarHighlight(marker, isAvatar);
+        } else {
+          if (this.map.hasLayer(marker)) {
+            this.map.removeLayer(marker);
+          }
+        }
+      }
+    });
+  }
+
+  private updateAvatarHighlight(marker: L.Marker, highlight: boolean): void {
+    const el = marker.getElement();
+    if (!el) return;
+    const pinEl = el.querySelector('.friend-pin');
+    if (pinEl) {
+      if (highlight) {
+        pinEl.classList.add('friend-pin--selected');
+      } else {
+        pinEl.classList.remove('friend-pin--selected');
+      }
+    }
+  }
+
+  clearActiveTripRoute(): void {
+    this.selectedTripId = null;
+    this.selectedTrip = null;
+    this.selectedStop = null;
+    this.markers.forEach(m => this.map.removeLayer(m));
+    this.markers = [];
+    if (this.polyline) {
+      this.map.removeLayer(this.polyline);
+    }
+  }
+
+  onFriendPinClicked(friend: FriendData, tripId?: number, stop?: any): void {
+    if (this.selectedFriend && this.selectedFriend.friend_id === friend.friend_id && !stop) {
+      this.selectedFriend = undefined;
+      this.isFriendTripsSidebarOpen = false;
+      this.clearActiveTripRoute();
+    } else {
+      this.selectedFriend = friend;
+      this.isFriendTripsSidebarOpen = true;
+      this.isTripSidebarOpen = false;
+      if (tripId) {
+        this.selectedTripId = tripId;
+      }
+      if (stop) {
+        this.selectedStop = stop;
+      }
+    }
+    this.updateFriendPinsVisibility();
     setTimeout(() => this.map.invalidateSize({ animate: false }), 300);
   }
 
   // ── Navigation ───────────────────────────────────────────────
 
   onNavTabChanged(tab: NavTab): void {
+    this.selectedFriend = undefined;
+    this.clearActiveTripRoute();
+
     switch (tab) {
       case 'home':
         this.isTripSidebarOpen = false;
@@ -321,15 +454,6 @@ export class Map implements AfterViewInit, OnInit {
   onAnySidebarClosed(): void {
     this.isTripSidebarOpen = false;
     this.isFriendTripsSidebarOpen = false;
-    this.selectedFriend = undefined;
-    this.selectedTripId = null;
-    this.selectedTrip = null;
-    this.selectedStop = null;
-    this.markers.forEach(m => this.map.removeLayer(m));
-    this.markers = [];
-    if (this.polyline) {
-      this.map.removeLayer(this.polyline);
-    }
     setTimeout(() => this.map.invalidateSize({ animate: false }), 350);
   }
 

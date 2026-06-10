@@ -55,6 +55,7 @@ type View = 'list' | 'detail' | 'create';
 export class TripSidebarComponent implements OnInit, OnChanges {
 
   @Input() friend?: FriendData;
+  @Input() activeTripId?: number | null;
 
   @Output() closed       = new EventEmitter<void>();
   @Output() tripCreated  = new EventEmitter<TripOut>();
@@ -100,6 +101,12 @@ export class TripSidebarComponent implements OnInit, OnChanges {
   ];
 
   selectedTripId?: number;
+
+  // Mobile drag-to-dismiss properties
+  private startY = 0;
+  private isDragging = false;
+  translateY = 'translateY(0px)';
+  transition = 'none';
 
   get isFriendMode(): boolean { return !!this.friend; }
   get headerTitle(): string   { return this.isFriendMode ? this.friend!.username : 'My Trips'; }
@@ -155,6 +162,22 @@ export class TripSidebarComponent implements OnInit, OnChanges {
       this.activeTrip     = undefined;
       this.loadTrips();
     }
+    if (changes['activeTripId']) {
+      if (this.activeTripId) {
+        this.selectedTripId = this.activeTripId;
+        const foundTrip = this.trips.find(t => t.id === this.activeTripId);
+        if (foundTrip) {
+          this.activeTrip = foundTrip;
+        } else {
+          this.activeTrip = { id: this.activeTripId, title: 'Trip Details' } as TripOut;
+        }
+        this.openDetail(this.activeTripId);
+      } else {
+        this.view = 'list';
+        this.selectedTripId = undefined;
+        this.activeTrip = undefined;
+      }
+    }
   }
 
   // ── list ─────────────────────────────────────────────────────
@@ -172,6 +195,12 @@ export class TripSidebarComponent implements OnInit, OnChanges {
       next: (res) => {
         this.trips        = res.trips ?? [];
         this.tripsLoading = false;
+        if (this.selectedTripId) {
+          const foundTrip = this.trips.find(t => t.id === this.selectedTripId);
+          if (foundTrip) {
+            this.activeTrip = foundTrip;
+          }
+        }
         this.cdr.markForCheck();
       },
       error: () => {
@@ -308,6 +337,40 @@ export class TripSidebarComponent implements OnInit, OnChanges {
   }
 
   close(): void { this.closed.emit(); }
+
+  onTouchStart(event: TouchEvent): void {
+    if (window.innerWidth > 768) return;
+    this.startY = event.touches[0].clientY;
+    this.isDragging = true;
+    this.transition = 'none';
+  }
+
+  onTouchMove(event: TouchEvent): void {
+    if (!this.isDragging) return;
+    const clientY = event.touches[0].clientY;
+    const deltaY = clientY - this.startY;
+    if (deltaY > 0) {
+      this.translateY = `translateY(${deltaY}px)`;
+    }
+  }
+
+  onTouchEnd(event: TouchEvent): void {
+    if (!this.isDragging) return;
+    this.isDragging = false;
+    const clientY = event.changedTouches[0].clientY;
+    const deltaY = clientY - this.startY;
+
+    if (deltaY > 100) {
+      this.close();
+      setTimeout(() => {
+        this.translateY = 'translateY(0px)';
+        this.transition = 'none';
+      }, 300);
+    } else {
+      this.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+      this.translateY = 'translateY(0px)';
+    }
+  }
 
   onStopClick(stop: any): void {
     this.stopSelected.emit(stop);

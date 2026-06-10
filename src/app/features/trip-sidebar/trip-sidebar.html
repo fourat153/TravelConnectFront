@@ -1,4 +1,11 @@
-<aside class="sidebar" (click)="$event.stopPropagation()">
+<aside class="sidebar" [style.transform]="translateY" [style.transition]="transition" (click)="$event.stopPropagation()">
+  <!-- Drag Handle for Mobile Bottom Sheet -->
+  <div class="drag-handle-mobile" 
+       (touchstart)="onTouchStart($event)" 
+       (touchmove)="onTouchMove($event)" 
+       (touchend)="onTouchEnd($event)">
+    <span class="drag-handle-line"></span>
+  </div>
   <!-- ══════════════════════════════════════════════════════════
        LIST VIEW
   ══════════════════════════════════════════════════════════ -->
