@@ -337,14 +337,62 @@
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
+.drag-handle-mobile {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .sidebar {
     left: 0 !important;
     width: 100vw !important;
-    height: calc(100dvh - 64px) !important;
-    top: 0 !important;
+    height: 50vh !important;
+    max-height: 50vh !important;
+    top: auto !important;
+    bottom: 0 !important;
     border-right: none !important;
-    border-bottom: 1px solid #262626 !important;
+    border-top: 1px solid #262626 !important;
+    border-radius: 20px 20px 0 0 !important;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4) !important;
+    overflow: hidden;
+    z-index: 1001 !important;
+    
+    animation: slide-up-mobile 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  .drag-handle-mobile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 24px;
+    cursor: grab;
+    touch-action: none;
+    background: transparent;
+    padding-top: 8px;
+    flex-shrink: 0;
+
+    .drag-handle-line {
+      width: 40px;
+      height: 4px;
+      background: #404040;
+      border-radius: 2px;
+      transition: background 0.15s;
+    }
+
+    &:active .drag-handle-line {
+      background: #737373;
+    }
+  }
+}
+
+@keyframes slide-up-mobile {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
   }
 }
 /* ── Append to trip-sidebar.scss ─────────────────────────── */

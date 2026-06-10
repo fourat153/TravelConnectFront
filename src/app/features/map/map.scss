@@ -300,6 +300,21 @@
       0 0 0 1.5px #1a1a2e;
   }
 
+  &--selected &__avatar {
+    transform: scale(1.15);
+    box-shadow:
+      0 0 0 4px #3b82f6,
+      0 2px 12px rgba(0, 0, 0, 0.4);
+    border-color: #fff;
+  }
+
+  &--selected:hover &__avatar {
+    transform: scale(1.15);
+    box-shadow:
+      0 0 0 4px #2563eb,
+      0 4px 16px rgba(0, 0, 0, 0.45);
+  }
+
   &:hover &__label {
     background: #3b82f6;
   }

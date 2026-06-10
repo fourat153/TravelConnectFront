@@ -7,6 +7,7 @@
       @if (isTripSidebarOpen || isFriendTripsSidebarOpen) {
       <app-trip-sidebar
         [friend]="isFriendTripsSidebarOpen ? selectedFriend : undefined"
+        [activeTripId]="selectedTripId"
         (closed)="onAnySidebarClosed()"
         (tripCreated)="onTripCreated($event)"
         (tripSelected)="onTripSelected($event)"
@@ -18,23 +19,7 @@
       </app-trip-sidebar>
     }
 
-      <div class="search-overlay">
-        <div class="search-bar">
-          <p-autoComplete
-            [(ngModel)]="searchQuery"
-            [suggestions]="suggestions"
-            (completeMethod)="onSearch()"
-            field="display_name"
-            [dropdown]="false"
-            placeholder="Search any destination..."
-            [forceSelection]="false"
-            (onSelect)="selectSuggestion($event)">
-            <ng-template let-suggestion pTemplate="item">
-              {{ suggestion.display_name }}
-            </ng-template>
-          </p-autoComplete>
-        </div>
-      </div>
+
 
       <div class="stop-panel" *ngIf="showStopPanel">
         <div class="stop-panel-header">

@@ -1,7 +1,7 @@
 .sheet-overlay {
   position: fixed;
   inset: 0;
-  z-index: 900;
+  z-index: 1100;
   background: transparent;
 }
 
@@ -10,7 +10,7 @@
   bottom: 0;
   left: 60px;
   right: 0;
-  z-index: 901;
+  z-index: 1101;
   background: white;
   border-radius: 20px 20px 0 0;
   box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
@@ -79,11 +79,31 @@
   }
 
   .close-btn {
-    background: none;
-    border: none;
-    font-size: 18px;
-    cursor: pointer;
-    color: #999;
+    ::ng-deep {
+      .p-button.p-button-text.p-button-secondary {
+        background-color: #f3f4f6 !important;
+        color: #4b5563 !important;
+        border: 1px solid #e5e7eb !important;
+        width: 36px !important;
+        height: 36px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 50% !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+
+        &:hover {
+          background-color: #e5e7eb !important;
+          color: #1f2937 !important;
+          transform: scale(1.08);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+        }
+
+        &:active {
+          transform: scale(0.95);
+        }
+      }
+    }
   }
 }
 
