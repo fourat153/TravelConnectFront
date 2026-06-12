@@ -32,7 +32,8 @@
               <div class="author-meta">
                 <span class="author-name">{{ post.authorName }}</span>
                 <span class="post-location">
-                  <i class="pi pi-map-marker"></i> {{ post.location }}<ng-container *ngIf="post.tripTitle"> · {{ post.tripTitle }}</ng-container>
+                  <i class="pi pi-map-marker"></i> {{ post.location }}<ng-container *ngIf="post.tripTitle"> · {{
+                    post.tripTitle }}</ng-container>
                 </span>
               </div>
             </div>
@@ -65,9 +66,7 @@
               <button class="action-btn comment-btn" (click)="commentInput.focus()">
                 <i class="pi pi-comment"></i>
               </button>
-              <button class="action-btn share-btn">
-                <i class="pi pi-send"></i>
-              </button>
+
             </div>
             <button class="action-btn bookmark-btn">
               <i class="pi pi-bookmark"></i>
@@ -132,7 +131,8 @@
       <div class="user-profile-row">
         <div class="user-avatar-circle">
           <span *ngIf="!currentUser?.profile_picture">{{ currentUserInitials }}</span>
-          <img *ngIf="currentUser?.profile_picture" [src]="currentUser.profile_picture" [alt]="getDisplayName(currentUser)">
+          <img *ngIf="currentUser?.profile_picture" [src]="currentUser.profile_picture"
+            [alt]="getDisplayName(currentUser)">
         </div>
         <div class="user-meta-info">
           <span class="user-fullname">{{ getDisplayName(currentUser) }}</span>
@@ -163,7 +163,8 @@
         <ng-container *ngIf="!suggestionsLoading">
           <div class="suggestion-row" *ngFor="let sug of suggestions">
             <div class="sug-avatar-wrapper">
-              <img *ngIf="sug.profile_picture" [src]="sug.profile_picture" [alt]="getFullName(sug)" class="sug-avatar" />
+              <img *ngIf="sug.profile_picture" [src]="sug.profile_picture" [alt]="getFullName(sug)"
+                class="sug-avatar" />
               <div *ngIf="!sug.profile_picture" class="sug-initials">
                 {{ sug.firstname[0] }}{{ sug.lastname[0] }}
               </div>

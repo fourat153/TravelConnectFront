@@ -28,8 +28,8 @@ interface NominatimResult {
 
 interface ResolvedPlace {
   label: string;
-  lat:   number;
-  lon:   number;
+  lat: number;
+  lon: number;
 }
 
 type View = 'list' | 'detail' | 'create';
@@ -57,8 +57,8 @@ export class TripSidebarComponent implements OnInit, OnChanges {
   @Input() friend?: FriendData;
   @Input() activeTripId?: number | null;
 
-  @Output() closed       = new EventEmitter<void>();
-  @Output() tripCreated  = new EventEmitter<TripOut>();
+  @Output() closed = new EventEmitter<void>();
+  @Output() tripCreated = new EventEmitter<TripOut>();
   @Output() tripSelected = new EventEmitter<number>();
   @Output() tripObjectSelected = new EventEmitter<TripOut>();
   @Output() stopSelected = new EventEmitter<any>();
@@ -70,34 +70,34 @@ export class TripSidebarComponent implements OnInit, OnChanges {
   // ── list ─────────────────────────────────────────────────────
   trips: TripOut[] = [];
   tripsLoading = false;
-  tripsError   = '';
+  tripsError = '';
 
   // ── detail ───────────────────────────────────────────────────
   activeTrip?: TripOut;
-  detailStops: StopOut[]  = [];
-  detailLoading           = false;
-  detailError             = '';
+  detailStops: StopOut[] = [];
+  detailLoading = false;
+  detailError = '';
 
   // single stop search
-  stopQuery               = '';
+  stopQuery = '';
   stopSuggestions: NominatimResult[] = [];
-  stopSearchLoading       = false;
-  stopShowDropdown        = false;
+  stopSearchLoading = false;
+  stopShowDropdown = false;
   resolvedPlace: ResolvedPlace | null = null;
-  addStopLoading          = false;
-  addStopError            = '';
-  private stopSearch$     = new Subject<string>();
+  addStopLoading = false;
+  addStopError = '';
+  private stopSearch$ = new Subject<string>();
 
   // ── create ───────────────────────────────────────────────────
   createForm: FormGroup;
   createLoading = false;
-  createError   = '';
+  createError = '';
   tripStops: TripStop[] = [];
 
   privacyOptions = [
-    { value: 'public',       label: 'Public',  color: '#27A168' },
+    { value: 'public', label: 'Public', color: '#27A168' },
     { value: 'friends_only', label: 'Friends', color: '#178FD8' },
-    { value: 'private',      label: 'Private', color: '#888780' },
+    { value: 'private', label: 'Private', color: '#888780' },
   ];
 
   selectedTripId?: number;
@@ -109,7 +109,7 @@ export class TripSidebarComponent implements OnInit, OnChanges {
   transition = 'none';
 
   get isFriendMode(): boolean { return !!this.friend; }
-  get headerTitle(): string   { return this.isFriendMode ? this.friend!.username : 'My Trips'; }
+  get headerTitle(): string { return this.isFriendMode ? this.friend!.username : 'My Trips'; }
   get headerSubtitle(): string {
     return this.isFriendMode ? 'Public trips' : 'Select a trip or create a new one';
   }
@@ -123,8 +123,8 @@ export class TripSidebarComponent implements OnInit, OnChanges {
     private cdr: ChangeDetectorRef
   ) {
     this.createForm = this.fb.group({
-      title:             ['', [Validators.required, Validators.minLength(2)]],
-      privacy:           ['public'],
+      title: ['', [Validators.required, Validators.minLength(2)]],
+      privacy: ['public'],
       include_home_city: [false],
     });
 
@@ -134,7 +134,7 @@ export class TripSidebarComponent implements OnInit, OnChanges {
       distinctUntilChanged(),
       switchMap((q) => {
         if (q.trim().length < 2) {
-          this.stopSuggestions  = [];
+          this.stopSuggestions = [];
           this.stopShowDropdown = false;
           this.stopSearchLoading = false;
           return of([]);
@@ -147,8 +147,8 @@ export class TripSidebarComponent implements OnInit, OnChanges {
       })
     ).subscribe((results: NominatimResult[]) => {
       this.stopSearchLoading = false;
-      this.stopSuggestions   = results;
-      this.stopShowDropdown  = results.length > 0;
+      this.stopSuggestions = results;
+      this.stopShowDropdown = results.length > 0;
       this.cdr.markForCheck();
     });
   }
@@ -157,9 +157,9 @@ export class TripSidebarComponent implements OnInit, OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['friend'] && !changes['friend'].firstChange) {
-      this.view           = 'list';
+      this.view = 'list';
       this.selectedTripId = undefined;
-      this.activeTrip     = undefined;
+      this.activeTrip = undefined;
       this.loadTrips();
     }
     if (changes['activeTripId']) {
@@ -184,8 +184,8 @@ export class TripSidebarComponent implements OnInit, OnChanges {
 
   loadTrips(): void {
     this.tripsLoading = true;
-    this.tripsError   = '';
-    this.trips        = [];
+    this.tripsError = '';
+    this.trips = [];
 
     const request$ = this.isFriendMode
       ? this.friendService.getFriendTrips(this.friend!.friend_id)
@@ -193,7 +193,7 @@ export class TripSidebarComponent implements OnInit, OnChanges {
 
     request$.subscribe({
       next: (res) => {
-        this.trips        = res.trips ?? [];
+        this.trips = res.trips ?? [];
         this.tripsLoading = false;
         if (this.selectedTripId) {
           const foundTrip = this.trips.find(t => t.id === this.selectedTripId);
@@ -204,7 +204,7 @@ export class TripSidebarComponent implements OnInit, OnChanges {
         this.cdr.markForCheck();
       },
       error: () => {
-        this.tripsError   = 'Could not load trips.';
+        this.tripsError = 'Could not load trips.';
         this.tripsLoading = false;
         this.cdr.markForCheck();
       }
@@ -212,7 +212,7 @@ export class TripSidebarComponent implements OnInit, OnChanges {
   }
 
   selectTrip(trip: TripOut): void {
-    this.activeTrip     = trip;
+    this.activeTrip = trip;
     this.selectedTripId = trip.id;
     this.tripSelected.emit(trip.id);
     this.tripObjectSelected.emit(trip);
@@ -222,20 +222,20 @@ export class TripSidebarComponent implements OnInit, OnChanges {
   // ── detail ───────────────────────────────────────────────────
 
   openDetail(tripId: number): void {
-    this.view             = 'detail';
-    this.detailStops      = [];
-    this.detailError      = '';
-    this.detailLoading    = true;
+    this.view = 'detail';
+    this.detailStops = [];
+    this.detailError = '';
+    this.detailLoading = true;
     this.clearStopInput();
 
     this.stopsService.getTripStops(tripId).subscribe({
       next: (res: any) => {
-        this.detailStops   = res.stops ?? [];
+        this.detailStops = res.stops ?? [];
         this.detailLoading = false;
         this.cdr.markForCheck();
       },
       error: () => {
-        this.detailError   = 'Could not load stops.';
+        this.detailError = 'Could not load stops.';
         this.detailLoading = false;
         this.cdr.markForCheck();
       }
@@ -253,9 +253,9 @@ export class TripSidebarComponent implements OnInit, OnChanges {
     const parts = s.display_name.split(',');
     const label = parts.slice(0, 2).join(',').trim();
 
-    this.resolvedPlace    = { label, lat: parseFloat(s.lat), lon: parseFloat(s.lon) };
-    this.stopQuery        = label;
-    this.stopSuggestions  = [];
+    this.resolvedPlace = { label, lat: parseFloat(s.lat), lon: parseFloat(s.lon) };
+    this.stopQuery = label;
+    this.stopSuggestions = [];
     this.stopShowDropdown = false;
   }
 
@@ -264,23 +264,23 @@ export class TripSidebarComponent implements OnInit, OnChanges {
   }
 
   clearStopInput(): void {
-    this.stopQuery        = '';
-    this.resolvedPlace    = null;
-    this.stopSuggestions  = [];
+    this.stopQuery = '';
+    this.resolvedPlace = null;
+    this.stopSuggestions = [];
     this.stopShowDropdown = false;
-    this.addStopError     = '';
+    this.addStopError = '';
   }
 
   addStop(): void {
     if (!this.resolvedPlace || !this.activeTrip || this.addStopLoading) return;
 
     this.addStopLoading = true;
-    this.addStopError   = '';
+    this.addStopError = '';
 
     const payload = {
-      lat:         this.resolvedPlace.lat,
-      long:        this.resolvedPlace.lon,
-      title:       this.resolvedPlace.label,
+      lat: this.resolvedPlace.lat,
+      long: this.resolvedPlace.lon,
+      title: this.resolvedPlace.label,
       description: '',
     };
 
@@ -291,18 +291,18 @@ export class TripSidebarComponent implements OnInit, OnChanges {
           this.detailStops = [
             ...this.detailStops,
             {
-              id:          res.id,
-              trip_id:     this.activeTrip!.id,
-              title:       res.title,
-              order:       res.order,
-              city:        res.city,
+              id: res.id,
+              trip_id: this.activeTrip!.id,
+              title: res.title,
+              order: res.order,
+              city: res.city,
             } as StopOut,
           ];
-                      this.stopAdded.emit({
-              lat:   this.resolvedPlace!.lat,
-              lon:   this.resolvedPlace!.lon,
-              title: this.resolvedPlace!.label,
-            });
+          this.stopAdded.emit({
+            lat: this.resolvedPlace!.lat,
+            lon: this.resolvedPlace!.lon,
+            title: this.resolvedPlace!.label,
+          });
           this.clearStopInput();
         } else {
           this.addStopError = res.message ?? 'Failed to add stop.';
@@ -311,7 +311,7 @@ export class TripSidebarComponent implements OnInit, OnChanges {
       },
       error: () => {
         this.addStopLoading = false;
-        this.addStopError   = 'Something went wrong. Try again.';
+        this.addStopError = 'Something went wrong. Try again.';
         this.cdr.markForCheck();
       }
     });
@@ -324,15 +324,16 @@ export class TripSidebarComponent implements OnInit, OnChanges {
   }
 
   goToCreate(): void {
-    this.view      = 'create';
+    this.view = 'create';
     this.tripStops = [];
     this.createForm.reset({ title: '', privacy: 'public', include_home_city: false });
     this.createError = '';
   }
 
   goToList(): void {
-    this.view       = 'list';
+    this.view = 'list';
     this.activeTrip = undefined;
+    this.loadTrips();
     this.backToList.emit();
   }
 
@@ -392,14 +393,14 @@ export class TripSidebarComponent implements OnInit, OnChanges {
   submitCreate(): void {
     if (this.createForm.invalid || this.createLoading) return;
     this.createLoading = true;
-    this.createError   = '';
+    this.createError = '';
 
     const payload = {
       ...this.createForm.value,
       stops: this.tripStops.map((stop, index) => ({
         label: stop.label,
-        lat:   stop.lat,
-        lon:   stop.lon,
+        lat: stop.lat,
+        lon: stop.lon,
         order: index,
       })),
     };
@@ -418,9 +419,9 @@ export class TripSidebarComponent implements OnInit, OnChanges {
       },
       error: () => {
         this.createLoading = false;
-        this.createError   = 'Something went wrong. Try again.';
+        this.createError = 'Something went wrong. Try again.';
       }
     });
   }
-  
+
 }

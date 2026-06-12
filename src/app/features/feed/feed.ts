@@ -6,6 +6,7 @@ import { BottomNavComponent, NavTab } from '../../shared/components/bottom-nav/b
 import { AuthService } from '../../core/services/auth';
 import { FeedService, FeedPost } from '../../core/services/feed';
 import { TripService } from '../../core/services/trip';
+import { StopsService } from '../../core/services/stop';
 import { TripStopInputComponent, TripStop } from '../../shared/components/trip-stop-input/trip-stop-input.component';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
@@ -39,6 +40,7 @@ export class FeedComponent implements OnInit {
   private authService = inject(AuthService);
   private feedService = inject(FeedService);
   private tripService = inject(TripService);
+  private stopsService = inject(StopsService);
   private suggestionsService = inject(SuggestionsService);
   private fb = inject(FormBuilder);
   private cdr = inject(ChangeDetectorRef);
@@ -345,34 +347,46 @@ export class FeedComponent implements OnInit {
     this.tripService.createTrip(payload).subscribe({
       next: (tripRes) => {
         if (tripRes.status_code === 201 && tripRes.id) {
-          // Trip created successfully! Now create feed posts.
-          const postObservables: any[] = [];
+          // Trip created successfully! Retrieve stops from backend to get their database IDs
+          this.stopsService.getTripStops(tripRes.id).subscribe({
+            next: (stopsRes) => {
+              const backendStops = stopsRes.stops || [];
+              const postObservables: any[] = [];
 
-          // Create feed post for each stop that has photos
-          stopsWithPhotos.forEach(stop => {
-            const locationName = stop.label || 'Unknown Location';
-            const lat = stop.lat || 0.0;
-            const lon = stop.lon || 0.0;
-            const images = stop.photos || [];
-            const stopDescription = (stop.description || '').trim() || tripRes.title || 'Trip stop';
-            postObservables.push(this.feedService.createFeedPost(stopDescription, locationName, lat, lon, images));
-          });
+              // Map each local stop that has photos to its backend equivalent to get the stop ID
+              this.tripStops.forEach((stop, index) => {
+                if (stop.photos && stop.photos.length > 0) {
+                  // Match by index or fallback to matching by label/title
+                  const backendStop = backendStops[index] || backendStops.find(bs => bs.title === stop.label);
+                  if (backendStop && backendStop.id) {
+                    const stopDescription = (stop.description || '').trim() || tripRes.title || 'Trip stop';
+                    const images = stop.photos || [];
+                    postObservables.push(this.feedService.createStopPost(backendStop.id, stopDescription, images));
+                  }
+                }
+              });
 
-          if (postObservables.length > 0) {
-            forkJoin(postObservables).subscribe({
-              next: () => {
+              if (postObservables.length > 0) {
+                forkJoin(postObservables).subscribe({
+                  next: () => {
+                    this.showCreateModal = false;
+                    this.loadFeed();
+                  },
+                  error: (err) => {
+                    console.error(err);
+                    this.imageError = 'Failed to create feed posts. Please try again.';
+                  }
+                });
+              } else {
                 this.showCreateModal = false;
                 this.loadFeed();
-              },
-              error: (err) => {
-                console.error(err);
-                this.imageError = 'Failed to create feed posts. Please try again.';
               }
-            });
-          } else {
-            this.showCreateModal = false;
-            this.loadFeed();
-          }
+            },
+            error: (err) => {
+              console.error(err);
+              this.imageError = 'Failed to retrieve trip stops. Please try again.';
+            }
+          });
         } else {
           this.imageError = tripRes.message || 'Failed to create trip.';
         }
