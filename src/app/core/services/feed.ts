@@ -36,10 +36,11 @@ export class FeedService {
   }
 
   loadPosts(): void {
-    this.http.get<FeedPost[]>(`${this.baseUrl}/posts/feed`, { withCredentials: true })
+    this.http.get<FeedPost[]>(`${this.baseUrl}/posts/feed?_=${new Date().getTime()}`, { withCredentials: true })
       .subscribe({
         next: (posts) => {
-          this.posts$.next(posts);
+          const sorted = (posts ?? []).sort((a, b) => b.id - a.id);
+          this.posts$.next(sorted);
         },
         error: (err) => {
           console.error('Failed to load feed posts', err);
@@ -81,6 +82,19 @@ export class FeedService {
     });
 
     return this.http.post<any>(`${this.baseUrl}/posts/feed`, formData, { withCredentials: true });
+  }
+
+  createStopPost(
+    stopId: number,
+    description: string,
+    images: File[]
+  ): Observable<any> {
+    const formData = new FormData();
+    formData.append('title', description);
+    images.forEach(image => {
+      formData.append('images', image);
+    });
+    return this.http.post<any>(`${this.baseUrl}/stops/${stopId}/posts`, formData, { withCredentials: true });
   }
 
   deletePost(postId: number): Observable<any> {

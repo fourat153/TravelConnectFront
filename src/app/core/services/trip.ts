@@ -13,7 +13,7 @@ export class TripService {
   }
  
   getMyTrips(): Observable<TripsOut> {
-    return this.http.get<TripsOut>(`${this.base}/trips/me` ,{ withCredentials: true });
+    return this.http.get<TripsOut>(`${this.base}/trips/me?_=${new Date().getTime()}` ,{ withCredentials: true });
   }
 }
  

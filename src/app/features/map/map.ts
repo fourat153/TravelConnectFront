@@ -1,4 +1,4 @@
-import { Component, AfterViewInit, NgZone, ChangeDetectorRef, OnInit } from '@angular/core';
+import { Component, AfterViewInit, NgZone, ChangeDetectorRef, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import * as L from 'leaflet';
@@ -36,6 +36,7 @@ import { FriendData } from '../../shared/models/friends';
   styleUrl: './map.scss',
 })
 export class Map implements AfterViewInit, OnInit {
+  @ViewChild(TripSidebarComponent) tripSidebar?: TripSidebarComponent;
   private map!: L.Map;
   private markers: L.CircleMarker[] = [];
   private polyline!: L.Polyline;
@@ -436,7 +437,11 @@ export class Map implements AfterViewInit, OnInit {
       case 'my-trips':
         this.isFriendTripsSidebarOpen = false;
         this.clearFriendPins();
-        this.openTripSidebar();
+        if (this.isTripSidebarOpen) {
+          this.tripSidebar?.loadTrips();
+        } else {
+          this.openTripSidebar();
+        }
         break;
 
       case 'profile':
