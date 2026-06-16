@@ -69,7 +69,7 @@ export class TripStopInputComponent implements OnDestroy {
 
   private searchTimeouts = new Map<string, any>();
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
 
   private makeRow(): StopRow {
