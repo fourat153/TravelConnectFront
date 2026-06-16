@@ -1,17 +1,9 @@
 <div class="stop-input-wrapper">
 
   <!-- ── Stop rows ─────────────────────────────────────────── -->
-  <div
-    cdkDropList
-    [cdkDropListData]="rows"
-    (cdkDropListDropped)="drop($event)"
-    class="stop-list">
+  <div cdkDropList [cdkDropListData]="rows" (cdkDropListDropped)="drop($event)" class="stop-list">
 
-    <div
-      *ngFor="let row of rows; let i = index; let last = last"
-      cdkDrag
-      [cdkDragData]="row"
-      class="stop-row">
+    <div *ngFor="let row of rows; let i = index; let last = last" cdkDrag [cdkDragData]="row" class="stop-row">
 
       <!-- drag handle -->
       <div cdkDragHandle class="drag-handle" title="Drag to reorder">
@@ -38,15 +30,10 @@
       <div class="stop-input-group">
         <div class="stop-input-inner" [class.resolved]="row.resolved">
 
-          <input
-            type="text"
-            [(ngModel)]="row.query"
-            (input)="onInput(row)"
-            (focus)="row.showDropdown = row.suggestions.length > 0"
-            (blur)="hideDropdown(row)"
+          <input type="text" [(ngModel)]="row.query" (input)="onInput(row)"
+            (focus)="row.showDropdown = row.suggestions.length > 0" (blur)="hideDropdown(row)"
             [placeholder]="isOrigin(i) ? 'Starting point' : isDestination(i) ? 'Destination' : 'Add stop'"
-            class="stop-input"
-            autocomplete="off" />
+            class="stop-input" autocomplete="off" />
 
           <!-- loading spinner -->
           <i *ngIf="row.loading" class="pi pi-spin pi-spinner input-icon"></i>
@@ -55,21 +42,14 @@
           <i *ngIf="row.resolved && !row.loading" class="pi pi-check-circle input-icon resolved-icon"></i>
 
           <!-- clear button -->
-          <button
-            *ngIf="row.query && !row.loading"
-            type="button"
-            class="clear-btn"
-            (click)="clearRow(row)">
+          <button *ngIf="row.query && !row.loading" type="button" class="clear-btn" (click)="clearRow(row)">
             <i class="pi pi-times"></i>
           </button>
         </div>
 
         <!-- suggestions dropdown -->
         <ul *ngIf="row.showDropdown" class="suggestions">
-          <li
-            *ngFor="let s of row.suggestions"
-            (mousedown)="selectSuggestion(row, s)"
-            class="suggestion-item">
+          <li *ngFor="let s of row.suggestions" (mousedown)="selectSuggestion(row, s)" class="suggestion-item">
             <i class="pi pi-map-marker suggestion-icon"></i>
             <div class="suggestion-text">
               <span class="suggestion-name">{{ s.display_name.split(',')[0] }}</span>
@@ -80,18 +60,10 @@
 
         <!-- Stop photos section -->
         <div class="stop-photos-section" *ngIf="allowPhotos">
-          <input
-            #stopFileInput
-            type="file"
-            (change)="onStopFilesSelected(row, $event)"
-            accept="image/*"
-            multiple
+          <input #stopFileInput type="file" (change)="onStopFilesSelected(row, $event)" accept="image/*" multiple
             style="display: none;" />
 
-          <button
-            type="button"
-            class="add-photos-btn"
-            (click)="stopFileInput.click()">
+          <button type="button" class="add-photos-btn" (click)="stopFileInput.click()">
             <i class="pi pi-camera"></i>
             <span>+ Add photos</span>
           </button>
@@ -99,31 +71,20 @@
           <div class="stop-photos-thumbnails" *ngIf="row.photoPreviews && row.photoPreviews.length > 0">
             <div class="photo-thumbnail" *ngFor="let preview of row.photoPreviews; let imgIdx = index">
               <img [src]="preview" class="thumb-img" alt="Stop photo preview">
-              <button
-                type="button"
-                class="remove-photo-btn"
+              <button type="button" class="remove-photo-btn"
                 (click)="removeStopPhoto(row, imgIdx); $event.stopPropagation()">
                 <i class="pi pi-times"></i>
               </button>
             </div>
           </div>
 
-          <input
-            type="text"
-            [(ngModel)]="row.description"
-            (input)="emit()"
-            placeholder="Write something about this stop..."
-            class="stop-desc-input" />
+          <input type="text" [(ngModel)]="row.description" (input)="emit()"
+            placeholder="Write something about this stop..." class="stop-desc-input" />
         </div>
       </div>
 
       <!-- remove button (only if more than 2 rows) -->
-      <button
-        *ngIf="rows.length > 2"
-        type="button"
-        class="remove-btn"
-        (click)="removeStop(i)"
-        title="Remove stop">
+      <button *ngIf="rows.length > 2" type="button" class="remove-btn" (click)="removeStop(i)" title="Remove stop">
         <i class="pi pi-times"></i>
       </button>
 
@@ -142,11 +103,7 @@
   </div>
 
   <!-- ── Add a stop ─────────────────────────────────────────── -->
-  <button
-    *ngIf="canAddStop"
-    type="button"
-    class="add-stop-btn"
-    (click)="addStop()">
+  <button *ngIf="canAddStop" type="button" class="add-stop-btn" (click)="addStop()">
     <i class="pi pi-plus"></i>
     <span>Add a stop</span>
   </button>

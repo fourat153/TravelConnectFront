@@ -14,8 +14,9 @@ import { TextareaModule } from 'primeng/textarea';
 import { ButtonModule } from 'primeng/button';
 import { CarouselModule } from 'primeng/carousel';
 import { SuggestionsService } from '../../core/services/suggestions';
-import {SuggestionUser } from '../../shared/models/user';
+import { SuggestionUser } from '../../shared/models/user';
 import { forkJoin } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-feed',
@@ -44,6 +45,7 @@ export class FeedComponent implements OnInit {
   private suggestionsService = inject(SuggestionsService);
   private fb = inject(FormBuilder);
   private cdr = inject(ChangeDetectorRef);
+  private http = inject(HttpClient);
 
   posts: FeedPost[] = [];
 
@@ -60,6 +62,8 @@ export class FeedComponent implements OnInit {
   newImageUrlsBase64: string[] = [];
   selectedImages: File[] = [];
   imageError = '';
+
+
 
   // Trip Form Properties
   createForm!: FormGroup;
@@ -91,8 +95,8 @@ export class FeedComponent implements OnInit {
       if (user) {
         this.currentUser = user;
         this.currentUserInitials = (user.firstname?.[0] ?? '') + (user.lastname?.[0] ?? '');
-      } 
-      
+      }
+
     });
 
     this.feedService.getPosts().subscribe(posts => {
@@ -124,9 +128,9 @@ export class FeedComponent implements OnInit {
     this.feedService.loadPosts();
   }
   connect(userId: number): void {
-      // TODO: wire to friendshipService.sendRequest() once implemented
-      this.suggestionsService.removeSuggestion(userId);
-    }
+    // TODO: wire to friendshipService.sendRequest() once implemented
+    this.suggestionsService.removeSuggestion(userId);
+  }
 
   getFullName(user: SuggestionUser): string {
     return `${user.firstname} ${user.lastname}`;
@@ -320,13 +324,12 @@ export class FeedComponent implements OnInit {
   }
 
   hasAnyStopPhotos(): boolean {
-    return this.tripStops.some(s => s.photos && s.photos.length > 0);
+    return this.selectedImages.length > 0;
   }
 
   submitPost(): void {
-    const stopsWithPhotos = this.tripStops.filter(s => s.photos && s.photos.length > 0);
-    if (stopsWithPhotos.length === 0) {
-      this.imageError = 'At least one trip photo is required.';
+    if (this.tripStops.length < 2) {
+      this.imageError = 'Please select both from and to cities.';
       return;
     }
     if (this.createForm.invalid) {
@@ -336,57 +339,58 @@ export class FeedComponent implements OnInit {
 
     const payload = {
       ...this.createForm.value,
-      stops: this.tripStops.map((stop, index) => ({
-        label: stop.label,
-        lat: stop.lat,
-        lon: stop.lon,
-        order: index,
-      })),
+      stops: [
+        {
+          label: this.tripStops[0].label,
+          lat: this.tripStops[0].lat,
+          lon: this.tripStops[0].lon,
+          order: 0,
+        },
+        {
+          label: this.tripStops[1].label,
+          lat: this.tripStops[1].lat,
+          lon: this.tripStops[1].lon,
+          order: 1,
+        }
+      ],
     };
 
     this.tripService.createTrip(payload).subscribe({
       next: (tripRes) => {
         if (tripRes.status_code === 201 && tripRes.id) {
-          // Trip created successfully! Retrieve stops from backend to get their database IDs
-          this.stopsService.getTripStops(tripRes.id).subscribe({
-            next: (stopsRes) => {
-              const backendStops = stopsRes.stops || [];
-              const postObservables: any[] = [];
-
-              // Map each local stop that has photos to its backend equivalent to get the stop ID
-              this.tripStops.forEach((stop, index) => {
-                if (stop.photos && stop.photos.length > 0) {
-                  // Match by index or fallback to matching by label/title
-                  const backendStop = backendStops[index] || backendStops.find(bs => bs.title === stop.label);
-                  if (backendStop && backendStop.id) {
-                    const stopDescription = (stop.description || '').trim() || tripRes.title || 'Trip stop';
-                    const images = stop.photos || [];
-                    postObservables.push(this.feedService.createStopPost(backendStop.id, stopDescription, images));
-                  }
+          if (this.selectedImages.length > 0) {
+            // Trip created successfully! Retrieve stops from backend to get their database IDs
+            this.stopsService.getTripStops(tripRes.id).subscribe({
+              next: (stopsRes) => {
+                const backendStops = stopsRes.stops || [];
+                const destinationStop = backendStops[1] || backendStops.find(bs => bs.title === this.tripStops[1].label);
+                if (destinationStop && destinationStop.id) {
+                  const stopDescription = this.newDescription.trim() || tripRes.title || 'Trip destination';
+                  this.feedService.createStopPost(destinationStop.id, stopDescription, this.selectedImages).subscribe({
+                    next: () => {
+                      this.showCreateModal = false;
+                      this.loadFeed();
+                    },
+                    error: (err) => {
+                      console.error(err);
+                      this.imageError = 'Failed to create feed post. Please try again.';
+                    }
+                  });
+                } else {
+                  this.showCreateModal = false;
+                  this.loadFeed();
                 }
-              });
-
-              if (postObservables.length > 0) {
-                forkJoin(postObservables).subscribe({
-                  next: () => {
-                    this.showCreateModal = false;
-                    this.loadFeed();
-                  },
-                  error: (err) => {
-                    console.error(err);
-                    this.imageError = 'Failed to create feed posts. Please try again.';
-                  }
-                });
-              } else {
-                this.showCreateModal = false;
-                this.loadFeed();
+              },
+              error: (err) => {
+                console.error(err);
+                this.imageError = 'Failed to retrieve trip stops. Please try again.';
               }
-            },
-            error: (err) => {
-              console.error(err);
-              this.imageError = 'Failed to retrieve trip stops. Please try again.';
-            }
-          });
+            });
+          } else {
+            // No photos selected: just close modal and load feed
+            this.showCreateModal = false;
+            this.loadFeed();
+          }
         } else {
           this.imageError = tripRes.message || 'Failed to create trip.';
         }

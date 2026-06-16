@@ -232,14 +232,42 @@
       <!-- Route -->
       <div class="form-field">
         <label>Route</label>
-        <app-trip-stop-input [allowPhotos]="true" (stopsChange)="onStopsChange($event)" />
+        <app-trip-stop-input [allowPhotos]="false" [maxStops]="2" (stopsChange)="onStopsChange($event)" />
       </div>
+
+      <!-- Photos Upload -->
+      <div class="form-field" style="margin-top: 12px;">
+        <label>Photos (Optional)</label>
+        <div class="image-select-area" (click)="triggerImageUpload(fileInput)">
+          <input #fileInput type="file" (change)="onFileSelected($event)" accept="image/*" multiple style="display: none;" />
+          
+          <div class="placeholder-content" *ngIf="newImageUrlsBase64.length === 0">
+            <i class="pi pi-camera upload-icon"></i>
+            <span>Upload Trip Photos</span>
+            <span class="upload-hint">Upload photos of your trip (optional)</span>
+          </div>
+
+          <div class="multi-preview-container" *ngIf="newImageUrlsBase64.length > 0" (click)="$event.stopPropagation()">
+            <div class="preview-thumb-card" *ngFor="let img of newImageUrlsBase64; let idx = index">
+              <img [src]="img" class="preview-thumbnail" alt="preview" />
+              <button class="remove-thumb-btn" (click)="removeUploadedImage(idx)">
+                <i class="pi pi-times"></i>
+              </button>
+            </div>
+            <div class="add-more-card" (click)="triggerImageUpload(fileInput)">
+              <i class="pi pi-plus"></i>
+              <span>Add More</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- Actions Footer -->
     <div class="form-actions-footer">
       <button class="dialog-cancel-btn" (click)="showCreateModal = false">Cancel</button>
-      <button class="dialog-submit-btn" [disabled]="!hasAnyStopPhotos() || createForm.invalid" (click)="submitPost()">
+      <button class="dialog-submit-btn" [disabled]="tripStops.length < 2 || createForm.invalid" (click)="submitPost()">
         Share Trip
       </button>
     </div>
