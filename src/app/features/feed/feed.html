@@ -256,8 +256,9 @@
       <div class="form-field" style="margin-top: 12px;">
         <label>Photos (Optional)</label>
         <div class="image-select-area" (click)="triggerImageUpload(fileInput)">
-          <input #fileInput type="file" (change)="onFileSelected($event)" accept="image/*" multiple style="display: none;" />
-          
+          <input #fileInput type="file" (change)="onFileSelected($event)" accept="image/*" multiple
+            style="display: none;" />
+
           <div class="placeholder-content" *ngIf="newImageUrlsBase64.length === 0">
             <i class="pi pi-camera upload-icon"></i>
             <span>Upload Trip Photos</span>
@@ -297,8 +298,9 @@
 <p-dialog [(visible)]="showPostDetailModal" [modal]="true" [draggable]="false" [resizable]="false"
   [header]="selectedPostForModal?.tripTitle || 'Trip Details'"
   [style]="{ width: '550px', 'max-width': '95vw', 'border-radius': '20px', overflow: 'hidden' }">
-  
-  <div class="post-card detail-modal-card" *ngIf="selectedPostForModal" style="border: none; box-shadow: none; margin: 0; padding: 0;">
+
+  <div class="post-card detail-modal-card" *ngIf="selectedPostForModal"
+    style="border: none; box-shadow: none; margin: 0; padding: 0;">
     <!-- Post Header -->
     <div class="post-header" style="padding: 0 0 12px 0;">
       <div class="post-author-info">
@@ -308,7 +310,8 @@
         <div class="author-meta">
           <span class="author-name">{{ selectedPostForModal.authorName }}</span>
           <span class="post-location">
-            <i class="pi pi-map-marker"></i> {{ selectedPostForModal.location }}<ng-container *ngIf="selectedPostForModal.tripTitle"> · {{
+            <i class="pi pi-map-marker"></i> {{ selectedPostForModal.location }}<ng-container
+              *ngIf="selectedPostForModal.tripTitle"> · {{
               selectedPostForModal.tripTitle }}</ng-container>
           </span>
         </div>
@@ -316,11 +319,14 @@
     </div>
 
     <!-- Post Photo Container (Double click to like) -->
-    <div class="post-image-container" style="height: 380px; border-radius: 12px; overflow: hidden; background: #0f172a; position: relative;">
+    <div class="post-image-container"
+      style="height: 380px; border-radius: 12px; overflow: hidden; background: #0f172a; position: relative;">
       <p-carousel [value]="selectedPostForModal.imageUrls" [numVisible]="1" [numScroll]="1" [circular]="true"
-        [showIndicators]="selectedPostForModal.imageUrls.length > 1" [showNavigators]="selectedPostForModal.imageUrls.length > 1">
+        [showIndicators]="selectedPostForModal.imageUrls.length > 1"
+        [showNavigators]="selectedPostForModal.imageUrls.length > 1">
         <ng-template let-imgUrl pTemplate="item">
-          <img [src]="imgUrl" [alt]="selectedPostForModal.location" class="post-image" (dblclick)="onImageDoubleClicked(selectedPostForModal)">
+          <img [src]="imgUrl" [alt]="selectedPostForModal.location" class="post-image"
+            (dblclick)="onImageDoubleClicked(selectedPostForModal)">
         </ng-template>
       </p-carousel>
 
@@ -333,7 +339,8 @@
     <!-- Action buttons (Like, Comment) -->
     <div class="post-actions" style="padding: 12px 0 6px 0;">
       <div class="left-actions">
-        <button class="action-btn like-btn" [class.liked]="selectedPostForModal.hasLiked" (click)="toggleLike(selectedPostForModal)">
+        <button class="action-btn like-btn" [class.liked]="selectedPostForModal.hasLiked"
+          (click)="toggleLike(selectedPostForModal)">
           <i [class]="selectedPostForModal.hasLiked ? 'pi pi-heart-fill' : 'pi pi-heart'"></i>
         </button>
         <button class="action-btn comment-btn" (click)="modalCommentInput.focus()">
@@ -357,7 +364,8 @@
     </div>
 
     <!-- Comments Area -->
-    <div class="post-comments-section" *ngIf="selectedPostForModal.comments.length > 0" style="padding: 0; max-height: 150px; overflow-y: auto;">
+    <div class="post-comments-section" *ngIf="selectedPostForModal.comments.length > 0"
+      style="padding: 0; max-height: 150px; overflow-y: auto;">
       <div class="comments-list">
         <div class="comment-item" *ngFor="let comment of selectedPostForModal.comments">
           <span class="comment-author">{{ comment.username }}</span>
@@ -378,14 +386,16 @@
 
         <!-- Popover Emoji Picker -->
         <div class="emoji-picker-popover" *ngIf="activeEmojiPickerPostId === selectedPostForModal.id">
-          <span class="emoji-item" *ngFor="let emoji of popularEmojis" (click)="addEmoji(selectedPostForModal.id, emoji)">
+          <span class="emoji-item" *ngFor="let emoji of popularEmojis"
+            (click)="addEmoji(selectedPostForModal.id, emoji)">
             {{ emoji }}
           </span>
         </div>
       </div>
       <input #modalCommentInput type="text" placeholder="Add a comment..." class="comment-input-field"
         [(ngModel)]="commentInputs[selectedPostForModal.id]" (keyup.enter)="submitComment(selectedPostForModal)">
-      <button class="comment-post-btn" [disabled]="!commentInputs[selectedPostForModal.id] || !commentInputs[selectedPostForModal.id].trim()"
+      <button class="comment-post-btn"
+        [disabled]="!commentInputs[selectedPostForModal.id] || !commentInputs[selectedPostForModal.id].trim()"
         (click)="submitComment(selectedPostForModal)">
         Post
       </button>

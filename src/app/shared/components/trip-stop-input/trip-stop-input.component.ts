@@ -18,6 +18,7 @@ import {
   distinctUntilChanged,
   switchMap,
   catchError,
+  map,
 } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
 
@@ -68,6 +69,7 @@ export class TripStopInputComponent implements OnDestroy {
   ];
 
   private searchTimeouts = new Map<string, any>();
+  private suggestionCache = new Map<string, NominatimResult[]>();
 
   constructor(private http: HttpClient) { }
 
@@ -118,37 +120,79 @@ export class TripStopInputComponent implements OnDestroy {
       clearTimeout(this.searchTimeouts.get(row.id));
     }
 
-    if (row.query.trim().length < 2) {
+    const q = row.query.trim().toLowerCase();
+
+    if (q.length < 2) {
       row.suggestions = [];
       row.showDropdown = false;
       return;
     }
 
+    // Return cached suggestions instantly if available
+    if (this.suggestionCache.has(q)) {
+      row.suggestions = this.suggestionCache.get(q)!;
+      row.showDropdown = row.suggestions.length > 0;
+      row.loading = false;
+      return;
+    }
+
     row.loading = true;
 
+    // Call Photon API directly for fast, search-as-you-type suggestions with high limits
     const timeoutId = setTimeout(() => {
       this.http
-        .get<NominatimResult[]>(
-          `https://nominatim.openstreetmap.org/search`,
-          {
-            params: {
-              q: row.query,
-              format: 'json',
-              limit: '5',
-              addressdetails: '1',
-            },
-            headers: { Accept: 'application/json' },
+        .get<any>(`https://photon.komoot.io/api/`, {
+          params: {
+            q: row.query,
+            limit: '5'
           }
-        )
+        })
         .pipe(
-          catchError(() => of([]))
+          map((photonRes: any) => {
+            const features = photonRes?.features || [];
+            return features.map((f: any, idx: number) => {
+              const name = f.properties?.name || '';
+              const city = f.properties?.city || '';
+              const country = f.properties?.country || '';
+              
+              // Avoid repeating city/name if they are identical
+              const uniqueParts: string[] = [];
+              [name, city, country].forEach(p => {
+                if (p && !uniqueParts.includes(p)) {
+                  uniqueParts.push(p);
+                }
+              });
+              
+              return {
+                place_id: idx,
+                display_name: uniqueParts.join(', '),
+                lat: f.geometry?.coordinates[1]?.toString() || '0',
+                lon: f.geometry?.coordinates[0]?.toString() || '0'
+              };
+            });
+          }),
+          catchError(() => {
+            // Fallback to Nominatim if Photon fails
+            return this.http.get<NominatimResult[]>(`https://nominatim.openstreetmap.org/search`, {
+              params: {
+                q: row.query,
+                format: 'json',
+                limit: '5',
+                addressdetails: '1'
+              },
+              headers: { Accept: 'application/json' }
+            }).pipe(
+              catchError(() => of([]))
+            );
+          })
         )
         .subscribe((results: NominatimResult[]) => {
           row.loading = false;
           row.suggestions = results;
           row.showDropdown = results.length > 0;
+          this.suggestionCache.set(q, results);
         });
-    }, 400);
+    }, 300); // 300ms debounce for extremely responsive autocomplete search
 
     this.searchTimeouts.set(row.id, timeoutId);
   }
