@@ -58,10 +58,9 @@ interface NominatimResult {
 })
 export class TripStopInputComponent implements OnDestroy {
   @Input() allowPhotos = false;
+  @Input() maxStops = 30;
+  @Input() minStops = 2;
   @Output() stopsChange = new EventEmitter<TripStop[]>();
-
-  readonly MAX_STOPS = 30;
-  readonly MIN_STOPS = 2;
 
   rows: StopRow[] = [
     this.makeRow(),
@@ -104,7 +103,7 @@ export class TripStopInputComponent implements OnDestroy {
   }
 
   get canAddStop(): boolean {
-    return this.rows.length < this.MAX_STOPS;
+    return this.rows.length < this.maxStops;
   }
 
   get showSwap(): boolean {
@@ -199,7 +198,7 @@ export class TripStopInputComponent implements OnDestroy {
   }
 
   removeStop(index: number): void {
-    if (this.rows.length <= this.MIN_STOPS) return;
+    if (this.rows.length <= this.minStops) return;
     const row = this.rows[index];
     if (this.searchTimeouts.has(row.id)) {
       clearTimeout(this.searchTimeouts.get(row.id));
