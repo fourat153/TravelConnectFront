@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -15,8 +15,10 @@ import { ButtonModule } from 'primeng/button';
 import { CarouselModule } from 'primeng/carousel';
 import { SuggestionsService } from '../../core/services/suggestions';
 import { SuggestionUser } from '../../shared/models/user';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of, Observable } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
+import * as L from 'leaflet';
 
 @Component({
   selector: 'app-feed',
@@ -46,8 +48,19 @@ export class FeedComponent implements OnInit {
   private fb = inject(FormBuilder);
   private cdr = inject(ChangeDetectorRef);
   private http = inject(HttpClient);
+  private ngZone = inject(NgZone);
 
   posts: FeedPost[] = [];
+
+  activeView: 'timeline' | 'map' = 'timeline';
+  private feedMap!: L.Map;
+  private mapInitialized = false;
+  private markers: L.Marker[] = [];
+  private geocodeCache = new Map<string, { lat: number; lon: number }>();
+  private geocodedPostsList: Array<{ post: FeedPost; coords: { lat: number; lon: number } }> = [];
+
+  showPostDetailModal = false;
+  selectedPostForModal: FeedPost | null = null;
 
   currentUser: any = null;
   currentUserInitials = '';
@@ -85,6 +98,7 @@ export class FeedComponent implements OnInit {
   popularEmojis = ['😀', '✈️', '🌍', '🏖️', '📸', '😍', '❤️', '🔥', '🙌', '✨', '🍕', '🗺️', '🥳', '😎', '👍', '👏', '🌟', '🍹', '🚗', '🏔️'];
 
   ngOnInit() {
+    this.loadGeocodeCache();
     this.createForm = this.fb.group({
       title: ['', [Validators.required, Validators.minLength(2)]],
       privacy: ['public'],
@@ -102,6 +116,9 @@ export class FeedComponent implements OnInit {
     this.feedService.getPosts().subscribe(posts => {
       this.posts = posts;
       this.cdr.detectChanges();
+      if (this.activeView === 'map') {
+        this.initMap();
+      }
     });
 
     this.suggestionsLoading = true;
@@ -399,5 +416,225 @@ export class FeedComponent implements OnInit {
         this.imageError = 'Something went wrong while creating the trip. Try again.';
       }
     });
+  }
+
+  setActiveView(view: 'timeline' | 'map'): void {
+    this.activeView = view;
+    if (view === 'map') {
+      setTimeout(() => {
+        this.initMap();
+      }, 50);
+    }
+  }
+
+  private initMap(): void {
+    if (!this.mapInitialized) {
+      this.feedMap = L.map('feed-map', {
+        zoomAnimation: true,
+        fadeAnimation: true,
+        minZoom: 2,
+        markerZoomAnimation: true,
+      }).setView([20, 0], 2);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+      }).addTo(this.feedMap);
+
+      this.mapInitialized = true;
+    }
+
+    // Clear existing markers
+    this.markers.forEach(m => this.feedMap.removeLayer(m));
+    this.markers = [];
+    this.geocodedPostsList = [];
+
+    // Load and place markers for all feed posts
+    let delay = 0;
+    this.posts.forEach((post) => {
+      // Prioritize using pre-resolved lat/long coordinates from backend
+      if (post.lat !== undefined && post.lat !== null && post.long !== undefined && post.long !== null) {
+        const coords = { lat: post.lat, lon: post.long };
+        this.geocodedPostsList.push({ post, coords });
+        this.redrawMarkers();
+        return;
+      }
+
+      const location = post.location;
+      if (!location) return;
+
+      if (this.geocodeCache.has(location)) {
+        // Cached - place immediately
+        const coords = this.geocodeCache.get(location)!;
+        this.geocodedPostsList.push({ post, coords });
+        this.redrawMarkers();
+      } else {
+        // Not cached - queue with a delay
+        setTimeout(() => {
+          if (this.activeView !== 'map' || !this.mapInitialized) return;
+
+          this.geocodeLocation(location).subscribe(coords => {
+            if (coords) {
+              this.geocodedPostsList.push({ post, coords });
+              this.redrawMarkers();
+            }
+          });
+        }, delay);
+        delay += 1200; // Increment delay by 1.2s to satisfy Nominatim 1 request/sec rate limit
+      }
+    });
+
+    // Invalidate size to ensure it renders correctly
+    setTimeout(() => {
+      this.feedMap.invalidateSize();
+    }, 100);
+  }
+
+  private redrawMarkers(): void {
+    // Clear existing markers from map
+    this.markers.forEach(m => this.feedMap.removeLayer(m));
+    this.markers = [];
+
+    // Group posts that are very close to each other
+    const groups: Array<Array<{ post: FeedPost; coords: { lat: number; lon: number } }>> = [];
+
+    this.geocodedPostsList.forEach((item) => {
+      let grouped = false;
+      for (const group of groups) {
+        const first = group[0];
+        const dist = this.feedMap.distance(
+          [item.coords.lat, item.coords.lon],
+          [first.coords.lat, first.coords.lon]
+        );
+        // If they are closer than 15km, group them to spiderfy
+        if (dist < 15000) {
+          group.push(item);
+          grouped = true;
+          break;
+        }
+      }
+      if (!grouped) {
+        groups.push([item]);
+      }
+    });
+
+    // Render each group
+    groups.forEach((group) => {
+      const N = group.length;
+      if (N === 1) {
+        const { post, coords } = group[0];
+        this.placePostMarkerAtCoords(post, coords.lat, coords.lon);
+      } else {
+        const centerLat = group.reduce((sum, item) => sum + item.coords.lat, 0) / N;
+        const centerLon = group.reduce((sum, item) => sum + item.coords.lon, 0) / N;
+
+        // Spread markers in a circle around the center (0.08 degree radius spacing)
+        const radius = 0.08;
+
+        group.forEach((item, i) => {
+          const angle = (2 * Math.PI * i) / N;
+          const offsetLat = Math.sin(angle) * radius;
+          const offsetLon = (Math.cos(angle) * radius) / Math.cos((centerLat * Math.PI) / 180);
+
+          this.placePostMarkerAtCoords(item.post, centerLat + offsetLat, centerLon + offsetLon);
+        });
+      }
+    });
+  }
+
+  private placePostMarkerAtCoords(post: FeedPost, lat: number, lon: number): void {
+    const colors = ['#f43f5e', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899', '#06b6d4', '#14b8a6', '#3b82f6'];
+    const color = colors[post.id % colors.length];
+
+    // Generate initials fallback if avatar is not present
+    const initials = (post.authorName || 'TR').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+
+    const avatarHtml = post.authorAvatar
+      ? `<img src="${post.authorAvatar}" style="width: 100%; height: 100%; object-fit: cover;" />`
+      : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 600; font-size: 14px;">${initials}</div>`;
+
+    const icon = L.divIcon({
+      className: '',
+      html: `
+        <div class="friend-pin">
+          <div class="friend-pin__avatar" style="background: ${color}; border-color: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 0 1.5px ${color}; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+            ${avatarHtml}
+          </div>
+          <div class="friend-pin__tail" style="border-top-color: ${color};"></div>
+          <div class="friend-pin__label" style="background: ${color};">${post.authorName}</div>
+        </div>
+      `,
+      iconSize: [90, 72],
+      iconAnchor: [45, 50],
+      popupAnchor: [0, -72],
+    });
+
+    const marker = L.marker([lat, lon], { icon }).addTo(this.feedMap);
+
+    marker.bindTooltip(`${post.location} · ${post.createdAt}`, {
+      direction: 'top',
+      offset: [0, -60],
+      className: 'friend-stop-tooltip'
+    });
+
+    marker.on('click', () => {
+      this.ngZone.run(() => {
+        this.selectedPostForModal = post;
+        this.showPostDetailModal = true;
+        this.cdr.detectChanges();
+      });
+    });
+
+    this.markers.push(marker);
+  }
+
+  private loadGeocodeCache(): void {
+    try {
+      const saved = localStorage.getItem('geocode_cache');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        Object.keys(parsed).forEach(key => {
+          this.geocodeCache.set(key, parsed[key]);
+        });
+      }
+    } catch (e) {
+      console.error('Failed to load geocode cache', e);
+    }
+  }
+
+  private saveGeocodeCache(): void {
+    try {
+      const obj: { [key: string]: { lat: number; lon: number } } = {};
+      this.geocodeCache.forEach((value, key) => {
+        obj[key] = value;
+      });
+      localStorage.setItem('geocode_cache', JSON.stringify(obj));
+    } catch (e) {
+      console.error('Failed to save geocode cache', e);
+    }
+  }
+
+  geocodeLocation(locationName: string): Observable<{ lat: number; lon: number } | null> {
+    if (this.geocodeCache.has(locationName)) {
+      return of(this.geocodeCache.get(locationName)!);
+    }
+
+    return this.http.get<any[]>('https://nominatim.openstreetmap.org/search', {
+      params: {
+        q: locationName,
+        format: 'json',
+        limit: '1'
+      }
+    }).pipe(
+      map(results => {
+        if (results && results.length > 0) {
+          const coords = { lat: parseFloat(results[0].lat), lon: parseFloat(results[0].lon) };
+          this.geocodeCache.set(locationName, coords);
+          this.saveGeocodeCache();
+          return coords;
+        }
+        return null;
+      }),
+      catchError(() => of(null))
+    );
   }
 }

@@ -31,7 +31,7 @@ export class Login {
         this.isLoading = false;
         if (res.status_code === 200) {
           this.authService.currentUser$.next(res);
-          this.router.navigate(['/map']);
+          this.router.navigate(['/feed']);
 
         } else {
           this.errorMessage = res.message;

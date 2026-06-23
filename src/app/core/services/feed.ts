@@ -21,6 +21,8 @@ export interface FeedPost {
   comments: PostComment[];
   createdAt: string;
   tripTitle?: string;
+  lat?: number;
+  long?: number;
 }
 
 @Injectable({
