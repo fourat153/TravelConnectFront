@@ -43,11 +43,11 @@
           <!-- Post Header -->
           <div class="post-header">
             <div class="post-author-info">
-              <div class="author-avatar-wrapper">
+              <div class="author-avatar-wrapper" (click)="viewProfile(post.authorId)" style="cursor: pointer;">
                 <img [src]="post.authorAvatar" [alt]="post.authorName" class="author-avatar">
               </div>
               <div class="author-meta">
-                <span class="author-name">{{ post.authorName }}</span>
+                <span class="author-name" (click)="viewProfile(post.authorId)" style="cursor: pointer;">{{ post.authorName }}</span>
                 <span class="post-location">
                   <i class="pi pi-map-marker"></i> {{ post.location }}<ng-container *ngIf="post.tripTitle"> · {{
                     post.tripTitle }}</ng-container>
@@ -97,7 +97,7 @@
 
           <!-- Post Caption -->
           <div class="post-caption">
-            <span class="caption-author">{{ post.authorName }}</span>
+            <span class="caption-author" (click)="viewProfile(post.authorId)" style="cursor: pointer;">{{ post.authorName }}</span>
             <span class="caption-text">{{ post.description }}</span>
           </div>
 
@@ -179,7 +179,7 @@
         <!-- real data -->
         <ng-container *ngIf="!suggestionsLoading">
           <div class="suggestion-row" *ngFor="let sug of suggestions">
-            <div class="sug-avatar-wrapper">
+            <div class="sug-avatar-wrapper" (click)="viewProfile(sug.id)" style="cursor: pointer;">
               <img *ngIf="sug.profile_picture" [src]="sug.profile_picture" [alt]="getFullName(sug)"
                 class="sug-avatar" />
               <div *ngIf="!sug.profile_picture" class="sug-initials">
@@ -187,7 +187,7 @@
               </div>
             </div>
             <div class="sug-info">
-              <span class="sug-name">{{ getFullName(sug) }}</span>
+              <span class="sug-name" (click)="viewProfile(sug.id)" style="cursor: pointer;">{{ getFullName(sug) }}</span>
               <span class="sug-subtext">
                 Followed by {{ sug.mutual_friends_count }}
                 {{ sug.mutual_friends_count === 1 ? 'friend' : 'friends' }}
@@ -304,11 +304,11 @@
     <!-- Post Header -->
     <div class="post-header" style="padding: 0 0 12px 0;">
       <div class="post-author-info">
-        <div class="author-avatar-wrapper">
+        <div class="author-avatar-wrapper" (click)="viewProfile(selectedPostForModal.authorId)" style="cursor: pointer;">
           <img [src]="selectedPostForModal.authorAvatar" [alt]="selectedPostForModal.authorName" class="author-avatar">
         </div>
         <div class="author-meta">
-          <span class="author-name">{{ selectedPostForModal.authorName }}</span>
+          <span class="author-name" (click)="viewProfile(selectedPostForModal.authorId)" style="cursor: pointer;">{{ selectedPostForModal.authorName }}</span>
           <span class="post-location">
             <i class="pi pi-map-marker"></i> {{ selectedPostForModal.location }}<ng-container
               *ngIf="selectedPostForModal.tripTitle"> · {{

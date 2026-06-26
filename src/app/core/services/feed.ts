@@ -11,6 +11,7 @@ export interface PostComment {
 
 export interface FeedPost {
   id: number;
+  authorId?: number;
   authorName: string;
   authorAvatar: string;
   location: string;
@@ -52,6 +53,10 @@ export class FeedService {
 
   getPosts(): Observable<FeedPost[]> {
     return this.posts$.asObservable();
+  }
+
+  getUserPosts(userId: number): Observable<FeedPost[]> {
+    return this.http.get<FeedPost[]>(`${this.baseUrl}/posts/user/${userId}`, { withCredentials: true });
   }
 
   likePost(postId: number): Observable<any> {

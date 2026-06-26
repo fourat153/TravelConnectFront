@@ -637,4 +637,11 @@ export class FeedComponent implements OnInit {
       catchError(() => of(null))
     );
   }
+
+  viewProfile(userId?: number): void {
+    if (userId) {
+      this.showPostDetailModal = false;
+      this.router.navigate(['/profile', userId]);
+    }
+  }
 }

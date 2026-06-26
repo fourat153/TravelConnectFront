@@ -559,6 +559,62 @@
       font-size: 0.95rem;
     }
   }
+
+  .profile-posts-section {
+    margin-top: 1.5rem !important;
+    padding: 1.25rem 0.75rem !important;
+    border-radius: 1rem !important;
+    box-shadow: none !important;
+    border: 1px solid rgba(229, 231, 235, 0.5) !important;
+
+    .posts-section-header {
+      margin-bottom: 1.25rem !important;
+      padding-top: 0.5rem !important;
+    }
+
+    .posts-grid {
+      grid-template-columns: repeat(3, 1fr) !important;
+      gap: 3px !important;
+
+      .grid-item {
+        border-radius: 0.25rem !important;
+      }
+    }
+  }
+
+  ::ng-deep .p-dialog {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    
+    .p-dialog-header {
+      padding: 0.75rem 1rem 0.5rem 1rem !important;
+    }
+    
+    .p-dialog-content {
+      padding: 0 1rem 1rem 1rem !important;
+    }
+  }
+
+  .detail-modal-card {
+    .post-image-container {
+      height: 280px !important;
+      .post-image {
+        height: 280px !important;
+      }
+    }
+    
+    .post-comments-section {
+      max-height: 120px !important;
+    }
+
+    .post-actions {
+      padding: 8px 0 4px 0 !important;
+    }
+
+    .add-comment-container {
+      padding: 8px 0 0 0 !important;
+    }
+  }
 }
 
 @keyframes slideInDown {
@@ -572,3 +628,573 @@
     opacity: 1;
   }
 }
+
+// Visited Profile & Instagram Grid Extensions
+.back-navigation {
+  align-self: flex-start;
+  margin-bottom: 0.5rem;
+
+  .back-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.2rem;
+    border-radius: 0.75rem;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #475569;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+
+    &:hover {
+      background: #f8fafc;
+      color: #0f172a;
+      transform: translateX(-2px);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+
+    i {
+      font-size: 0.85rem;
+    }
+  }
+}
+
+.profile-details-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  background: #f8fafc;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px dashed #e2e8f0;
+
+    &:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .info-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+      color: #64748b;
+      font-weight: 500;
+
+      i {
+        font-size: 1rem;
+        color: #3b82f6;
+      }
+    }
+
+    .info-value {
+      font-size: 0.95rem;
+      color: #0f172a;
+      font-weight: 600;
+    }
+  }
+}
+
+.profile-posts-section {
+  width: 100%;
+  margin-top: 2rem;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 1.5rem;
+  padding: 2.5rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+
+  .posts-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 1rem;
+    margin-bottom: 2rem;
+    color: #64748b;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 1.5px;
+
+    i {
+      font-size: 0.95rem;
+    }
+  }
+
+  .posts-loading, .posts-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    color: #94a3b8;
+    text-align: center;
+    gap: 1rem;
+
+    i {
+      font-size: 2.5rem;
+      color: #cbd5e1;
+    }
+
+    p {
+      margin: 0;
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+  }
+
+  .posts-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+
+    @media (max-width: 768px) {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 480px) {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .grid-item {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      border-radius: 0.75rem;
+      overflow: hidden;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+      &:hover {
+        transform: scale(1.02);
+
+        .grid-overlay {
+          opacity: 1;
+        }
+      }
+
+      .grid-image-wrapper {
+        width: 100%;
+        height: 100%;
+        background: #f1f5f9;
+
+        .grid-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          transition: transform 0.5s ease;
+        }
+      }
+
+      .grid-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.45);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1.5rem;
+        opacity: 0;
+        color: #ffffff;
+        transition: opacity 0.25s ease;
+        font-weight: 700;
+        font-size: 1.1rem;
+
+        .overlay-stat {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+
+          i {
+            font-size: 1.2rem;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Styles for PrimeNG post detail dialog inside profile (mirrored from feed.scss)
+::ng-deep {
+  .p-dialog {
+    .p-dialog-header {
+      padding: 1.25rem 1.5rem 0.75rem 1.5rem !important;
+      border-bottom: none !important;
+
+      .p-dialog-title {
+        font-weight: 700 !important;
+        font-size: 1.25rem !important;
+        color: #0f172a !important;
+      }
+    }
+
+    .p-dialog-content {
+      padding: 0 1.5rem 1.5rem 1.5rem !important;
+    }
+  }
+}
+
+.detail-modal-card {
+  .post-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .post-author-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+
+      .author-avatar-wrapper {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        overflow: hidden;
+        background: #e2e8f0;
+        border: 2px solid #3b82f6;
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+      }
+
+      .author-meta {
+        display: flex;
+        flex-direction: column;
+
+        .author-name {
+          font-weight: 700;
+          font-size: 0.95rem;
+          color: #0f172a;
+        }
+
+        .post-location {
+          font-size: 0.75rem;
+          color: #64748b;
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+          margin-top: 0.1rem;
+
+          i {
+            font-size: 0.75rem;
+            color: #ef4444;
+          }
+        }
+      }
+    }
+  }
+
+  .post-image-container {
+    height: 380px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #0f172a;
+    position: relative;
+
+    .post-image {
+      width: 100%;
+      height: 380px;
+      object-fit: cover;
+    }
+
+    .heart-animation-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.15);
+      z-index: 10;
+      pointer-events: none;
+
+      .animated-heart {
+        font-size: 5.5rem;
+        color: #ef4444;
+        filter: drop-shadow(0 4px 15px rgba(0, 0, 0, 0.3));
+        animation: heartPop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+      }
+    }
+  }
+
+  .post-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .left-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .action-btn {
+      background: none;
+      border: none;
+      padding: 0.4rem;
+      cursor: pointer;
+      color: #475569;
+      font-size: 1.35rem;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+
+      &:hover {
+        background: #f1f5f9;
+        color: #0f172a;
+        transform: scale(1.1);
+      }
+
+      &.like-btn {
+        &:hover {
+          color: #ef4444;
+          background: #fef2f2;
+        }
+
+        &.liked {
+          color: #ef4444;
+          animation: heartBeat 0.3s ease;
+        }
+      }
+
+      &.comment-btn {
+        &:hover {
+          color: #3b82f6;
+          background: #eff6ff;
+        }
+      }
+    }
+  }
+
+  .post-likes-info {
+    .likes-text {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #0f172a;
+    }
+  }
+
+  .post-caption {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #334155;
+
+    .caption-author {
+      font-weight: 700;
+      color: #0f172a;
+      margin-right: 0.5rem;
+    }
+  }
+
+  .post-comments-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+
+    .comments-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .comment-item {
+      font-size: 0.875rem;
+      line-height: 1.4;
+      display: block;
+
+      .comment-author {
+        font-weight: 700;
+        color: #0f172a;
+        margin-right: 0.4rem;
+      }
+
+      .comment-text {
+        color: #334155;
+      }
+
+      .comment-time {
+        display: block;
+        font-size: 0.7rem;
+        color: #94a3b8;
+        margin-top: 0.15rem;
+      }
+    }
+  }
+
+  .post-time-ago {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+
+  .add-comment-container {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    position: relative;
+
+    .emoji-picker-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+
+      .comment-emoji-icon {
+        font-size: 1.25rem;
+        color: #64748b;
+        cursor: pointer;
+        transition: color 0.2s ease;
+
+        &:hover {
+          color: #eab308;
+        }
+      }
+
+      .emoji-picker-popover {
+        position: absolute;
+        bottom: 2rem;
+        left: 0;
+        z-index: 100;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 0.5rem;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 0.35rem;
+        width: 180px;
+
+        .emoji-item {
+          font-size: 1.25rem;
+          padding: 0.25rem;
+          cursor: pointer;
+          border-radius: 6px;
+          text-align: center;
+          transition: background 0.15s ease;
+
+          &:hover {
+            background: #f1f5f9;
+          }
+        }
+      }
+    }
+
+    .comment-input-field {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 0.9rem;
+      color: #0f172a;
+      background: transparent;
+
+      &::placeholder {
+        color: #94a3b8;
+      }
+    }
+
+    .comment-post-btn {
+      background: none;
+      border: none;
+      color: #3b82f6;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: color 0.2s ease;
+
+      &:hover:not(:disabled) {
+        color: #1d4ed8;
+      }
+
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+    }
+  }
+}
+
+// Carousel customization for modal
+::ng-deep {
+  .post-image-container {
+    .p-carousel-content {
+      height: 100%;
+    }
+    
+    .p-carousel-container {
+      height: 100%;
+    }
+    
+    .p-carousel-items-container {
+      height: 100%;
+    }
+
+    .p-carousel-item {
+      height: 100%;
+    }
+  }
+}
+
+@keyframes heartPop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.9;
+  }
+  80% {
+    transform: scale(0.9);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes heartBeat {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.25);
+  }
+  50% {
+    transform: scale(1);
+  }
+  75% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}

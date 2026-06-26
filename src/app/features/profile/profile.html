@@ -5,6 +5,15 @@
   <!-- Main Profile Content -->
   <div class="profile-main-content">
     <div class="profile-container">
+      
+      <!-- Back button for visiting other profiles -->
+      <div class="back-navigation" *ngIf="!isOwnProfile">
+        <button class="back-btn" (click)="goBack()">
+          <i class="pi pi-arrow-left"></i>
+          <span>Back to Feed</span>
+        </button>
+      </div>
+
       <!-- Status messages -->
       <div *ngIf="successMessage" class="alert alert-success">
         <i class="pi pi-check-circle"></i>
@@ -19,35 +28,54 @@
       <div class="profile-card">
         <!-- Left Section: Profile Avatar & Upload -->
         <div class="avatar-section">
-          <div class="avatar-wrapper" [class.editable]="isEditMode" (click)="triggerFileInput(fileInput)">
-            <img *ngIf="imagePreview; else defaultAvatar" [src]="imagePreview" alt="Profile Picture"
-              class="avatar-img" />
-            <ng-template #defaultAvatar>
-              <div class="avatar-placeholder">
-                {{ userInitials || 'TR' }}
+          <ng-container *ngIf="isOwnProfile; else visitedAvatar">
+            <div class="avatar-wrapper" [class.editable]="isEditMode" (click)="triggerFileInput(fileInput)">
+              <img *ngIf="imagePreview; else defaultAvatar" [src]="imagePreview" alt="Profile Picture"
+                class="avatar-img" />
+              <ng-template #defaultAvatar>
+                <div class="avatar-placeholder">
+                  {{ userInitials || 'TR' }}
+                </div>
+              </ng-template>
+              <div *ngIf="isEditMode" class="avatar-overlay">
+                <i class="pi pi-camera"></i>
+                <span>Upload Photo</span>
               </div>
-            </ng-template>
-            <div *ngIf="isEditMode" class="avatar-overlay">
-              <i class="pi pi-camera"></i>
-              <span>Upload Photo</span>
             </div>
-          </div>
-          <input type="file" #fileInput class="hidden-file-input" (change)="onFileSelected($event)" accept="image/*" />
-          <h2 class="user-fullname">{{ user?.firstname }} {{ user?.lastname }}</h2>
-          <p class="user-email-text">{{ user?.email }}</p>
-          <div class="status-badge" *ngIf="user?.has_completed_onboarding === 'Onboarded'">
-            <i class="pi pi-verified"></i> Onboarded
-          </div>
-          <p-button 
-            label="Logout" 
-            icon="pi pi-sign-out" 
-            styleClass="p-button-danger p-button-outlined p-button-sm mt-3 w-full" 
-            (onClick)="logout()">
-          </p-button>
+            <input type="file" #fileInput class="hidden-file-input" (change)="onFileSelected($event)" accept="image/*" />
+            <h2 class="user-fullname">{{ user?.firstname }} {{ user?.lastname }}</h2>
+            <p class="user-email-text">{{ user?.email }}</p>
+            <div class="status-badge" *ngIf="user?.has_completed_onboarding === 'Onboarded'">
+              <i class="pi pi-verified"></i> Onboarded
+            </div>
+            <p-button 
+              label="Logout" 
+              icon="pi pi-sign-out" 
+              styleClass="p-button-danger p-button-outlined p-button-sm mt-3 w-full" 
+              (onClick)="logout()">
+            </p-button>
+          </ng-container>
+
+          <ng-template #visitedAvatar>
+            <div class="avatar-wrapper">
+              <img *ngIf="visitedUser?.profile_picture; else defaultVisitedAvatar" [src]="visitedUser?.profile_picture" alt="Profile Picture"
+                class="avatar-img" />
+              <ng-template #defaultVisitedAvatar>
+                <div class="avatar-placeholder">
+                  {{ visitedUserInitials || 'TR' }}
+                </div>
+              </ng-template>
+            </div>
+            <h2 class="user-fullname">{{ visitedUser?.firstname }} {{ visitedUser?.lastname }}</h2>
+            <p class="user-email-text">{{ visitedUser?.email }}</p>
+            <div class="status-badge">
+              <i class="pi pi-users"></i> Friend
+            </div>
+          </ng-template>
         </div>
 
-        <!-- Right Section: Details Form -->
-        <div class="details-section">
+        <!-- Right Section: Details Form (Own Profile) -->
+        <div class="details-section" *ngIf="isOwnProfile">
           <div class="section-title">
             <h3>Personal Information</h3>
             <button class="btn btn-secondary edit-btn" (click)="toggleEditMode()">
@@ -141,7 +169,180 @@
             </div>
           </form>
         </div>
+
+        <!-- Right Section: Friend Info (Visited Profile) -->
+        <div class="details-section" *ngIf="!isOwnProfile">
+          <div class="section-title">
+            <h3>Friend Information</h3>
+          </div>
+          <div class="profile-details-info">
+            <div class="info-row">
+              <span class="info-label"><i class="pi pi-user"></i> Full Name</span>
+              <span class="info-value">{{ visitedUser?.firstname }} {{ visitedUser?.lastname }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label"><i class="pi pi-envelope"></i> Email</span>
+              <span class="info-value">{{ visitedUser?.email }}</span>
+            </div>
+            <div class="info-row" *ngIf="visitedUser?.gender">
+              <span class="info-label"><i class="pi pi-users"></i> Gender</span>
+              <span class="info-value" style="text-transform: capitalize;">{{ visitedUser?.gender }}</span>
+            </div>
+            <div class="info-row" *ngIf="visitedUser?.phone_number">
+              <span class="info-label"><i class="pi pi-phone"></i> Phone Number</span>
+              <span class="info-value">{{ visitedUser?.phone_number }}</span>
+            </div>
+          </div>
+        </div>
       </div>
+
+      <!-- Instagram-Style Post Grid Section -->
+      <div class="profile-posts-section">
+        <div class="posts-section-header">
+          <i class="pi pi-th-large"></i>
+          <span>POSTS</span>
+        </div>
+
+        <!-- Loading state -->
+        <div class="posts-loading" *ngIf="postsLoading">
+          <i class="pi pi-spin pi-spinner"></i>
+          <span>Loading posts...</span>
+        </div>
+
+        <!-- Empty state -->
+        <div class="posts-empty" *ngIf="!postsLoading && posts.length === 0">
+          <i class="pi pi-camera"></i>
+          <p>No posts shared yet</p>
+        </div>
+
+        <!-- Grid layout -->
+        <div class="posts-grid" *ngIf="!postsLoading && posts.length > 0">
+          <div class="grid-item" *ngFor="let post of posts" (click)="openPostDetail(post)">
+            <div class="grid-image-wrapper">
+              <img [src]="post.imageUrls[0] || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=300'" [alt]="post.location" class="grid-image" />
+            </div>
+            <div class="grid-overlay">
+              <span class="overlay-stat">
+                <i class="pi pi-heart-fill"></i> {{ post.likesCount }}
+              </span>
+              <span class="overlay-stat">
+                <i class="pi pi-comment"></i> {{ post.comments.length }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
+
+<!-- Post Detail Modal (when clicked from Instagram grid) -->
+<p-dialog [(visible)]="showPostDetailModal" [modal]="true" [draggable]="false" [resizable]="false"
+  [header]="selectedPostForModal?.tripTitle || 'Trip Details'"
+  [style]="{ width: '550px', 'max-width': '95vw', 'border-radius': '20px', overflow: 'hidden' }">
+
+  <div class="post-card detail-modal-card" *ngIf="selectedPostForModal"
+    style="border: none; box-shadow: none; margin: 0; padding: 0;">
+    <!-- Post Header -->
+    <div class="post-header" style="padding: 0 0 12px 0;">
+      <div class="post-author-info">
+        <div class="author-avatar-wrapper">
+          <img [src]="selectedPostForModal.authorAvatar" [alt]="selectedPostForModal.authorName" class="author-avatar">
+        </div>
+        <div class="author-meta">
+          <span class="author-name">{{ selectedPostForModal.authorName }}</span>
+          <span class="post-location">
+            <i class="pi pi-map-marker"></i> {{ selectedPostForModal.location }}<ng-container
+              *ngIf="selectedPostForModal.tripTitle"> · {{
+              selectedPostForModal.tripTitle }}</ng-container>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Post Photo Container (Double click to like) -->
+    <div class="post-image-container"
+      style="height: 380px; border-radius: 12px; overflow: hidden; background: #0f172a; position: relative;">
+      <p-carousel [value]="selectedPostForModal.imageUrls" [numVisible]="1" [numScroll]="1" [circular]="true"
+        [showIndicators]="selectedPostForModal.imageUrls.length > 1"
+        [showNavigators]="selectedPostForModal.imageUrls.length > 1">
+        <ng-template let-imgUrl pTemplate="item">
+          <img [src]="imgUrl" [alt]="selectedPostForModal.location" class="post-image"
+            (dblclick)="onImageDoubleClicked(selectedPostForModal)">
+        </ng-template>
+      </p-carousel>
+
+      <!-- Large floating heart double click animation overlay -->
+      <div class="heart-animation-overlay" *ngIf="heartOverlayPostId === selectedPostForModal.id">
+        <i class="pi pi-heart-fill animated-heart"></i>
+      </div>
+    </div>
+
+    <!-- Action buttons (Like, Comment) -->
+    <div class="post-actions" style="padding: 12px 0 6px 0;">
+      <div class="left-actions">
+        <button class="action-btn like-btn" [class.liked]="selectedPostForModal.hasLiked"
+          (click)="toggleLike(selectedPostForModal)">
+          <i [class]="selectedPostForModal.hasLiked ? 'pi pi-heart-fill' : 'pi pi-heart'"></i>
+        </button>
+        <button class="action-btn comment-btn" (click)="modalCommentInput.focus()">
+          <i class="pi pi-comment"></i>
+        </button>
+      </div>
+      <button class="action-btn bookmark-btn">
+        <i class="pi pi-bookmark"></i>
+      </button>
+    </div>
+
+    <!-- Likes Count -->
+    <div class="post-likes-info" style="padding: 0 0 4px 0;">
+      <span class="likes-text">{{ selectedPostForModal.likesCount }} likes</span>
+    </div>
+
+    <!-- Post Caption -->
+    <div class="post-caption" style="padding: 4px 0 8px 0;">
+      <span class="caption-author">{{ selectedPostForModal.authorName }}</span>
+      <span class="caption-text">{{ selectedPostForModal.description }}</span>
+    </div>
+
+    <!-- Comments Area -->
+    <div class="post-comments-section" *ngIf="selectedPostForModal.comments.length > 0"
+      style="padding: 0; max-height: 150px; overflow-y: auto;">
+      <div class="comments-list">
+        <div class="comment-item" *ngFor="let comment of selectedPostForModal.comments">
+          <span class="comment-author">{{ comment.username }}</span>
+          <span class="comment-text">{{ comment.text }}</span>
+          <span class="comment-time">{{ comment.createdAt }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="post-time-ago" style="padding: 8px 0 12px 0;">
+      <span>{{ selectedPostForModal.createdAt }}</span>
+    </div>
+
+    <!-- Add Comment Input Box -->
+    <div class="add-comment-container" style="padding: 12px 0 0 0; border-top: 1px solid #f1f5f9;">
+      <div class="emoji-picker-wrapper">
+        <i class="pi pi-face-smile comment-emoji-icon" (click)="toggleEmojiPicker(selectedPostForModal.id)"></i>
+
+        <!-- Popover Emoji Picker -->
+        <div class="emoji-picker-popover" *ngIf="activeEmojiPickerPostId === selectedPostForModal.id">
+          <span class="emoji-item" *ngFor="let emoji of popularEmojis"
+            (click)="addEmoji(selectedPostForModal.id, emoji)">
+            {{ emoji }}
+          </span>
+        </div>
+      </div>
+      <input #modalCommentInput type="text" placeholder="Add a comment..." class="comment-input-field"
+        [(ngModel)]="commentInputs[selectedPostForModal.id]" (keyup.enter)="submitComment(selectedPostForModal)">
+      <button class="comment-post-btn"
+        [disabled]="!commentInputs[selectedPostForModal.id] || !commentInputs[selectedPostForModal.id].trim()"
+        (click)="submitComment(selectedPostForModal)">
+        Post
+      </button>
+    </div>
+
+  </div>
+</p-dialog>
