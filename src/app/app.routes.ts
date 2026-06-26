@@ -43,6 +43,12 @@ export const routes: Routes = [
   canActivate: [authGuard]
 },
 {
+  path: 'profile/:id',
+  loadComponent: () =>
+    import('./features/profile/profile').then(m => m.Profile),
+  canActivate: [authGuard]
+},
+{
     path: '**',
     redirectTo: 'auth/login',
   }

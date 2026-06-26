@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { catchError, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
-import { BehaviorSubject, of } from 'rxjs';
+import { BehaviorSubject, of, Observable } from 'rxjs';
 import { confirmation_code } from '../../shared/models/confirmation_code';
 import { User } from '../../shared/models/user';
 @Injectable({
@@ -71,6 +71,10 @@ verifySession() {
 
   getUserCity() {
     return this.http.get<{ lat?: number; long?: number }>(`${this.baseUrl}/users/me/city`, { withCredentials: true });
+  }
+
+  getUserById(userId: number): Observable<User> {
+    return this.http.get<User>(`${this.baseUrl}/users/${userId}`, { withCredentials: true });
   }
 
   logout() {
