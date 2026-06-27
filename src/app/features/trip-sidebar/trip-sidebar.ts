@@ -2,9 +2,11 @@ import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitte
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { TripService } from '../../core/services/trip';
 import { FriendService } from '../../core/services/friends';
 import { StopsService } from '../../core/services/stop';
+import { PostService } from '../../core/services/post';
 import { TripOut } from '../../shared/models/trip';
 import { StopOut } from '../../shared/models/stop';
 import { FriendData } from '../../shared/models/friends';
@@ -15,7 +17,7 @@ import { MessageModule } from 'primeng/message';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { TripStopInputComponent, TripStop } from '../../shared/components/trip-stop-input/trip-stop-input.component';
 import { Subject } from 'rxjs';
-import { debounceTime, distinctUntilChanged, switchMap, catchError } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, switchMap, catchError, map } from 'rxjs/operators';
 import { of } from 'rxjs';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 
@@ -87,6 +89,12 @@ export class TripSidebarComponent implements OnInit, OnChanges {
   addStopLoading = false;
   addStopError = '';
   private stopSearch$ = new Subject<string>();
+  private suggestionCache = new Map<string, NominatimResult[]>();
+
+  // photos and description for new stop
+  stopPhotos: File[] = [];
+  stopPhotoPreviews: string[] = [];
+  stopDescription = '';
 
   // ── create ───────────────────────────────────────────────────
   createForm: FormGroup;
@@ -114,13 +122,21 @@ export class TripSidebarComponent implements OnInit, OnChanges {
     return this.isFriendMode ? 'Public trips' : 'Select a trip or create a new one';
   }
 
+  viewFriendProfile(): void {
+    if (this.friend) {
+      this.router.navigate(['/profile', this.friend.friend_id]);
+    }
+  }
+
   constructor(
     private fb: FormBuilder,
     private tripService: TripService,
     private friendService: FriendService,
     private stopsService: StopsService,
+    private postService: PostService,
     private http: HttpClient,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private router: Router
   ) {
     this.createForm = this.fb.group({
       title: ['', [Validators.required, Validators.minLength(2)]],
@@ -128,22 +144,67 @@ export class TripSidebarComponent implements OnInit, OnChanges {
       include_home_city: [false],
     });
 
-    // wire up nominatim search for single stop input
+    // wire up search for single stop input using Photon with Nominatim fallback & caching
     this.stopSearch$.pipe(
       debounceTime(300),
       distinctUntilChanged(),
       switchMap((q) => {
-        if (q.trim().length < 2) {
+        const query = q.trim();
+        if (query.length < 2) {
           this.stopSuggestions = [];
           this.stopShowDropdown = false;
           this.stopSearchLoading = false;
           return of([]);
         }
+
+        const cacheKey = query.toLowerCase();
+        if (this.suggestionCache.has(cacheKey)) {
+          return of(this.suggestionCache.get(cacheKey)!);
+        }
+
         this.stopSearchLoading = true;
-        return this.http.get<NominatimResult[]>(
-          'https://nominatim.openstreetmap.org/search',
-          { params: { q, format: 'json', limit: '5', addressdetails: '1' } }
-        ).pipe(catchError(() => of([])));
+        return this.http.get<any>(
+          'https://photon.komoot.io/api/',
+          { params: { q: query, limit: '5' } }
+        ).pipe(
+          map((photonRes: any) => {
+            const features = photonRes?.features || [];
+            const results = features.map((f: any, idx: number) => {
+              const name = f.properties?.name || '';
+              const city = f.properties?.city || '';
+              const country = f.properties?.country || '';
+              
+              const uniqueParts: string[] = [];
+              [name, city, country].forEach(p => {
+                if (p && !uniqueParts.includes(p)) {
+                  uniqueParts.push(p);
+                }
+              });
+              
+              return {
+                place_id: idx,
+                display_name: uniqueParts.join(', '),
+                lat: f.geometry?.coordinates[1]?.toString() || '0',
+                lon: f.geometry?.coordinates[0]?.toString() || '0'
+              };
+            });
+            this.suggestionCache.set(cacheKey, results);
+            return results;
+          }),
+          catchError(() => {
+            // Fallback to Nominatim if Photon fails
+            return this.http.get<NominatimResult[]>(
+              'https://nominatim.openstreetmap.org/search',
+              { params: { q: query, format: 'json', limit: '5', addressdetails: '1' } }
+            ).pipe(
+              map((nominatimRes: NominatimResult[]) => {
+                this.suggestionCache.set(cacheKey, nominatimRes);
+                return nominatimRes;
+              }),
+              catchError(() => of([]))
+            );
+          })
+        );
       })
     ).subscribe((results: NominatimResult[]) => {
       this.stopSearchLoading = false;
@@ -269,6 +330,34 @@ export class TripSidebarComponent implements OnInit, OnChanges {
     this.stopSuggestions = [];
     this.stopShowDropdown = false;
     this.addStopError = '';
+    
+    // Clear new stop photos & description
+    this.stopPhotos = [];
+    this.stopPhotoPreviews = [];
+    this.stopDescription = '';
+  }
+
+  onStopFilesSelected(event: any): void {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (!file.type.startsWith('image/')) continue;
+
+      this.stopPhotos.push(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        this.stopPhotoPreviews.push(reader.result as string);
+        this.cdr.markForCheck();
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  removeStopPhoto(index: number): void {
+    this.stopPhotos.splice(index, 1);
+    this.stopPhotoPreviews.splice(index, 1);
   }
 
   addStop(): void {
@@ -284,30 +373,85 @@ export class TripSidebarComponent implements OnInit, OnChanges {
       description: '',
     };
 
+    // 1. Create the stop on the backend
     this.stopsService.createStop(payload, this.activeTrip.id).subscribe({
-      next: (res: any) => {
-        this.addStopLoading = false;
-        if (res.status_code === 201) {
-          this.detailStops = [
-            ...this.detailStops,
-            {
-              id: res.id,
-              trip_id: this.activeTrip!.id,
-              title: res.title,
-              order: res.order,
-              city: res.city,
-            } as StopOut,
-          ];
-          this.stopAdded.emit({
-            lat: this.resolvedPlace!.lat,
-            lon: this.resolvedPlace!.lon,
-            title: this.resolvedPlace!.label,
-          });
-          this.clearStopInput();
+      next: (createRes: any) => {
+        if (createRes.status_code === 201) {
+          const stopId = createRes.id;
+
+          const finalizeStopAddition = () => {
+            // 2. Fetch all stops to ensure we have the complete, official list from the db
+            this.stopsService.getTripStops(this.activeTrip!.id).subscribe({
+              next: (getRes: any) => {
+                let stops = getRes.stops ?? [];
+                
+                console.log('Stops loaded from db:', JSON.stringify(stops));
+
+                if (stops.length >= 3) {
+                  // The newly created stop is appended at the end of the database results.
+                  // We want to insert it between the first stop (From) and the last stop (To).
+                  const newStop = stops.pop(); // Remove the newly added stop from the end
+                  if (newStop) {
+                    // Insert it right before the last stop (which is now the last element in the array)
+                    stops.splice(stops.length - 1, 0, newStop);
+                    console.log('Stops after shifting newStop:', JSON.stringify(stops));
+                  }
+                }
+
+                // Update the order properties of all stops to match their new array position (0-indexed)
+                stops.forEach((s: any, idx: number) => {
+                  s.order = idx;
+                });
+
+                // 3. Persist the new sequence to the backend
+                const stopIds = stops.map((s: any) => s.id);
+                console.log('Sending stopIds to reorderStops:', stopIds);
+                this.stopsService.reorderStops(this.activeTrip!.id, stopIds).subscribe({
+                  next: (reorderRes) => {
+                    console.log('reorderStops response:', reorderRes);
+                    this.detailStops = stops;
+                    this.stopsReordered.emit(this.detailStops);
+                    this.clearStopInput();
+                    this.addStopLoading = false;
+                    this.cdr.markForCheck();
+                  },
+                  error: (err) => {
+                    console.error('Failed to persist stop order after adding', err);
+                    this.addStopError = 'Could not update stop order.';
+                    this.addStopLoading = false;
+                    this.cdr.markForCheck();
+                  }
+                });
+              },
+              error: (err) => {
+                console.error('Failed to load stops:', err);
+                this.addStopError = 'Failed to reload stops list.';
+                this.addStopLoading = false;
+                this.cdr.markForCheck();
+              }
+            });
+          };
+
+          // 2. If there are photos or a description, create a post for this stop
+          if (this.stopPhotos.length > 0 || this.stopDescription.trim().length > 0) {
+            this.postService.createPost(stopId, this.stopDescription, this.stopPhotos).subscribe({
+              next: () => {
+                finalizeStopAddition();
+              },
+              error: (err) => {
+                console.error('Failed to create post', err);
+                this.addStopError = 'Stop added, but failed to upload photos/description.';
+                finalizeStopAddition();
+              }
+            });
+          } else {
+            finalizeStopAddition();
+          }
         } else {
-          this.addStopError = res.message ?? 'Failed to add stop.';
+          this.addStopError = createRes.message ?? 'Failed to add stop.';
+          this.addStopLoading = false;
+          this.cdr.markForCheck();
         }
-        this.cdr.markForCheck();
       },
       error: () => {
         this.addStopLoading = false;
@@ -378,8 +522,14 @@ export class TripSidebarComponent implements OnInit, OnChanges {
   }
 
   onStopDrop(event: CdkDragDrop<StopOut[]>): void {
+    if (!this.activeTrip) return;
     moveItemInArray(this.detailStops, event.previousIndex, event.currentIndex);
     this.stopsReordered.emit(this.detailStops);
+
+    const stopIds = this.detailStops.map(s => s.id);
+    this.stopsService.reorderStops(this.activeTrip.id, stopIds).subscribe({
+      error: (err) => console.error('Failed to persist stop order', err)
+    });
   }
 
   setPrivacy(value: string): void {
