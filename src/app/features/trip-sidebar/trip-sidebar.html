@@ -14,6 +14,9 @@
       <div>
         <h2>{{ headerTitle }}</h2>
         <p>{{ headerSubtitle }}</p>
+        <button *ngIf="isFriendMode && friend" class="view-profile-btn" (click)="viewFriendProfile()" style="display: flex; align-items: center; gap: 0.35rem; margin-top: 0.5rem; padding: 0.3rem 0.6rem; border: 1px solid #3b82f6; border-radius: 6px; background: transparent; color: #3b82f6; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;">
+          <i class="pi pi-user"></i> View Profile
+        </button>
       </div>
       <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="secondary" (click)="close()" />
     </div>
@@ -79,11 +82,19 @@
 
         <!-- ── existing stops list ── -->
         <div class="stop-list" *ngIf="detailStops.length > 0" cdkDropList (cdkDropListDropped)="onStopDrop($event)">
-          <div *ngFor="let stop of detailStops; let i = index" class="stop-card" (click)="onStopClick(stop)" style="cursor: pointer;" cdkDrag>
-            <div class="stop-card__index">{{ i + 1 }}</div>
+          <div *ngFor="let stop of detailStops; let i = index" 
+               class="stop-card" 
+               [class.stop-card--fixed]="i === 0 || (i === detailStops.length - 1 && i !== 0)"
+               [cdkDragDisabled]="i === 0 || i === detailStops.length - 1"
+               (click)="onStopClick(stop)" 
+               cdkDrag>
+            <div class="stop-card__badge stop-card__badge--from" *ngIf="i === 0">From</div>
+            <div class="stop-card__badge stop-card__badge--to" *ngIf="i === detailStops.length - 1 && i !== 0">To</div>
+            <div class="stop-card__index" *ngIf="i > 0 && i < detailStops.length - 1">{{ i }}</div>
             <div class="stop-card__body">
               <span class="stop-card__title">{{ stop.title }}</span>
             </div>
+            <i class="pi pi-bars stop-card__drag-handle" *ngIf="i > 0 && i < detailStops.length - 1"></i>
           </div>
         </div>
 
@@ -131,6 +142,35 @@
                 </div>
               </li>
             </ul>
+          </div>
+
+          <!-- ── photo and description inputs ── -->
+          <div class="add-stop-post-section" *ngIf="resolvedPlace">
+            <div class="detail-section-label" style="margin-top: 12px; margin-bottom: 4px;">Post details (Optional)</div>
+            <textarea
+              [(ngModel)]="stopDescription"
+              placeholder="Write a description for this stop..."
+              class="add-stop-desc-input"
+              rows="3"
+            ></textarea>
+
+            <div class="stop-photos-upload-wrap">
+              <input #stopFileInput type="file" (change)="onStopFilesSelected($event)" accept="image/*" multiple style="display: none;" />
+              
+              <button type="button" class="add-photos-btn" (click)="stopFileInput.click()">
+                <i class="pi pi-camera"></i>
+                <span>Add photos</span>
+              </button>
+
+              <div class="stop-photos-thumbnails" *ngIf="stopPhotoPreviews.length > 0">
+                <div class="photo-thumbnail" *ngFor="let preview of stopPhotoPreviews; let imgIdx = index">
+                  <img [src]="preview" class="thumb-img" alt="Stop photo preview">
+                  <button type="button" class="remove-photo-btn" (click)="removeStopPhoto(imgIdx); $event.stopPropagation()">
+                    <i class="pi pi-times"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <p-message

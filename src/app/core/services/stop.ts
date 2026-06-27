@@ -15,5 +15,9 @@ export class StopsService {
   getTripStops(tripId: number): Observable<StopsOut> {
     return this.http.get<StopsOut>(`${this.base}/trips/${tripId}/stops?_=${new Date().getTime()}` ,{ withCredentials: true });
   }
+
+  reorderStops(tripId: number, stopIds: number[]): Observable<any> {
+    return this.http.put<any>(`${this.base}/trips/${tripId}/stops/reorder`, { stop_ids: stopIds }, { withCredentials: true });
+  }
 }
  
