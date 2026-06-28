@@ -24,6 +24,8 @@ import { BottomNavComponent, NavTab } from '../../shared/components/bottom-nav/b
 import { FriendService } from '../../core/services/friends';
 import { FriendData } from '../../shared/models/friends';
 
+import { environment } from '../../../environments/environment';
+
 @Component({
   selector: 'app-map',
   imports: [
@@ -102,8 +104,11 @@ export class Map implements AfterViewInit, OnInit {
       markerZoomAnimation: true,
     }).setView([36.8065, 10.1815], 5);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
+    L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${environment.mapboxToken}`, {
+      attribution: '© <a href="https://www.mapbox.com/">Mapbox</a> © <a href="https://www.openstreetmap.org/">OpenStreetMap</a>',
+      tileSize: 512,
+      zoomOffset: -1,
+      maxZoom: 22,
     }).addTo(this.map);
   }
 
@@ -243,7 +248,7 @@ export class Map implements AfterViewInit, OnInit {
       className: '',
       html: `
         <div class="friend-pin">
-          <div class="friend-pin__avatar" style="background: ${color}; border-color: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 0 1.5px ${color};">${initials}</div>
+          <div class="friend-pin__avatar" style="background: ${color}; border-color: #fff;">${initials}</div>
           <div class="friend-pin__tail" style="border-top-color: ${color};"></div>
           <div class="friend-pin__label" style="background: ${color};">${friend.username}</div>
         </div>
