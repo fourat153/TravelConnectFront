@@ -436,8 +436,11 @@ export class FeedComponent implements OnInit {
         markerZoomAnimation: true,
       }).setView([20, 0], 2);
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
+      L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoiYWhtZWQxMjM1IiwiYSI6ImNtcXhta3B4YTBrcmoycnNlZXpiY2p3dXQifQ.1sZQO19pL26OcP_yosXnWQ', {
+        attribution: '© <a href="https://www.mapbox.com/">Mapbox</a> © <a href="https://www.openstreetmap.org/">OpenStreetMap</a>',
+        tileSize: 512,
+        zoomOffset: -1,
+        maxZoom: 22,
       }).addTo(this.feedMap);
 
       this.mapInitialized = true;
@@ -556,7 +559,7 @@ export class FeedComponent implements OnInit {
       className: '',
       html: `
         <div class="friend-pin">
-          <div class="friend-pin__avatar" style="background: ${color}; border-color: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 0 1.5px ${color}; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+          <div class="friend-pin__avatar" style="background: ${color}; border-color: #fff; overflow: hidden; display: flex; align-items: center; justify-content: center;">
             ${avatarHtml}
           </div>
           <div class="friend-pin__tail" style="border-top-color: ${color};"></div>
