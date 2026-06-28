@@ -19,6 +19,7 @@ import { forkJoin, of, Observable } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
 import * as L from 'leaflet';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-feed',
@@ -436,7 +437,7 @@ export class FeedComponent implements OnInit {
         markerZoomAnimation: true,
       }).setView([20, 0], 2);
 
-      L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoiYWhtZWQxMjM1IiwiYSI6ImNtcXhta3B4YTBrcmoycnNlZXpiY2p3dXQifQ.1sZQO19pL26OcP_yosXnWQ', {
+      L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${environment.mapboxToken}`, {
         attribution: '© <a href="https://www.mapbox.com/">Mapbox</a> © <a href="https://www.openstreetmap.org/">OpenStreetMap</a>',
         tileSize: 512,
         zoomOffset: -1,

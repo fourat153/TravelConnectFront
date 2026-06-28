@@ -24,6 +24,8 @@ import { BottomNavComponent, NavTab } from '../../shared/components/bottom-nav/b
 import { FriendService } from '../../core/services/friends';
 import { FriendData } from '../../shared/models/friends';
 
+import { environment } from '../../../environments/environment';
+
 @Component({
   selector: 'app-map',
   imports: [
@@ -102,7 +104,7 @@ export class Map implements AfterViewInit, OnInit {
       markerZoomAnimation: true,
     }).setView([36.8065, 10.1815], 5);
 
-    L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoiYWhtZWQxMjM1IiwiYSI6ImNtcXhta3B4YTBrcmoycnNlZXpiY2p3dXQifQ.1sZQO19pL26OcP_yosXnWQ', {
+    L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${environment.mapboxToken}`, {
       attribution: '© <a href="https://www.mapbox.com/">Mapbox</a> © <a href="https://www.openstreetmap.org/">OpenStreetMap</a>',
       tileSize: 512,
       zoomOffset: -1,
