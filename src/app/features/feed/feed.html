@@ -12,7 +12,8 @@
           <i class="pi pi-compass logo-icon"></i>
           <span class="logo-text">TravelConnect</span>
         </div>
-        <p-button label="Share Trip" icon="pi pi-plus-circle" styleClass="share-trip-btn" (onClick)="openCreateModal()"></p-button>
+        <p-button label="Share Trip" icon="pi pi-plus-circle" styleClass="share-trip-btn"
+          (onClick)="openCreateModal()"></p-button>
       </header>
 
       <!-- View Toggle at the top -->
@@ -44,7 +45,8 @@
                 <img [src]="post.authorAvatar" [alt]="post.authorName" class="author-avatar">
               </div>
               <div class="author-meta">
-                <span class="author-name" (click)="viewProfile(post.authorId)" style="cursor: pointer;">{{ post.authorName }}</span>
+                <span class="author-name" (click)="viewProfile(post.authorId)" style="cursor: pointer;">{{
+                  post.authorName }}</span>
                 <span class="post-location">
                   <i class="pi pi-map-marker"></i> {{ post.location }}<ng-container *ngIf="post.tripTitle"> · {{
                     post.tripTitle }}</ng-container>
@@ -94,7 +96,8 @@
 
           <!-- Post Caption -->
           <div class="post-caption">
-            <span class="caption-author" (click)="viewProfile(post.authorId)" style="cursor: pointer;">{{ post.authorName }}</span>
+            <span class="caption-author" (click)="viewProfile(post.authorId)" style="cursor: pointer;">{{
+              post.authorName }}</span>
             <span class="caption-text">{{ post.description }}</span>
           </div>
 
@@ -184,7 +187,8 @@
               </div>
             </div>
             <div class="sug-info">
-              <span class="sug-name" (click)="viewProfile(sug.id)" style="cursor: pointer;">{{ getFullName(sug) }}</span>
+              <span class="sug-name" (click)="viewProfile(sug.id)" style="cursor: pointer;">{{ getFullName(sug)
+                }}</span>
               <span class="sug-subtext">
                 Followed by {{ sug.mutual_friends_count }}
                 {{ sug.mutual_friends_count === 1 ? 'friend' : 'friends' }}
@@ -209,8 +213,7 @@
 </div>
 
 <!-- PrimeNG Modal Dialog for Sharing a New Trip Post -->
-<p-dialog [(visible)]="showCreateModal" [modal]="true" [draggable]="false" [resizable]="false"
-  header="Create New Trip Post"
+<p-dialog [(visible)]="showCreateModal" [modal]="true" [draggable]="false" [resizable]="false" header="Create New Trip"
   [style]="{ width: '500px', 'max-width': '95vw', 'border-radius': '20px', overflow: 'hidden' }">
 
   <div class="create-post-form">
@@ -282,9 +285,7 @@
     <!-- Actions Footer -->
     <div class="form-actions-footer">
       <button class="dialog-cancel-btn" (click)="showCreateModal = false">Cancel</button>
-      <button class="dialog-submit-btn" [disabled]="tripStops.length < 2 || createForm.invalid" (click)="submitPost()">
-        Share Trip
-      </button>
+      <p-button label="Save" icon="pi pi-check" styleClass="share-trip-btn dialog-submit-btn" [disabled]="tripStops.length < 2 || createForm.invalid" (onClick)="submitPost()"></p-button>
     </div>
 
   </div>
@@ -301,11 +302,13 @@
     <!-- Post Header -->
     <div class="post-header" style="padding: 0 0 12px 0;">
       <div class="post-author-info">
-        <div class="author-avatar-wrapper" (click)="viewProfile(selectedPostForModal.authorId)" style="cursor: pointer;">
+        <div class="author-avatar-wrapper" (click)="viewProfile(selectedPostForModal.authorId)"
+          style="cursor: pointer;">
           <img [src]="selectedPostForModal.authorAvatar" [alt]="selectedPostForModal.authorName" class="author-avatar">
         </div>
         <div class="author-meta">
-          <span class="author-name" (click)="viewProfile(selectedPostForModal.authorId)" style="cursor: pointer;">{{ selectedPostForModal.authorName }}</span>
+          <span class="author-name" (click)="viewProfile(selectedPostForModal.authorId)" style="cursor: pointer;">{{
+            selectedPostForModal.authorName }}</span>
           <span class="post-location">
             <i class="pi pi-map-marker"></i> {{ selectedPostForModal.location }}<ng-container
               *ngIf="selectedPostForModal.tripTitle"> · {{

@@ -21,6 +21,7 @@ import {
   map,
 } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../../environments/environment';
 
 export interface TripStop {
   id: string;
@@ -138,53 +139,29 @@ export class TripStopInputComponent implements OnDestroy {
 
     row.loading = true;
 
-    // Call Photon API directly for fast, search-as-you-type suggestions with high limits
+    // Call Mapbox Geocoding API directly for place suggestions
     const timeoutId = setTimeout(() => {
       this.http
-        .get<any>(`https://photon.komoot.io/api/`, {
+        .get<any>(`https://api.mapbox.com/search/geocode/v6/forward`, {
           params: {
             q: row.query,
-            limit: '5'
+            limit: '5',
+            access_token: environment.mapboxToken
           }
         })
         .pipe(
-          map((photonRes: any) => {
-            const features = photonRes?.features || [];
+          map((mapboxRes: any) => {
+            const features = mapboxRes?.features || [];
             return features.map((f: any, idx: number) => {
-              const name = f.properties?.name || '';
-              const city = f.properties?.city || '';
-              const country = f.properties?.country || '';
-              
-              // Avoid repeating city/name if they are identical
-              const uniqueParts: string[] = [];
-              [name, city, country].forEach(p => {
-                if (p && !uniqueParts.includes(p)) {
-                  uniqueParts.push(p);
-                }
-              });
-              
               return {
-                place_id: idx,
-                display_name: uniqueParts.join(', '),
+                place_id: f.id || idx,
+                display_name: f.properties?.full_address || f.properties?.name || '',
                 lat: f.geometry?.coordinates[1]?.toString() || '0',
                 lon: f.geometry?.coordinates[0]?.toString() || '0'
               };
             });
           }),
-          catchError(() => {
-            // Fallback to Nominatim if Photon fails
-            return this.http.get<NominatimResult[]>(`https://nominatim.openstreetmap.org/search`, {
-              params: {
-                q: row.query,
-                format: 'json',
-                limit: '5',
-                addressdetails: '1'
-              },
-              headers: { Accept: 'application/json' }
-            }).pipe(
-              catchError(() => of([]))
-            );
-          })
+          catchError(() => of([]))
         )
         .subscribe((results: NominatimResult[]) => {
           row.loading = false;

@@ -9,6 +9,7 @@ import { User } from '../../shared/models/user';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { CarouselModule } from 'primeng/carousel';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-profile',
@@ -116,12 +117,12 @@ export class Profile implements OnInit {
   }
 
   reverseGeocode(lat: number, lon: number) {
-    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+    fetch(`https://api.mapbox.com/search/geocode/v6/reverse?longitude=${lon}&latitude=${lat}&access_token=${environment.mapboxToken}`)
       .then((res) => res.json())
       .then((data) => {
-        if (data && data.display_name) {
-          const address = data.address;
-          const cityName = address.city || address.town || address.village || address.suburb || data.display_name.split(',')[0];
+        if (data && data.features && data.features.length > 0) {
+          const feature = data.features[0];
+          const cityName = feature.properties?.name || feature.properties?.full_address || '';
           this.citySearchQuery = cityName;
           this.cdr.detectChanges();
         }
@@ -159,15 +160,22 @@ export class Profile implements OnInit {
     }
     this.searchTimeout = setTimeout(() => {
       fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+        `https://api.mapbox.com/search/geocode/v6/forward?q=${encodeURIComponent(
           this.citySearchQuery
-        )}&limit=5`
+        )}&limit=5&access_token=${environment.mapboxToken}`
       )
         .then((res) => res.json())
-        .then((results) => {
-          this.citySuggestions = results;
+        .then((data) => {
+          const features = data?.features || [];
+          this.citySuggestions = features.map((f: any, idx: number) => ({
+            place_id: f.id || idx,
+            display_name: f.properties?.full_address || f.properties?.name || '',
+            lat: f.geometry?.coordinates[1]?.toString() || '0',
+            lon: f.geometry?.coordinates[0]?.toString() || '0'
+          }));
           this.cdr.detectChanges();
-        });
+        })
+        .catch((err) => console.error('Error searching city:', err));
     }, 400);
   }
 

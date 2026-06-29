@@ -63,30 +63,39 @@
       color: #0f172a;
     }
   }
+}
 
-  .share-trip-btn {
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 8px !important;
-    padding: 8px 16px !important;
-    border: none !important;
-    border-radius: 30px !important;
-    background: linear-gradient(135deg, #7e119a 0%, #3b82f6 100%) !important;
-    color: white !important;
-    font-weight: 600 !important;
-    font-size: 0.9rem !important;
-    cursor: pointer !important;
-    transition: transform 0.2s !important;
+.share-trip-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 8px 16px !important;
+  border: none !important;
+  border-radius: 30px !important;
+  background: linear-gradient(135deg, #7e119a 0%, #3b82f6 100%) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  font-size: 0.9rem !important;
+  cursor: pointer !important;
+  transition: transform 0.2s !important;
 
-    &:hover {
-      transform: translateY(-1px) !important;
-    }
+  &:hover {
+    transform: translateY(-1px) !important;
+  }
 
-    &:active {
-      transform: translateY(0) !important;
-    }
+  &:active {
+    transform: translateY(0) !important;
+  }
+
+  &.p-disabled, &:disabled, &[disabled] {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+    box-shadow: none !important;
+    pointer-events: none !important;
   }
 }
+
 
 /* ─── Post Cards ──────────────────────────────────── */
 .posts-list {
