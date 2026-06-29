@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } 
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { environment } from '../../../environments/environment';
 import { TripService } from '../../core/services/trip';
 import { FriendService } from '../../core/services/friends';
 import { StopsService } from '../../core/services/stop';
@@ -164,26 +165,21 @@ export class TripSidebarComponent implements OnInit, OnChanges {
 
         this.stopSearchLoading = true;
         return this.http.get<any>(
-          'https://photon.komoot.io/api/',
-          { params: { q: query, limit: '5' } }
+          'https://api.mapbox.com/search/geocode/v6/forward',
+          {
+            params: {
+              q: query,
+              limit: '5',
+              access_token: environment.mapboxToken
+            }
+          }
         ).pipe(
-          map((photonRes: any) => {
-            const features = photonRes?.features || [];
+          map((mapboxRes: any) => {
+            const features = mapboxRes?.features || [];
             const results = features.map((f: any, idx: number) => {
-              const name = f.properties?.name || '';
-              const city = f.properties?.city || '';
-              const country = f.properties?.country || '';
-              
-              const uniqueParts: string[] = [];
-              [name, city, country].forEach(p => {
-                if (p && !uniqueParts.includes(p)) {
-                  uniqueParts.push(p);
-                }
-              });
-              
               return {
-                place_id: idx,
-                display_name: uniqueParts.join(', '),
+                place_id: f.id || idx,
+                display_name: f.properties?.full_address || f.properties?.name || '',
                 lat: f.geometry?.coordinates[1]?.toString() || '0',
                 lon: f.geometry?.coordinates[0]?.toString() || '0'
               };
@@ -191,19 +187,7 @@ export class TripSidebarComponent implements OnInit, OnChanges {
             this.suggestionCache.set(cacheKey, results);
             return results;
           }),
-          catchError(() => {
-            // Fallback to Nominatim if Photon fails
-            return this.http.get<NominatimResult[]>(
-              'https://nominatim.openstreetmap.org/search',
-              { params: { q: query, format: 'json', limit: '5', addressdetails: '1' } }
-            ).pipe(
-              map((nominatimRes: NominatimResult[]) => {
-                this.suggestionCache.set(cacheKey, nominatimRes);
-                return nominatimRes;
-              }),
-              catchError(() => of([]))
-            );
-          })
+          catchError(() => of([]))
         );
       })
     ).subscribe((results: NominatimResult[]) => {

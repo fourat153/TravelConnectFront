@@ -692,9 +692,18 @@ export class Map implements AfterViewInit, OnInit {
       return;
     }
     this.searchTimeout = setTimeout(() => {
-      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(this.searchQuery)}&limit=5`)
+      fetch(`https://api.mapbox.com/search/geocode/v6/forward?q=${encodeURIComponent(this.searchQuery)}&limit=5&access_token=${environment.mapboxToken}`)
         .then(res => res.json())
-        .then(results => { this.suggestions = results; });
+        .then(data => {
+          const features = data?.features || [];
+          this.suggestions = features.map((f: any, idx: number) => ({
+            place_id: f.id || idx,
+            display_name: f.properties?.full_address || f.properties?.name || '',
+            lat: f.geometry?.coordinates[1]?.toString() || '0',
+            lon: f.geometry?.coordinates[0]?.toString() || '0'
+          }));
+        })
+        .catch((err) => console.error('Error searching location:', err));
     }, 400);
   }
 

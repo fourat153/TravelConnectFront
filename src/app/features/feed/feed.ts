@@ -483,7 +483,7 @@ export class FeedComponent implements OnInit {
             }
           });
         }, delay);
-        delay += 1200; // Increment delay by 1.2s to satisfy Nominatim 1 request/sec rate limit
+        delay += 50; // Mapbox is fast and has high limits, 50ms is enough to stagger updates smoothly
       }
     });
 
@@ -622,16 +622,18 @@ export class FeedComponent implements OnInit {
       return of(this.geocodeCache.get(locationName)!);
     }
 
-    return this.http.get<any[]>('https://nominatim.openstreetmap.org/search', {
+    return this.http.get<any>('https://api.mapbox.com/search/geocode/v6/forward', {
       params: {
         q: locationName,
-        format: 'json',
-        limit: '1'
+        limit: '1',
+        access_token: environment.mapboxToken
       }
     }).pipe(
-      map(results => {
-        if (results && results.length > 0) {
-          const coords = { lat: parseFloat(results[0].lat), lon: parseFloat(results[0].lon) };
+      map(data => {
+        const features = data?.features || [];
+        if (features.length > 0) {
+          const f = features[0];
+          const coords = { lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0] };
           this.geocodeCache.set(locationName, coords);
           this.saveGeocodeCache();
           return coords;
