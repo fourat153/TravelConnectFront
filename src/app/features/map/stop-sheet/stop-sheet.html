@@ -11,13 +11,15 @@
         </p>
         <p class="stop-desc" *ngIf="stop?.description">{{ stop?.description }}</p>
       </div>
-      <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="secondary" (click)="close()" class="close-btn" />
+      <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="secondary" (click)="close()"
+        class="close-btn" />
     </div>
   </div>
 
   <div class="post-form" *ngIf="!friendName">
     <div class="form-top">
-      <p-avatar *ngIf="currentUser?.profile_picture; else myInitialsAvatar" [image]="currentUser.profile_picture" shape="circle" size="normal" />
+      <p-avatar *ngIf="currentUser?.profile_picture; else myInitialsAvatar" [image]="currentUser.profile_picture"
+        shape="circle" size="normal" />
       <ng-template #myInitialsAvatar>
         <p-avatar [label]="currentUserInitials" shape="circle" size="normal" />
       </ng-template>
@@ -49,7 +51,8 @@
 
         <!-- Post Header -->
         <div class="instagram-post-header">
-          <p-avatar *ngIf="authorPhoto; else authorInitialsAvatar" [image]="authorPhoto" shape="circle" size="normal" class="author-avatar" />
+          <p-avatar *ngIf="authorPhoto; else authorInitialsAvatar" [image]="authorPhoto" shape="circle" size="normal"
+            class="author-avatar" />
           <ng-template #authorInitialsAvatar>
             <p-avatar [label]="authorInitials" shape="circle" size="normal" class="author-avatar" />
           </ng-template>
@@ -68,12 +71,12 @@
         <div class="custom-slider" *ngIf="post.images && post.images.length > 0">
           <div class="slider-container">
             <img [src]="post.images[currentImageIndex[post.id] || 0]?.link" class="slider-img" />
-            
+
             <!-- Left Arrow -->
             <button *ngIf="post.images.length > 1" (click)="prevImage(post)" class="slider-btn prev">
               <i class="pi pi-chevron-left slider-btn-icon"></i>
             </button>
-            
+
             <!-- Right Arrow -->
             <button *ngIf="post.images.length > 1" (click)="nextImage(post)" class="slider-btn next">
               <i class="pi pi-chevron-right slider-btn-icon"></i>
@@ -82,10 +85,8 @@
 
           <!-- Dot Indicators -->
           <div *ngIf="post.images.length > 1" class="slider-dots">
-            <span *ngFor="let img of post.images; let i = index" 
-              (click)="setImageIndex(post, i)"
-              [style.background]="(currentImageIndex[post.id] || 0) === i ? '#3b82f6' : '#ccc'"
-              class="slider-dot">
+            <span *ngFor="let img of post.images; let i = index" (click)="setImageIndex(post, i)"
+              [style.background]="(currentImageIndex[post.id] || 0) === i ? '#3b82f6' : '#ccc'" class="slider-dot">
             </span>
           </div>
         </div>
@@ -117,9 +118,12 @@
 
           <!-- Add Comment Input Bar -->
           <div class="comment-input-bar">
-            <p-avatar *ngIf="currentUser?.profile_picture; else myCommentInitialsAvatar" [image]="currentUser.profile_picture" shape="circle" style="width: 24px; height: 24px; font-size: 11px; flex-shrink: 0;" />
+            <p-avatar *ngIf="currentUser?.profile_picture; else myCommentInitialsAvatar"
+              [image]="currentUser.profile_picture" shape="circle"
+              style="width: 24px; height: 24px; font-size: 11px; flex-shrink: 0;" />
             <ng-template #myCommentInitialsAvatar>
-              <p-avatar [label]="currentUserInitials" shape="circle" style="width: 24px; height: 24px; font-size: 11px; flex-shrink: 0;" />
+              <p-avatar [label]="currentUserInitials" shape="circle"
+                style="width: 24px; height: 24px; font-size: 11px; flex-shrink: 0;" />
             </ng-template>
             <input type="text" [(ngModel)]="commentInputs[post.id]" placeholder="Add a comment..." class="comment-input"
               (keyup.enter)="addComment(post)" />

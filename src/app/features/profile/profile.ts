@@ -10,6 +10,7 @@ import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { CarouselModule } from 'primeng/carousel';
 import { environment } from '../../../environments/environment';
+import { POPULAR_EMOJIS } from '../../shared/constants/emojis';
 
 @Component({
   selector: 'app-profile',
@@ -40,7 +41,7 @@ export class Profile implements OnInit {
   selectedPostForModal: FeedPost | null = null;
   commentInputs: { [postId: number]: string } = {};
   activeEmojiPickerPostId: number | null = null;
-  popularEmojis = ['😀', '✈️', '🌍', '🏖️', '📸', '😍', '❤️', '🔥', '🙌', '✨', '🍕', '🗺️', '🥳', '😎', '👍', '👏', '🌟', '🍹', '🚗', '🏔️'];
+  popularEmojis = POPULAR_EMOJIS;
   heartOverlayPostId: number | null = null;
 
   // Edit Mode state

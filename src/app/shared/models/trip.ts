@@ -11,11 +11,17 @@ export interface StopInput {
 }
 
     
+export interface CityInput {
+  label: string;
+  lat: number;
+  lon: number;
+}
+
 export interface TripCreate {
   title:             string;
-  privacy:           'public' | 'friends_only' | 'private';
-  include_home_city: boolean;
-  stops:             StopInput[];
+  privacy?:          'public' | 'friends_only' | 'private' | null;
+  from_city:         CityInput;
+  to_city:           CityInput;
 }
  
 

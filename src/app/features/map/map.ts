@@ -606,6 +606,7 @@ export class Map implements AfterViewInit, OnInit {
       long: this.pendingLatLng.lng,
       title: this.stopTitle,
       description: this.stopDescription,
+      order: Math.max(1, this.markers.length - 1),
     };
 
     this.markers.push(circle);

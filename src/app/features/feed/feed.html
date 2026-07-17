@@ -285,7 +285,8 @@
     <!-- Actions Footer -->
     <div class="form-actions-footer">
       <button class="dialog-cancel-btn" (click)="showCreateModal = false">Cancel</button>
-      <p-button label="Save" icon="pi pi-check" styleClass="share-trip-btn dialog-submit-btn" [disabled]="tripStops.length < 2 || createForm.invalid" (onClick)="submitPost()"></p-button>
+      <p-button label="Save" icon="pi pi-check" styleClass="share-trip-btn dialog-submit-btn"
+        [disabled]="tripStops.length < 2 || createForm.invalid" (onClick)="submitPost()"></p-button>
     </div>
 
   </div>

@@ -1,9 +1,8 @@
-<aside class="sidebar" [style.transform]="translateY" [style.transition]="transition" (click)="$event.stopPropagation()">
+<aside class="sidebar" [style.transform]="translateY" [style.transition]="transition"
+  (click)="$event.stopPropagation()">
   <!-- Drag Handle for Mobile Bottom Sheet -->
-  <div class="drag-handle-mobile" 
-       (touchstart)="onTouchStart($event)" 
-       (touchmove)="onTouchMove($event)" 
-       (touchend)="onTouchEnd($event)">
+  <div class="drag-handle-mobile" (touchstart)="onTouchStart($event)" (touchmove)="onTouchMove($event)"
+    (touchend)="onTouchEnd($event)">
     <span class="drag-handle-line"></span>
   </div>
   <!-- ══════════════════════════════════════════════════════════
@@ -14,7 +13,8 @@
       <div>
         <h2>{{ headerTitle }}</h2>
         <p>{{ headerSubtitle }}</p>
-        <button *ngIf="isFriendMode && friend" class="view-profile-btn" (click)="viewFriendProfile()" style="display: flex; align-items: center; gap: 0.35rem; margin-top: 0.5rem; padding: 0.3rem 0.6rem; border: 1px solid #3b82f6; border-radius: 6px; background: transparent; color: #3b82f6; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;">
+        <button *ngIf="isFriendMode && friend" class="view-profile-btn" (click)="viewFriendProfile()"
+          style="display: flex; align-items: center; gap: 0.35rem; margin-top: 0.5rem; padding: 0.3rem 0.6rem; border: 1px solid #3b82f6; border-radius: 6px; background: transparent; color: #3b82f6; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;">
           <i class="pi pi-user"></i> View Profile
         </button>
       </div>
@@ -29,10 +29,7 @@
       <p-message *ngIf="tripsError" severity="error" variant="simple">{{ tripsError }}</p-message>
 
       <div *ngIf="!tripsLoading && trips.length > 0" class="trip-list">
-        <div
-          *ngFor="let trip of trips"
-          class="trip-item"
-          [class.active]="trip.id === selectedTripId"
+        <div *ngFor="let trip of trips" class="trip-item" [class.active]="trip.id === selectedTripId"
           (click)="selectTrip(trip)">
           <div class="trip-item__icon">
             <i class="pi pi-map"></i>
@@ -82,12 +79,9 @@
 
         <!-- ── existing stops list ── -->
         <div class="stop-list" *ngIf="detailStops.length > 0" cdkDropList (cdkDropListDropped)="onStopDrop($event)">
-          <div *ngFor="let stop of detailStops; let i = index" 
-               class="stop-card" 
-               [class.stop-card--fixed]="i === 0 || (i === detailStops.length - 1 && i !== 0)"
-               [cdkDragDisabled]="i === 0 || i === detailStops.length - 1"
-               (click)="onStopClick(stop)" 
-               cdkDrag>
+          <div *ngFor="let stop of detailStops; let i = index" class="stop-card"
+            [class.stop-card--fixed]="i === 0 || (i === detailStops.length - 1 && i !== 0)"
+            [cdkDragDisabled]="i === 0 || i === detailStops.length - 1" (click)="onStopClick(stop)" cdkDrag>
             <div class="stop-card__badge stop-card__badge--from" *ngIf="i === 0">From</div>
             <div class="stop-card__badge stop-card__badge--to" *ngIf="i === detailStops.length - 1 && i !== 0">To</div>
             <div class="stop-card__index" *ngIf="i > 0 && i < detailStops.length - 1">{{ i }}</div>
@@ -113,28 +107,21 @@
           <div class="add-stop-search">
             <div class="add-stop-input-wrap" [class.resolved]="resolvedPlace">
               <i class="pi pi-map-marker add-stop-icon"></i>
-              <input
-                type="text"
-                [(ngModel)]="stopQuery"
-                (input)="onStopInput()"
-                (focus)="stopShowDropdown = stopSuggestions.length > 0"
-                (blur)="hideStopDropdown()"
-                placeholder="Search for a city or place..."
-                class="add-stop-input"
-                autocomplete="off" />
+              <input type="text" [(ngModel)]="stopQuery" (input)="onStopInput()"
+                (focus)="stopShowDropdown = stopSuggestions.length > 0" (blur)="hideStopDropdown()"
+                placeholder="Search for a city or place..." class="add-stop-input" autocomplete="off" />
               <i *ngIf="stopSearchLoading" class="pi pi-spin pi-spinner add-stop-status"></i>
-              <i *ngIf="resolvedPlace && !stopSearchLoading" class="pi pi-check-circle add-stop-status resolved-icon"></i>
-              <button *ngIf="stopQuery && !stopSearchLoading" class="add-stop-clear" type="button" (click)="clearStopInput()">
+              <i *ngIf="resolvedPlace && !stopSearchLoading"
+                class="pi pi-check-circle add-stop-status resolved-icon"></i>
+              <button *ngIf="stopQuery && !stopSearchLoading" class="add-stop-clear" type="button"
+                (click)="clearStopInput()">
                 <i class="pi pi-times"></i>
               </button>
             </div>
 
             <!-- suggestions dropdown -->
             <ul *ngIf="stopShowDropdown" class="stop-suggestions">
-              <li
-                *ngFor="let s of stopSuggestions"
-                class="stop-suggestion-item"
-                (mousedown)="selectStopSuggestion(s)">
+              <li *ngFor="let s of stopSuggestions" class="stop-suggestion-item" (mousedown)="selectStopSuggestion(s)">
                 <i class="pi pi-map-marker"></i>
                 <div class="stop-suggestion-text">
                   <span class="stop-suggestion-name">{{ s.display_name.split(',')[0] }}</span>
@@ -145,39 +132,83 @@
           </div>
 
           <!-- ── photo and description inputs ── -->
-          <div class="add-stop-post-section" *ngIf="resolvedPlace">
-            <div class="detail-section-label" style="margin-top: 12px; margin-bottom: 4px;">Post details (Optional)</div>
-            <textarea
-              [(ngModel)]="stopDescription"
-              placeholder="Write a description for this stop..."
-              class="add-stop-desc-input"
-              rows="3"
-            ></textarea>
+          <div class="add-stop-post-section" *ngIf="resolvedPlace"
+            style="display: flex; flex-direction: column; gap: 16px;">
+            <div *ngFor="let post of stopPosts; let idx = index"
+              style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; position: relative;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span class="detail-section-label" style="margin-top: 0; margin-bottom: 0; font-weight: 600;">Add
+                  Post</span>
+                <button type="button" *ngIf="stopPosts.length > 1" (click)="removeStopPostField(idx)"
+                  style="background: none; border: none; color: #ef4444; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 2px;">
+                  <i class="pi pi-trash"></i> Delete
+                </button>
+              </div>
 
-            <div class="stop-photos-upload-wrap">
-              <input #stopFileInput type="file" (change)="onStopFilesSelected($event)" accept="image/*" multiple style="display: none;" />
-              
-              <button type="button" class="add-photos-btn" (click)="stopFileInput.click()">
-                <i class="pi pi-camera"></i>
-                <span>Add photos</span>
-              </button>
+              <textarea [(ngModel)]="post.description" placeholder="Write a description for this activity..."
+                class="add-stop-desc-input" rows="2"
+                style="width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px; font-size: 0.85rem;"></textarea>
 
-              <div class="stop-photos-thumbnails" *ngIf="stopPhotoPreviews.length > 0">
-                <div class="photo-thumbnail" *ngFor="let preview of stopPhotoPreviews; let imgIdx = index">
-                  <img [src]="preview" class="thumb-img" alt="Stop photo preview">
-                  <button type="button" class="remove-photo-btn" (click)="removeStopPhoto(imgIdx); $event.stopPropagation()">
-                    <i class="pi pi-times"></i>
+              <div class="stop-photos-upload-wrap" style="display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                  <input #stopPostFileInput type="file" (change)="onStopPostFilesSelected($event, idx)" accept="image/*"
+                    multiple style="display: none;" />
+                  <button type="button" class="add-photos-btn" (click)="stopPostFileInput.click()"
+                    style="padding: 4px 8px; font-size: 0.75rem;">
+                    <i class="pi pi-camera"></i>
+                    <span>Photos</span>
                   </button>
+
+                  <input #stopPostVideoInput type="file" (change)="onStopPostVideoSelected($event, idx)"
+                    accept="video/*" multiple style="display: none;" />
+                  <button type="button" class="add-photos-btn" (click)="stopPostVideoInput.click()"
+                    style="padding: 4px 8px; font-size: 0.75rem;">
+                    <i class="pi pi-video"></i>
+                    <span>Videos</span>
+                  </button>
+                </div>
+
+                <!-- Photo previews -->
+                <div class="stop-photos-thumbnails" *ngIf="post.photoPreviews.length > 0"
+                  style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
+                  <div class="photo-thumbnail" *ngFor="let preview of post.photoPreviews; let imgIdx = index"
+                    style="width: 50px; height: 50px; position: relative;">
+                    <img [src]="preview" class="thumb-img" alt="preview"
+                      style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">
+                    <button type="button" class="remove-photo-btn" (click)="removeStopPostPhoto(idx, imgIdx)"
+                      style="position: absolute; top: -4px; right: -4px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; cursor: pointer;">
+                      <i class="pi pi-times"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Video previews -->
+                <div class="stop-photos-thumbnails" *ngIf="post.videoPreviews.length > 0"
+                  style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
+                  <div class="photo-thumbnail" *ngFor="let preview of post.videoPreviews; let vidIdx = index"
+                    style="width: 50px; height: 50px; position: relative;">
+                    <video [src]="preview" class="thumb-img"
+                      style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;" muted></video>
+                    <button type="button" class="remove-photo-btn" (click)="removeStopPostVideo(idx, vidIdx)"
+                      style="position: absolute; top: -4px; right: -4px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; cursor: pointer;">
+                      <i class="pi pi-times"></i>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
+
+            <!-- Add another post form block button -->
+            <div style="display: flex; justify-content: center; margin-top: 4px;">
+              <button type="button" (click)="addStopPostField()"
+                style="background: none; border: 1px dashed #3b82f6; color: #3b82f6; border-radius: 8px; padding: 6px 16px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 6px; width: 100%; justify-content: center;">
+                <i class="pi pi-plus"></i>
+                <span>Add another activity post</span>
+              </button>
+            </div>
           </div>
 
-          <p-message
-            *ngIf="addStopError"
-            severity="error"
-            [text]="addStopError"
-            styleClass="w-full mt-2" />
+          <p-message *ngIf="addStopError" severity="error" [text]="addStopError" styleClass="w-full mt-2" />
         </ng-container>
 
       </ng-container>
@@ -185,11 +216,7 @@
 
     <!-- footer: add stop button -->
     <div class="sidebar-footer" *ngIf="!isFriendMode">
-      <p-button
-        label="Add stop"
-        styleClass="w-full"
-        [loading]="addStopLoading"
-        [disabled]="!resolvedPlace"
+      <p-button label="Add stop" styleClass="w-full" [loading]="addStopLoading" [disabled]="!resolvedPlace"
         (click)="addStop()" />
     </div>
   </ng-container>
@@ -220,10 +247,7 @@
         <div class="field">
           <label>Privacy</label>
           <div class="seg">
-            <button
-              type="button"
-              *ngFor="let opt of privacyOptions"
-              [class.active]="selectedPrivacy === opt.value"
+            <button type="button" *ngFor="let opt of privacyOptions" [class.active]="selectedPrivacy === opt.value"
               (click)="setPrivacy(opt.value)">
               <span class="dot" [style.background]="opt.color"></span>
               {{ opt.label }}
@@ -243,11 +267,7 @@
 
     <div class="sidebar-footer">
       <p-button label="Cancel" severity="secondary" [outlined]="true" type="button" (click)="goToList()" />
-      <p-button
-        label="Create trip"
-        [loading]="createLoading"
-        [disabled]="createForm.invalid"
-        type="button"
+      <p-button label="Create trip" [loading]="createLoading" [disabled]="createForm.invalid" type="button"
         (click)="submitCreate()" />
     </div>
   </ng-container>

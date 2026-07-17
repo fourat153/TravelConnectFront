@@ -13,10 +13,13 @@ export class PostService {
     return this.http.get<PostsOut>(`${this.base}/stops/${stopId}/posts`, { withCredentials: true });
   }
 
-  createPost(stopId: number, title: string, images: File[]): Observable<SinglePostOut> {
+  createPost(stopId: number, title: string, images: File[], videos?: File[]): Observable<SinglePostOut> {
     const formData = new FormData();
     formData.append('title', title);
     images.forEach(img => formData.append('images', img));
+    if (videos && videos.length > 0) {
+      videos.forEach(vid => formData.append('videos', vid));
+    }
     return this.http.post<SinglePostOut>(`${this.base}/stops/${stopId}/posts`, formData, { withCredentials: true });
   }
 
