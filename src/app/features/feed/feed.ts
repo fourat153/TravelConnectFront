@@ -6,6 +6,7 @@ import { BottomNavComponent, NavTab } from '../../shared/components/bottom-nav/b
 import { AuthService } from '../../core/services/auth';
 import { FeedService, FeedPost } from '../../core/services/feed';
 import { TripService } from '../../core/services/trip';
+import { TripCreate } from '../../shared/models/trip';
 import { StopsService } from '../../core/services/stop';
 import { TripStopInputComponent, TripStop } from '../../shared/components/trip-stop-input/trip-stop-input.component';
 import { DialogModule } from 'primeng/dialog';
@@ -20,6 +21,7 @@ import { map, catchError } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
 import * as L from 'leaflet';
 import { environment } from '../../../environments/environment';
+import { POPULAR_EMOJIS } from '../../shared/constants/emojis';
 
 @Component({
   selector: 'app-feed',
@@ -77,6 +79,16 @@ export class FeedComponent implements OnInit {
   selectedImages: File[] = [];
   imageError = '';
 
+  // Comment / Emoji Picker state
+  commentInputs: { [postId: number]: string } = {};
+  activeEmojiPickerPostId: number | null = null;
+  popularEmojis = POPULAR_EMOJIS;
+  heartOverlayPostId: number | null = null;
+
+  // Video upload state
+  selectedVideo: File | null = null;
+  videoPreviewUrl: string | null = null;
+
 
 
   // Trip Form Properties
@@ -88,15 +100,7 @@ export class FeedComponent implements OnInit {
     { value: 'private', label: 'Private', color: '#888780' },
   ];
 
-  // Store active comment input text per post ID
-  commentInputs: { [postId: number]: string } = {};
 
-  // For showing a brief heart animation overlay when double clicked
-  heartOverlayPostId: number | null = null;
-
-  // Emoji picker state
-  activeEmojiPickerPostId: number | null = null;
-  popularEmojis = ['😀', '✈️', '🌍', '🏖️', '📸', '😍', '❤️', '🔥', '🙌', '✨', '🍕', '🗺️', '🥳', '😎', '👍', '👏', '🌟', '🍹', '🚗', '🏔️'];
 
   ngOnInit() {
     this.loadGeocodeCache();
@@ -208,7 +212,6 @@ export class FeedComponent implements OnInit {
     if (!post.hasLiked) {
       this.toggleLike(post);
     }
-    // Show heart pop animation
     this.heartOverlayPostId = post.id;
     setTimeout(() => {
       if (this.heartOverlayPostId === post.id) {
@@ -217,16 +220,12 @@ export class FeedComponent implements OnInit {
     }, 800);
   }
 
-  /**
-   * Prompt user for confirmation and delete the post via FeedService.
-   */
   confirmDelete(post: FeedPost): void {
     if (!confirm('Are you sure you want to delete this post?')) {
       return;
     }
     this.feedService.deletePost(post.id).subscribe({
       next: () => {
-        // Refresh feed after deletion
         this.loadFeed();
       },
       error: (err) => {
@@ -239,7 +238,6 @@ export class FeedComponent implements OnInit {
     const text = this.commentInputs[post.id];
     if (!text || !text.trim()) return;
 
-    // Optimistically add to comments array
     const userFullName = this.getDisplayName(this.currentUser);
     const newComment = {
       username: userFullName,
@@ -251,12 +249,8 @@ export class FeedComponent implements OnInit {
     this.cdr.detectChanges();
 
     this.feedService.addComment(post.id, text).subscribe({
-      next: (res) => {
-        // Backend successfully created the comment
-      },
       error: (err) => {
         console.error('Failed to submit comment', err);
-        // Rollback on error
         post.comments = post.comments.filter(c => c !== newComment);
         this.commentInputs[post.id] = text;
         this.cdr.detectChanges();
@@ -337,12 +331,41 @@ export class FeedComponent implements OnInit {
     this.newImageUrlsBase64 = [];
     this.selectedImages = [];
     this.imageError = '';
+    this.selectedVideo = null;
+    this.videoPreviewUrl = null;
     this.tripStops = [];
     this.createForm?.reset({ title: '', privacy: 'public', include_home_city: false });
   }
 
   hasAnyStopPhotos(): boolean {
     return this.selectedImages.length > 0;
+  }
+
+  onVideoSelected(event: any): void {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('video/')) {
+      this.imageError = 'Please select a valid video file.';
+      return;
+    }
+
+    if (file.size > 50 * 1024 * 1024) { // 50MB limit
+      this.imageError = 'Video must be under 50MB.';
+      return;
+    }
+
+    this.imageError = '';
+    this.selectedVideo = file;
+    this.videoPreviewUrl = URL.createObjectURL(file);
+  }
+
+  removeVideo(): void {
+    if (this.videoPreviewUrl) {
+      URL.revokeObjectURL(this.videoPreviewUrl);
+    }
+    this.selectedVideo = null;
+    this.videoPreviewUrl = null;
   }
 
   submitPost(): void {
@@ -355,60 +378,26 @@ export class FeedComponent implements OnInit {
       return;
     }
 
-    const payload = {
-      ...this.createForm.value,
-      stops: [
-        {
-          label: this.tripStops[0].label,
-          lat: this.tripStops[0].lat,
-          lon: this.tripStops[0].lon,
-          order: 0,
-        },
-        {
-          label: this.tripStops[1].label,
-          lat: this.tripStops[1].lat,
-          lon: this.tripStops[1].lon,
-          order: 1,
-        }
-      ],
+    const payload: TripCreate = {
+      title: this.createForm.value.title,
+      privacy: this.createForm.value.privacy,
+      from_city: {
+        label: this.tripStops[0].label,
+        lat: this.tripStops[0].lat,
+        lon: this.tripStops[0].lon,
+      },
+      to_city: {
+        label: this.tripStops[1].label,
+        lat: this.tripStops[1].lat,
+        lon: this.tripStops[1].lon,
+      }
     };
 
     this.tripService.createTrip(payload).subscribe({
       next: (tripRes) => {
         if (tripRes.status_code === 201 && tripRes.id) {
-          if (this.selectedImages.length > 0) {
-            // Trip created successfully! Retrieve stops from backend to get their database IDs
-            this.stopsService.getTripStops(tripRes.id).subscribe({
-              next: (stopsRes) => {
-                const backendStops = stopsRes.stops || [];
-                const destinationStop = backendStops[1] || backendStops.find(bs => bs.title === this.tripStops[1].label);
-                if (destinationStop && destinationStop.id) {
-                  const stopDescription = this.newDescription.trim() || tripRes.title || 'Trip destination';
-                  this.feedService.createStopPost(destinationStop.id, stopDescription, this.selectedImages).subscribe({
-                    next: () => {
-                      this.showCreateModal = false;
-                      this.loadFeed();
-                    },
-                    error: (err) => {
-                      console.error(err);
-                      this.imageError = 'Failed to create feed post. Please try again.';
-                    }
-                  });
-                } else {
-                  this.showCreateModal = false;
-                  this.loadFeed();
-                }
-              },
-              error: (err) => {
-                console.error(err);
-                this.imageError = 'Failed to retrieve trip stops. Please try again.';
-              }
-            });
-          } else {
-            // No photos selected: just close modal and load feed
-            this.showCreateModal = false;
-            this.loadFeed();
-          }
+          this.showCreateModal = false;
+          this.loadFeed();
         } else {
           this.imageError = tripRes.message || 'Failed to create trip.';
         }
