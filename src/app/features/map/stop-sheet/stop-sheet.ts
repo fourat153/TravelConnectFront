@@ -12,9 +12,11 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { GalleriaModule } from 'primeng/galleria';
 
+import { PostCommentsComponent } from '../../../shared/components/post-comments/post-comments';
+
 @Component({
   selector: 'app-stop-sheet',
-  imports: [CommonModule, FormsModule, TimelineModule, CardModule, AvatarModule, ButtonModule, InputTextModule, GalleriaModule],
+  imports: [CommonModule, FormsModule, TimelineModule, CardModule, AvatarModule, ButtonModule, InputTextModule, GalleriaModule, PostCommentsComponent],
   templateUrl: './stop-sheet.html',
   styleUrl: './stop-sheet.scss'
 })
@@ -39,6 +41,7 @@ export class StopSheetComponent implements OnInit, OnChanges {
   isSubmitting = false;
   errorMessage = '';
   commentInputs: { [postId: number]: string } = {};
+  activeReplyComment: { [postId: number]: any | null } = {};
   currentImageIndex: { [postId: number]: number } = {};
   responsiveOptions = [
     { breakpoint: '1024px', numVisible: 5 },
@@ -149,13 +152,28 @@ export class StopSheetComponent implements OnInit, OnChanges {
     }
   }
 
+  replyToComment(post: any, comment: any, inputElem?: HTMLInputElement): void {
+    this.activeReplyComment[post.id] = comment;
+    if (inputElem) {
+      setTimeout(() => inputElem.focus(), 50);
+    }
+  }
+
+  cancelReply(postId: number): void {
+    this.activeReplyComment[postId] = null;
+  }
+
   addComment(post: PostOut) {
     const text = this.commentInputs[post.id];
     if (!text || !text.trim()) return;
 
-    this.postService.addComment(post.id, text).subscribe({
-      next: (res) => {
+    const replyTarget = this.activeReplyComment[post.id];
+    const parentId = replyTarget?.id ?? null;
+
+    this.postService.addComment(post.id, text, parentId).subscribe({
+      next: () => {
         this.commentInputs[post.id] = '';
+        this.activeReplyComment[post.id] = null;
         this.loadComments(post);
         this.cdr.detectChanges();
       },

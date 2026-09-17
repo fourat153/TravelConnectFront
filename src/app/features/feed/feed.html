@@ -79,7 +79,7 @@
               <button class="action-btn like-btn" [class.liked]="post.hasLiked" (click)="toggleLike(post)">
                 <i [class]="post.hasLiked ? 'pi pi-heart-fill' : 'pi pi-heart'"></i>
               </button>
-              <button class="action-btn comment-btn" (click)="commentInput.focus()">
+              <button class="action-btn comment-btn" (click)="timelineCommentsComp.focusInput()">
                 <i class="pi pi-comment"></i>
               </button>
 
@@ -101,40 +101,14 @@
             <span class="caption-text">{{ post.description }}</span>
           </div>
 
-          <!-- Comments Area -->
-          <div class="post-comments-section" *ngIf="post.comments.length > 0">
-            <div class="comments-list">
-              <div class="comment-item" *ngFor="let comment of post.comments">
-                <span class="comment-author">{{ comment.username }}</span>
-                <span class="comment-text">{{ comment.text }}</span>
-                <span class="comment-time">{{ comment.createdAt }}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="post-time-ago">
-            <span>{{ post.createdAt }}</span>
-          </div>
-
-          <!-- Add Comment Input Box -->
-          <div class="add-comment-container">
-            <div class="emoji-picker-wrapper">
-              <i class="pi pi-face-smile comment-emoji-icon" (click)="toggleEmojiPicker(post.id)"></i>
-
-              <!-- Popover Emoji Picker -->
-              <div class="emoji-picker-popover" *ngIf="activeEmojiPickerPostId === post.id">
-                <span class="emoji-item" *ngFor="let emoji of popularEmojis" (click)="addEmoji(post.id, emoji)">
-                  {{ emoji }}
-                </span>
-              </div>
-            </div>
-            <input #commentInput type="text" placeholder="Add a comment..." class="comment-input-field"
-              [(ngModel)]="commentInputs[post.id]" (keyup.enter)="submitComment(post)">
-            <button class="comment-post-btn" [disabled]="!commentInputs[post.id] || !commentInputs[post.id].trim()"
-              (click)="submitComment(post)">
-              Post
-            </button>
-          </div>
+          <!-- Reusable Comments Component -->
+          <app-post-comments
+            #timelineCommentsComp
+            [postId]="post.id"
+            [comments]="post.comments"
+            [currentUsername]="getDisplayName(currentUser)"
+            (authorClicked)="viewProfile($event)">
+          </app-post-comments>
 
         </div>
 
@@ -344,7 +318,7 @@
           (click)="toggleLike(selectedPostForModal)">
           <i [class]="selectedPostForModal.hasLiked ? 'pi pi-heart-fill' : 'pi pi-heart'"></i>
         </button>
-        <button class="action-btn comment-btn" (click)="modalCommentInput.focus()">
+        <button class="action-btn comment-btn" (click)="modalCommentsComp.focusInput()">
           <i class="pi pi-comment"></i>
         </button>
       </div>
@@ -364,43 +338,14 @@
       <span class="caption-text">{{ selectedPostForModal.description }}</span>
     </div>
 
-    <!-- Comments Area -->
-    <div class="post-comments-section" *ngIf="selectedPostForModal.comments.length > 0"
-      style="padding: 0; max-height: 150px; overflow-y: auto;">
-      <div class="comments-list">
-        <div class="comment-item" *ngFor="let comment of selectedPostForModal.comments">
-          <span class="comment-author">{{ comment.username }}</span>
-          <span class="comment-text">{{ comment.text }}</span>
-          <span class="comment-time">{{ comment.createdAt }}</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="post-time-ago" style="padding: 8px 0 12px 0;">
-      <span>{{ selectedPostForModal.createdAt }}</span>
-    </div>
-
-    <!-- Add Comment Input Box -->
-    <div class="add-comment-container" style="padding: 12px 0 0 0; border-top: 1px solid #f1f5f9;">
-      <div class="emoji-picker-wrapper">
-        <i class="pi pi-face-smile comment-emoji-icon" (click)="toggleEmojiPicker(selectedPostForModal.id)"></i>
-
-        <!-- Popover Emoji Picker -->
-        <div class="emoji-picker-popover" *ngIf="activeEmojiPickerPostId === selectedPostForModal.id">
-          <span class="emoji-item" *ngFor="let emoji of popularEmojis"
-            (click)="addEmoji(selectedPostForModal.id, emoji)">
-            {{ emoji }}
-          </span>
-        </div>
-      </div>
-      <input #modalCommentInput type="text" placeholder="Add a comment..." class="comment-input-field"
-        [(ngModel)]="commentInputs[selectedPostForModal.id]" (keyup.enter)="submitComment(selectedPostForModal)">
-      <button class="comment-post-btn"
-        [disabled]="!commentInputs[selectedPostForModal.id] || !commentInputs[selectedPostForModal.id].trim()"
-        (click)="submitComment(selectedPostForModal)">
-        Post
-      </button>
-    </div>
+    <!-- Reusable Comments Component -->
+    <app-post-comments
+      #modalCommentsComp
+      [postId]="selectedPostForModal.id"
+      [comments]="selectedPostForModal.comments"
+      [currentUsername]="getDisplayName(currentUser)"
+      (authorClicked)="viewProfile($event)">
+    </app-post-comments>
 
   </div>
 </p-dialog>

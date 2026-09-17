@@ -104,33 +104,13 @@
           </button>
         </div>
 
-        <!-- Comments Section -->
-        <div class="post-comments-container">
-          <div class="comments-list" *ngIf="post.comments && post.comments.length > 0">
-            <div *ngFor="let comment of post.comments" class="comment-item">
-              <span class="commenter-name">{{ comment.username }}</span>
-              <span class="comment-text">{{ comment.text }}</span>
-            </div>
-          </div>
-          <div class="no-comments-msg" *ngIf="!post.comments || post.comments.length === 0">
-            No comments yet.
-          </div>
-
-          <!-- Add Comment Input Bar -->
-          <div class="comment-input-bar">
-            <p-avatar *ngIf="currentUser?.profile_picture; else myCommentInitialsAvatar"
-              [image]="currentUser.profile_picture" shape="circle"
-              style="width: 24px; height: 24px; font-size: 11px; flex-shrink: 0;" />
-            <ng-template #myCommentInitialsAvatar>
-              <p-avatar [label]="currentUserInitials" shape="circle"
-                style="width: 24px; height: 24px; font-size: 11px; flex-shrink: 0;" />
-            </ng-template>
-            <input type="text" [(ngModel)]="commentInputs[post.id]" placeholder="Add a comment..." class="comment-input"
-              (keyup.enter)="addComment(post)" />
-            <button class="comment-send-btn" (click)="addComment(post)" [disabled]="!commentInputs[post.id]?.trim()">
-              <i class="pi pi-send"></i>
-            </button>
-          </div>
+        <!-- Reusable Comments Component -->
+        <div style="padding: 10px 16px;">
+          <app-post-comments
+            [postId]="post.id"
+            [comments]="post.comments || []"
+            [currentUsername]="currentUser?.username || 'Me'">
+          </app-post-comments>
         </div>
 
       </div>

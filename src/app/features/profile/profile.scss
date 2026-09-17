@@ -1,22 +1,28 @@
 .profile-layout {
   display: flex;
   height: 100vh;
+  height: 100dvh;
+  width: 100%;
   overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   background: radial-gradient(circle at 10% 20%, rgba(243, 244, 246, 1) 0%, rgba(229, 231, 235, 1) 90%);
   color: #1f2937;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 .profile-main-content {
-  flex-grow: 1;
+  flex: 1;
+  width: 100%;
+  min-height: 100%;
   padding: 2.5rem;
   margin-left: 5rem; // Adjust for bottom nav width
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 2rem;
-  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .profile-header {
@@ -432,61 +438,79 @@
   .profile-layout {
     flex-direction: column;
     height: 100vh;
+    height: 100dvh;
     overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    background: radial-gradient(circle at 10% 20%, rgba(243, 244, 246, 1) 0%, rgba(229, 231, 235, 1) 90%);
   }
 
   .profile-main-content {
     margin-left: 0 !important;
-    padding: 1rem 1rem 5.5rem 1rem !important;
+    padding: 1.25rem 1rem 7rem 1rem !important; /* Safe area space for bottom navbar on PWA */
     justify-content: flex-start;
     gap: 1rem;
+    width: 100%;
+    min-height: auto;
+    box-sizing: border-box;
+    overflow-y: visible;
   }
 
   .profile-container {
     gap: 1rem;
     width: 100%;
+    max-width: 100%;
   }
 
   .profile-card {
     grid-template-columns: 1fr !important;
-    border-radius: 1rem;
+    border-radius: 1.25rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
   }
 
   .avatar-section {
-    padding: 1.5rem 1rem !important;
-    border-bottom: 1px solid rgba(229, 231, 235, 0.5);
-    
+    padding: 1.75rem 1.25rem !important;
+    border-bottom: 1px solid rgba(229, 231, 235, 0.6);
+
     .avatar-wrapper {
       width: 110px;
       height: 110px;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.75rem;
+
+      .avatar-overlay {
+        opacity: 1;
+        background: rgba(0, 0, 0, 0.45);
+      }
     }
 
     .user-fullname {
-      font-size: 1.25rem !important;
+      font-size: 1.35rem !important;
       margin-bottom: 0.25rem !important;
+      word-break: break-word;
     }
 
     .user-email-text {
       font-size: 0.85rem !important;
-      margin-bottom: 0.5rem !important;
+      margin-bottom: 0.75rem !important;
+      word-break: break-all;
     }
 
     .status-badge {
-      font-size: 0.75rem !important;
-      padding: 0.25rem 0.65rem !important;
+      font-size: 0.8rem !important;
+      padding: 0.3rem 0.75rem !important;
     }
 
     p-button {
-      max-width: 150px !important;
-      width: auto !important;
-      margin-top: 0.75rem !important;
+      max-width: 200px !important;
+      width: 100% !important;
+      margin-top: 1rem !important;
 
       ::ng-deep .p-button {
-        width: auto !important;
-        min-height: 38px !important;
-        padding: 0.5rem 1rem !important;
-        font-size: 0.85rem !important;
+        width: 100% !important;
+        min-height: 44px !important; /* Touch-friendly height for PWA */
+        padding: 0.6rem 1.2rem !important;
+        font-size: 0.9rem !important;
+        border-radius: 0.75rem !important;
       }
     }
   }
@@ -510,10 +534,11 @@
 
       .edit-btn {
         width: auto !important;
-        min-height: 36px !important;
-        padding: 0.4rem 0.8rem !important;
-        font-size: 0.8rem !important;
+        min-height: 40px !important;
+        padding: 0.5rem 0.9rem !important;
+        font-size: 0.85rem !important;
         margin: 0 !important;
+        border-radius: 0.6rem;
       }
     }
   }
@@ -524,60 +549,72 @@
 
   .form-grid {
     grid-template-columns: 1fr !important;
-    gap: 0.75rem !important;
+    gap: 1rem !important;
   }
 
   .form-group {
-    gap: 0.25rem !important;
+    gap: 0.35rem !important;
 
     &.city-form-group {
       grid-column: span 1 !important;
     }
 
+    label {
+      font-size: 0.85rem;
+    }
+
     .input-container {
-      min-height: 40px;
-      
-      input, select {
-        padding: 0.6rem 1rem 0.6rem 2.5rem;
-        min-height: 40px;
-        font-size: 15px !important;
+      min-height: 46px; /* Optimized touch target for PWA */
+      border-radius: 0.75rem;
+
+      input,
+      select {
+        padding: 0.75rem 1rem 0.75rem 2.6rem;
+        min-height: 46px;
+        font-size: 16px !important; /* Prevents iOS auto-zoom on focus */
       }
-      
+
       .field-icon {
         left: 0.85rem !important;
-        font-size: 0.9rem !important;
+        font-size: 1rem !important;
       }
     }
   }
 
   .form-actions {
     padding-top: 1rem !important;
-    
+
     .btn-primary {
       width: 100%;
-      min-height: 44px;
-      font-size: 0.95rem;
+      min-height: 48px; /* Touch target */
+      font-size: 1rem;
+      border-radius: 0.75rem;
     }
   }
 
   .profile-posts-section {
-    margin-top: 1.5rem !important;
-    padding: 1.25rem 0.75rem !important;
-    border-radius: 1rem !important;
-    box-shadow: none !important;
-    border: 1px solid rgba(229, 231, 235, 0.5) !important;
+    margin-top: 1rem !important;
+    padding: 1.25rem 0.85rem !important;
+    border-radius: 1.25rem !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
 
     .posts-section-header {
-      margin-bottom: 1.25rem !important;
-      padding-top: 0.5rem !important;
+      margin-bottom: 1rem !important;
+      padding-top: 0.25rem !important;
     }
 
     .posts-grid {
       grid-template-columns: repeat(3, 1fr) !important;
-      gap: 3px !important;
+      gap: 4px !important;
+
+      @media (max-width: 420px) {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 6px !important;
+      }
 
       .grid-item {
-        border-radius: 0.25rem !important;
+        border-radius: 0.5rem !important;
       }
     }
   }
@@ -585,11 +622,12 @@
   ::ng-deep .p-dialog {
     width: 95vw !important;
     max-width: 95vw !important;
-    
+    margin: 0 auto;
+
     .p-dialog-header {
-      padding: 0.75rem 1rem 0.5rem 1rem !important;
+      padding: 0.85rem 1rem 0.5rem 1rem !important;
     }
-    
+
     .p-dialog-content {
       padding: 0 1rem 1rem 1rem !important;
     }
@@ -598,13 +636,14 @@
   .detail-modal-card {
     .post-image-container {
       height: 280px !important;
+
       .post-image {
         height: 280px !important;
       }
     }
-    
+
     .post-comments-section {
-      max-height: 120px !important;
+      max-height: 160px !important;
     }
 
     .post-actions {
@@ -734,7 +773,8 @@
     }
   }
 
-  .posts-loading, .posts-empty {
+  .posts-loading,
+  .posts-empty {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1147,11 +1187,11 @@
     .p-carousel-content {
       height: 100%;
     }
-    
+
     .p-carousel-container {
       height: 100%;
     }
-    
+
     .p-carousel-items-container {
       height: 100%;
     }
@@ -1167,14 +1207,17 @@
     transform: scale(0);
     opacity: 0;
   }
+
   50% {
     transform: scale(1.2);
     opacity: 0.9;
   }
+
   80% {
     transform: scale(0.9);
     opacity: 0.9;
   }
+
   100% {
     transform: scale(1);
     opacity: 0;
@@ -1185,16 +1228,20 @@
   0% {
     transform: scale(1);
   }
+
   25% {
     transform: scale(1.25);
   }
+
   50% {
     transform: scale(1);
   }
+
   75% {
     transform: scale(1.15);
   }
+
   100% {
     transform: scale(1);
   }
-}
+}

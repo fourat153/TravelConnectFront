@@ -1,0 +1,68 @@
+<p-popover #popover (onShow)="loadNotifications()" styleClass="notifications-popover">
+  <div class="notifications-container">
+    <!-- Header -->
+    <div class="notifications-header">
+      <div class="header-left">
+        <i class="pi pi-bell header-icon"></i>
+        <h3 class="header-title">Notifications</h3>
+      </div>
+      <button class="close-btn" (click)="close()" aria-label="Close">
+        <i class="pi pi-times"></i>
+      </button>
+    </div>
+
+    <!-- Error state -->
+    <div class="error-state" *ngIf="errorMessage">
+      <i class="pi pi-exclamation-circle error-icon"></i>
+      <p>{{ errorMessage }}</p>
+      <button class="retry-btn" (click)="loadNotifications()">
+        <i class="pi pi-refresh"></i> Retry
+      </button>
+    </div>
+
+    <!-- Loading state -->
+    <div class="loading-state" *ngIf="loading && !errorMessage">
+      <i class="pi pi-spin pi-spinner loading-spinner"></i>
+      <span>Loading notifications...</span>
+    </div>
+
+    <!-- Notification List -->
+    <div class="notifications-list" *ngIf="!loading && !errorMessage">
+      <ng-container *ngIf="(notifications$ | async) as notifications">
+        
+        <!-- Empty state -->
+        <div class="empty-state" *ngIf="notifications.length === 0">
+          <div class="empty-icon-wrapper">
+            <i class="pi pi-bell-slash empty-icon"></i>
+          </div>
+          <h4 class="empty-title">No notifications yet</h4>
+          <p class="empty-desc">When you get updates, friend requests or activity, they'll appear here.</p>
+        </div>
+
+        <!-- Items -->
+        <div 
+          *ngFor="let notification of notifications"
+          class="notification-item"
+          [class.unread]="!notification.is_read"
+          (click)="onNotificationClick(notification)">
+          
+          <!-- Icon indicator (Blue styled) -->
+          <div class="item-icon-wrapper" [ngClass]="getNotificationTypeClass(notification.type)">
+            <i [class]="getNotificationIcon(notification.type)"></i>
+          </div>
+
+          <!-- Content -->
+          <div class="item-content">
+            <div class="item-text-row">
+              <span class="item-message">{{ getNotificationMessage(notification) }}</span>
+            </div>
+            <span class="item-time">{{ formatDate(notification.created_at) }}</span>
+          </div>
+        </div>
+
+
+      </ng-container>
+    </div>
+  </div>
+</p-popover>
+

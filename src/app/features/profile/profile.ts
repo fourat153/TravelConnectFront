@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { BottomNavComponent, NavTab } from '../../shared/components/bottom-nav/bottom-nav';
 import { AuthService } from '../../core/services/auth';
-import { FeedService, FeedPost } from '../../core/services/feed';
+import { FeedService, FeedPost, PostComment } from '../../core/services/feed';
 import { User } from '../../shared/models/user';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
@@ -12,10 +12,12 @@ import { CarouselModule } from 'primeng/carousel';
 import { environment } from '../../../environments/environment';
 import { POPULAR_EMOJIS } from '../../shared/constants/emojis';
 
+import { PostCommentsComponent } from '../../shared/components/post-comments/post-comments';
+
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule, BottomNavComponent, ButtonModule, DialogModule, CarouselModule],
+  imports: [CommonModule, FormsModule, BottomNavComponent, ButtonModule, DialogModule, CarouselModule, PostCommentsComponent],
   templateUrl: './profile.html',
   styleUrl: './profile.scss',
 })
@@ -40,6 +42,7 @@ export class Profile implements OnInit {
   showPostDetailModal = false;
   selectedPostForModal: FeedPost | null = null;
   commentInputs: { [postId: number]: string } = {};
+  activeReplyComment: { [postId: number]: PostComment | null } = {};
   activeEmojiPickerPostId: number | null = null;
   popularEmojis = POPULAR_EMOJIS;
   heartOverlayPostId: number | null = null;
@@ -337,25 +340,49 @@ export class Profile implements OnInit {
     }, 800);
   }
 
+  replyToComment(post: FeedPost, comment: PostComment, inputElem?: HTMLInputElement): void {
+    this.activeReplyComment[post.id] = comment;
+    if (inputElem) {
+      setTimeout(() => inputElem.focus(), 50);
+    }
+  }
+
+  cancelReply(postId: number): void {
+    this.activeReplyComment[postId] = null;
+  }
+
   submitComment(post: FeedPost): void {
     const text = this.commentInputs[post.id];
     if (!text || !text.trim()) return;
 
+    const replyTarget = this.activeReplyComment[post.id];
+    const parentId = replyTarget?.id ?? null;
     const userFullName = `${this.user?.firstname} ${this.user?.lastname}`;
-    const newComment = {
+
+    const newComment: PostComment = {
       username: userFullName,
       text: text,
-      createdAt: 'Just now'
+      createdAt: 'Just now',
+      parentId: parentId,
+      replyToUsername: replyTarget?.username
     };
+
     post.comments = [...post.comments, newComment];
     this.commentInputs[post.id] = '';
+    this.activeReplyComment[post.id] = null;
     this.cdr.detectChanges();
 
-    this.feedService.addComment(post.id, text).subscribe({
+    this.feedService.addComment(post.id, text, parentId).subscribe({
+      next: (res) => {
+        if (res && res.id) {
+          newComment.id = res.id;
+        }
+      },
       error: (err) => {
         console.error('Failed to submit comment', err);
         post.comments = post.comments.filter(c => c !== newComment);
         this.commentInputs[post.id] = text;
+        this.activeReplyComment[post.id] = replyTarget ?? null;
         this.cdr.detectChanges();
       }
     });

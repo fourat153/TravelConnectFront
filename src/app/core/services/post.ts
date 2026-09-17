@@ -7,7 +7,7 @@ import { PostsOut, SinglePostOut } from '../../shared/models/post';
 export class PostService {
   private base = 'http://localhost:8000';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   getStopPosts(stopId: number): Observable<PostsOut> {
     return this.http.get<PostsOut>(`${this.base}/stops/${stopId}/posts`, { withCredentials: true });
@@ -35,7 +35,11 @@ export class PostService {
     return this.http.delete<any>(`${this.base}/posts/${postId}/likes`, { withCredentials: true });
   }
 
-  addComment(postId: number, content: string): Observable<any> {
-    return this.http.post<any>(`${this.base}/posts/${postId}/comments`, { content }, { withCredentials: true });
+  addComment(postId: number, content: string, parentId?: number | null): Observable<any> {
+    const payload: any = { content };
+    if (parentId !== undefined && parentId !== null) {
+      payload.parent_id = parentId;
+    }
+    return this.http.post<any>(`${this.base}/posts/${postId}/comments`, payload, { withCredentials: true });
   }
 }

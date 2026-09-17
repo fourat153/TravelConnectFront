@@ -112,8 +112,6 @@ export class Map implements AfterViewInit, OnInit {
     }).addTo(this.map);
   }
 
-  // ── Friend pins ──────────────────────────────────────────────
-
   loadFriendPins(): void {
     this.clearFriendPins();
     this.friendPinsVisible = true;
@@ -342,13 +340,11 @@ export class Map implements AfterViewInit, OnInit {
     this.friendPinMarkers.forEach((marker) => {
       const fId = (marker as any).friendId;
       if (!this.selectedFriend) {
-        // No friend is selected, so all should be on the map
         if (!this.map.hasLayer(marker)) {
           marker.addTo(this.map);
         }
         this.updateAvatarHighlight(marker, false);
       } else {
-        // A friend is selected. Only show this friend's markers.
         if (fId === this.selectedFriend.friend_id) {
           if (!this.map.hasLayer(marker)) {
             marker.addTo(this.map);
@@ -408,8 +404,6 @@ export class Map implements AfterViewInit, OnInit {
     setTimeout(() => this.map.invalidateSize({ animate: false }), 300);
   }
 
-  // ── Navigation ───────────────────────────────────────────────
-
   onNavTabChanged(tab: NavTab): void {
     this.selectedFriend = undefined;
     this.clearActiveTripRoute();
@@ -458,8 +452,6 @@ export class Map implements AfterViewInit, OnInit {
         break;
     }
   }
-
-  // ── Sidebar ──────────────────────────────────────────────────
 
   onAnySidebarClosed(): void {
     this.isTripSidebarOpen = false;
@@ -547,7 +539,6 @@ export class Map implements AfterViewInit, OnInit {
     setTimeout(() => this.map.invalidateSize(), 300);
   }
 
-  // ── Stop panel ───────────────────────────────────────────────
 
   addDraggablePin(): void {
     if (this.draggableMarker) return;
@@ -634,7 +625,6 @@ export class Map implements AfterViewInit, OnInit {
     this.pendingLatLng = null;
   }
 
-  // ── Route / polyline ─────────────────────────────────────────
 
   private async getOsrmRoute(points: L.LatLng[]): Promise<L.LatLngTuple[]> {
     const coords = points.map(p => `${p.lng},${p.lat}`).join(';');
@@ -684,8 +674,6 @@ export class Map implements AfterViewInit, OnInit {
     await this.drawRoute(points);
   }
 
-  // ── Search ───────────────────────────────────────────────────
-
   onSearch(): void {
     clearTimeout(this.searchTimeout);
     if (!this.searchQuery || this.searchQuery.length < 3) {
@@ -714,8 +702,6 @@ export class Map implements AfterViewInit, OnInit {
     this.searchQuery = suggestion.display_name;
     this.suggestions = [];
   }
-
-  // ── Profile ──────────────────────────────────────────────────
 
   toggleProfileMenu(): void {
     this.showProfileMenu = !this.showProfileMenu;

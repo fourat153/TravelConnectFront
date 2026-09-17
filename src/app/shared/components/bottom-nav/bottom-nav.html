@@ -14,6 +14,16 @@
       <span class="item-label">Home</span>
     </button>
 
+    <button #notifBtn class="sidebar-item notification-btn" (click)="openNotifications($event, notifBtn)">
+      <div class="icon-badge-wrapper">
+        <i class="pi pi-bell"></i>
+        <span class="notification-badge" *ngIf="(unreadCount$ | async) as count">
+          {{ count > 99 ? '99+' : count }}
+        </span>
+      </div>
+      <span class="item-label">Notifications</span>
+    </button>
+
     <button class="sidebar-item" [class.active]="active === 'my-trips'" (click)="select('my-trips')">
       <i class="pi pi-map"></i>
       <span class="item-label">My Trips</span>
@@ -26,3 +36,7 @@
 
   </div>
 </nav>
+
+<!-- Notifications Panel Popover -->
+<app-notifications-panel #notifPanel></app-notifications-panel>
+

@@ -70,18 +70,15 @@ export class TripSidebarComponent implements OnInit, OnChanges {
   @Output() stopsReordered = new EventEmitter<StopOut[]>();
   view: View = 'list';
 
-  // ── list ─────────────────────────────────────────────────────
   trips: TripOut[] = [];
   tripsLoading = false;
   tripsError = '';
 
-  // ── detail ───────────────────────────────────────────────────
   activeTrip?: TripOut;
   detailStops: StopOut[] = [];
   detailLoading = false;
   detailError = '';
 
-  // single stop search
   stopQuery = '';
   stopSuggestions: NominatimResult[] = [];
   stopSearchLoading = false;
@@ -92,7 +89,6 @@ export class TripSidebarComponent implements OnInit, OnChanges {
   private stopSearch$ = new Subject<string>();
   private suggestionCache = new Map<string, NominatimResult[]>();
 
-  // Array of posts to create during stop creation
   stopPosts: {
     description: string;
     photos: File[];
@@ -101,7 +97,6 @@ export class TripSidebarComponent implements OnInit, OnChanges {
     videoPreviews: string[];
   }[] = [];
 
-  // ── create ───────────────────────────────────────────────────
   createForm: FormGroup;
   createLoading = false;
   createError = '';
@@ -115,7 +110,6 @@ export class TripSidebarComponent implements OnInit, OnChanges {
 
   selectedTripId?: number;
 
-  // Mobile drag-to-dismiss properties
   private startY = 0;
   private isDragging = false;
   translateY = 'translateY(0px)';
@@ -149,7 +143,6 @@ export class TripSidebarComponent implements OnInit, OnChanges {
       include_home_city: [false],
     });
 
-    // wire up search for single stop input using Photon with Nominatim fallback & caching
     this.stopSearch$.pipe(
       debounceTime(300),
       distinctUntilChanged(),
@@ -229,7 +222,6 @@ export class TripSidebarComponent implements OnInit, OnChanges {
     }
   }
 
-  // ── list ─────────────────────────────────────────────────────
 
   loadTrips(): void {
     this.tripsLoading = true;
@@ -268,8 +260,6 @@ export class TripSidebarComponent implements OnInit, OnChanges {
     this.openDetail(trip.id);
   }
 
-  // ── detail ───────────────────────────────────────────────────
-
   openDetail(tripId: number): void {
     this.view = 'detail';
     this.detailStops = [];
@@ -290,8 +280,6 @@ export class TripSidebarComponent implements OnInit, OnChanges {
       }
     });
   }
-
-  // ── single stop search ────────────────────────────────────────
 
   onStopInput(): void {
     this.resolvedPlace = null;
@@ -320,7 +308,6 @@ export class TripSidebarComponent implements OnInit, OnChanges {
     this.stopShowDropdown = false;
     this.addStopError = '';
 
-    // Clear new stop photos & description
     this.stopPosts.forEach(p => p.videoPreviews.forEach(url => URL.revokeObjectURL(url)));
     this.stopPosts = [];
   }
@@ -331,7 +318,7 @@ export class TripSidebarComponent implements OnInit, OnChanges {
   }
 
   removeStopPostField(index: number): void {
-    if (this.stopPosts.length <= 1) return; // Keep at least one
+    if (this.stopPosts.length <= 1) return;
     const post = this.stopPosts[index];
     if (post) {
       post.videoPreviews.forEach(url => URL.revokeObjectURL(url));
@@ -414,14 +401,12 @@ export class TripSidebarComponent implements OnInit, OnChanges {
       order: Math.max(1, this.detailStops.length - 1)
     };
 
-    // 1. Create the stop on the backend
     this.stopsService.createStop(payload, this.activeTrip.id).subscribe({
       next: (createRes: any) => {
         if (createRes.status_code === 201) {
           const stopId = createRes.id;
 
           const finalizeStopAddition = () => {
-            // 2. Fetch all stops to ensure we have the complete, official list from the db
             this.stopsService.getTripStops(this.activeTrip!.id).subscribe({
               next: (getRes: any) => {
                 const stops = getRes.stops ?? [];
@@ -441,7 +426,6 @@ export class TripSidebarComponent implements OnInit, OnChanges {
             });
           };
 
-          // 2. Create posts for each activity post that has some details
           const validPosts = this.stopPosts.filter(p => p.description.trim().length > 0 || p.photos.length > 0 || p.videos.length > 0);
 
           if (validPosts.length > 0) {
@@ -475,8 +459,6 @@ export class TripSidebarComponent implements OnInit, OnChanges {
       }
     });
   }
-
-  // ── create ───────────────────────────────────────────────────
 
   onStopsChange(stops: TripStop[]): void {
     this.tripStops = stops;
@@ -542,9 +524,8 @@ export class TripSidebarComponent implements OnInit, OnChanges {
     const minIndex = 1;
     const maxIndex = this.detailStops.length - 2;
 
-    if (maxIndex < minIndex) return; // Not enough stops to reorder
+    if (maxIndex < minIndex) return;
 
-    // Constrain the drop index to be within the allowed range
     let targetIndex = event.currentIndex;
     if (targetIndex < minIndex) {
       targetIndex = minIndex;

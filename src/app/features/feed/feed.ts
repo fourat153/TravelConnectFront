@@ -4,7 +4,8 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } 
 import { Router } from '@angular/router';
 import { BottomNavComponent, NavTab } from '../../shared/components/bottom-nav/bottom-nav';
 import { AuthService } from '../../core/services/auth';
-import { FeedService, FeedPost } from '../../core/services/feed';
+import { FirebaseMessagingService } from '../../core/services/firebase-messaging';
+import { FeedService, FeedPost, PostComment } from '../../core/services/feed';
 import { TripService } from '../../core/services/trip';
 import { TripCreate } from '../../shared/models/trip';
 import { StopsService } from '../../core/services/stop';
@@ -22,6 +23,7 @@ import { HttpClient } from '@angular/common/http';
 import * as L from 'leaflet';
 import { environment } from '../../../environments/environment';
 import { POPULAR_EMOJIS } from '../../shared/constants/emojis';
+import { PostCommentsComponent } from '../../shared/components/post-comments/post-comments';
 
 @Component({
   selector: 'app-feed',
@@ -36,7 +38,8 @@ import { POPULAR_EMOJIS } from '../../shared/constants/emojis';
     TextareaModule,
     ButtonModule,
     CarouselModule,
-    TripStopInputComponent
+    TripStopInputComponent,
+    PostCommentsComponent
   ],
   templateUrl: './feed.html',
   styleUrl: './feed.scss'
@@ -52,6 +55,7 @@ export class FeedComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   private http = inject(HttpClient);
   private ngZone = inject(NgZone);
+  private firebaseMessagingService = inject(FirebaseMessagingService);
 
   posts: FeedPost[] = [];
 
@@ -81,6 +85,7 @@ export class FeedComponent implements OnInit {
 
   // Comment / Emoji Picker state
   commentInputs: { [postId: number]: string } = {};
+  activeReplyComment: { [postId: number]: PostComment | null } = {};
   activeEmojiPickerPostId: number | null = null;
   popularEmojis = POPULAR_EMOJIS;
   heartOverlayPostId: number | null = null;
@@ -108,6 +113,23 @@ export class FeedComponent implements OnInit {
       title: ['', [Validators.required, Validators.minLength(2)]],
       privacy: ['public'],
       include_home_city: [false],
+    });
+
+    // Firebase Messaging service token retrieval and registration
+    this.firebaseMessagingService.getFCMToken().then(token => {
+      console.log('FCM Token retrieved:', token);
+      if (token) {
+        this.firebaseMessagingService.registerToken(token).subscribe({
+          next: () => {
+            console.log('Successfully registered FCM token with backend');
+          },
+          error: (err) => {
+            console.error('Failed to register FCM token with backend', err);
+          }
+        });
+      }
+    }).catch(err => {
+      console.error('FCM Token retrieval error:', err);
     });
 
     this.authService.currentUser$.subscribe(user => {
@@ -234,25 +256,49 @@ export class FeedComponent implements OnInit {
     });
   }
 
+  replyToComment(post: FeedPost, comment: PostComment, inputElem?: HTMLInputElement): void {
+    this.activeReplyComment[post.id] = comment;
+    if (inputElem) {
+      setTimeout(() => inputElem.focus(), 50);
+    }
+  }
+
+  cancelReply(postId: number): void {
+    this.activeReplyComment[postId] = null;
+  }
+
   submitComment(post: FeedPost): void {
     const text = this.commentInputs[post.id];
     if (!text || !text.trim()) return;
 
+    const replyTarget = this.activeReplyComment[post.id];
+    const parentId = replyTarget?.id ?? null;
     const userFullName = this.getDisplayName(this.currentUser);
-    const newComment = {
+
+    const newComment: PostComment = {
       username: userFullName,
       text: text,
-      createdAt: 'Just now'
+      createdAt: 'Just now',
+      parentId: parentId,
+      replyToUsername: replyTarget?.username
     };
+
     post.comments = [...post.comments, newComment];
     this.commentInputs[post.id] = '';
+    this.activeReplyComment[post.id] = null;
     this.cdr.detectChanges();
 
-    this.feedService.addComment(post.id, text).subscribe({
+    this.feedService.addComment(post.id, text, parentId).subscribe({
+      next: (res) => {
+        if (res && res.id) {
+          newComment.id = res.id;
+        }
+      },
       error: (err) => {
         console.error('Failed to submit comment', err);
         post.comments = post.comments.filter(c => c !== newComment);
         this.commentInputs[post.id] = text;
+        this.activeReplyComment[post.id] = replyTarget ?? null;
         this.cdr.detectChanges();
       }
     });

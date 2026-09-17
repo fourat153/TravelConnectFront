@@ -7,9 +7,12 @@ export interface ImageOut {
 export interface CommentData {
   id?: number;
   userId?: number;
+  postId?: number;
+  parentId?: number | null;
   username: string;
   text: string;
   createdAt?: string;
+  replyToUsername?: string;
 }
 
 export interface PostOut {
