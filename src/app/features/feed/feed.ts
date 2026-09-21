@@ -15,8 +15,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { ButtonModule } from 'primeng/button';
 import { CarouselModule } from 'primeng/carousel';
-import { SuggestionsService } from '../../core/services/suggestions';
-import { SuggestionUser } from '../../shared/models/user';
+
 import { forkJoin, of, Observable } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
@@ -50,7 +49,7 @@ export class FeedComponent implements OnInit {
   private feedService = inject(FeedService);
   private tripService = inject(TripService);
   private stopsService = inject(StopsService);
-  private suggestionsService = inject(SuggestionsService);
+
   private fb = inject(FormBuilder);
   private cdr = inject(ChangeDetectorRef);
   private http = inject(HttpClient);
@@ -72,8 +71,7 @@ export class FeedComponent implements OnInit {
   currentUser: any = null;
   currentUserInitials = '';
 
-  suggestions: SuggestionUser[] = [];
-  suggestionsLoading = false;
+
 
   // Create post modal state
   showCreateModal = false;
@@ -148,21 +146,7 @@ export class FeedComponent implements OnInit {
       }
     });
 
-    this.suggestionsLoading = true;
-    this.suggestionsService.getSuggestions().subscribe({
-      next: (data) => {
-        this.suggestions = data;
-        if (data && data.length > 0) {
-          this.suggestionsLoading = false;
-        }
-        this.cdr.detectChanges();
-      },
-      error: () => {
-        this.suggestionsLoading = false;
-        this.cdr.detectChanges();
-      }
-    });
-    this.suggestionsService.loadSuggestions();
+
 
     // Explicitly load feed posts when visiting feed page
     this.loadFeed();
@@ -171,14 +155,7 @@ export class FeedComponent implements OnInit {
   loadFeed(): void {
     this.feedService.loadPosts();
   }
-  connect(userId: number): void {
-    // TODO: wire to friendshipService.sendRequest() once implemented
-    this.suggestionsService.removeSuggestion(userId);
-  }
 
-  getFullName(user: SuggestionUser): string {
-    return `${user.firstname} ${user.lastname}`;
-  }
 
   getDisplayName(user: any): string {
     if (!user) return 'Traveler';

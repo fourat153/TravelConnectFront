@@ -132,48 +132,7 @@
         <button class="switch-profile-btn" (click)="onNavTabChanged('profile')">Profile</button>
       </div>
 
-      <div class="suggestions-header">
-        <span class="suggestions-title">Suggestions for you</span>
-        <button class="see-all-btn">See All</button>
-      </div>
 
-      <div class="suggestions-list">
-
-        <!-- skeleton — only while loading -->
-        <ng-container *ngIf="suggestionsLoading">
-          <div class="suggestion-row skeleton" *ngFor="let i of [1,2,3]">
-            <div class="sug-avatar-wrapper"></div>
-            <div class="sug-info">
-              <div class="name-skel"></div>
-              <div class="sub-skel"></div>
-            </div>
-          </div>
-        </ng-container>
-
-        <!-- real data -->
-        <ng-container *ngIf="!suggestionsLoading">
-          <div class="suggestion-row" *ngFor="let sug of suggestions">
-            <div class="sug-avatar-wrapper" (click)="viewProfile(sug.id)" style="cursor: pointer;">
-              <img *ngIf="sug.profile_picture" [src]="sug.profile_picture" [alt]="getFullName(sug)"
-                class="sug-avatar" />
-              <div *ngIf="!sug.profile_picture" class="sug-initials">
-                {{ sug.firstname[0] }}{{ sug.lastname[0] }}
-              </div>
-            </div>
-            <div class="sug-info">
-              <span class="sug-name" (click)="viewProfile(sug.id)" style="cursor: pointer;">{{ getFullName(sug)
-                }}</span>
-              <span class="sug-subtext">
-                Followed by {{ sug.mutual_friends_count }}
-                {{ sug.mutual_friends_count === 1 ? 'friend' : 'friends' }}
-              </span>
-            </div>
-            <button class="connect-btn" (click)="connect(sug.id)">Connect</button>
-          </div>
-
-          <p class="no-suggestions" *ngIf="suggestions.length === 0">No suggestions right now.</p>
-        </ng-container>
-      </div>
 
       <footer class="feed-sidebar-footer">
         <p>About • Help • Press • API • Jobs • Privacy • Terms</p>
