@@ -4,6 +4,8 @@ import {
   Output,
   EventEmitter,
   OnDestroy,
+  ChangeDetectorRef,
+  inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -72,7 +74,10 @@ export class TripStopInputComponent implements OnDestroy {
   private searchTimeouts = new Map<string, any>();
   private suggestionCache = new Map<string, NominatimResult[]>();
 
-  constructor(private http: HttpClient) { }
+  private http = inject(HttpClient);
+  private cdr = inject(ChangeDetectorRef);
+
+  constructor() { }
 
 
   private makeRow(): StopRow {
@@ -126,6 +131,8 @@ export class TripStopInputComponent implements OnDestroy {
     if (q.length < 2) {
       row.suggestions = [];
       row.showDropdown = false;
+      row.loading = false;
+      this.cdr.markForCheck();
       return;
     }
 
@@ -134,10 +141,12 @@ export class TripStopInputComponent implements OnDestroy {
       row.suggestions = this.suggestionCache.get(q)!;
       row.showDropdown = row.suggestions.length > 0;
       row.loading = false;
+      this.cdr.markForCheck();
       return;
     }
 
     row.loading = true;
+    this.cdr.markForCheck();
 
     // Call Mapbox Geocoding API directly for place suggestions
     const timeoutId = setTimeout(() => {
@@ -168,6 +177,7 @@ export class TripStopInputComponent implements OnDestroy {
           row.suggestions = results;
           row.showDropdown = results.length > 0;
           this.suggestionCache.set(q, results);
+          this.cdr.markForCheck();
         });
     }, 300); // 300ms debounce for extremely responsive autocomplete search
 
@@ -205,6 +215,7 @@ export class TripStopInputComponent implements OnDestroy {
   hideDropdown(row: StopRow): void {
     setTimeout(() => {
       row.showDropdown = false;
+      this.cdr.markForCheck();
     }, 150);
   }
 

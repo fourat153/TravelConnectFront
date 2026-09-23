@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, inject, ChangeDetectorRef, AfterViewInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, inject, ChangeDetectorRef, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PostService } from '../../../core/services/post';
@@ -27,13 +27,15 @@ export class StopSheetComponent implements OnInit, OnChanges {
   @Input() tripDate: string = '';
   @Output() closed = new EventEmitter<void>();
 
+  @ViewChild('postInput') postInputElem?: ElementRef<HTMLInputElement>;
+
   private postService = inject(PostService);
   private authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
   
   currentUser: any = null;
   currentUserInitials = '';
-  
+
   posts: PostOut[] = [];
   postTitle = '';
   selectedImages: File[] = [];
@@ -99,7 +101,14 @@ export class StopSheetComponent implements OnInit, OnChanges {
       this.commentInputs = {};
       this.currentImageIndex = {};
       this.loadPosts();
+      this.focusPostInput();
     }
+  }
+
+  focusPostInput(): void {
+    setTimeout(() => {
+      this.postInputElem?.nativeElement?.focus();
+    }, 150);
   }
   
   loadPosts() {

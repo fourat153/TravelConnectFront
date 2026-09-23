@@ -19,7 +19,7 @@ import { CarouselModule } from 'primeng/carousel';
 import { forkJoin, of, Observable } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
-import * as L from 'leaflet';
+import mapboxgl from 'mapbox-gl';
 import { environment } from '../../../environments/environment';
 import { POPULAR_EMOJIS } from '../../shared/constants/emojis';
 import { PostCommentsComponent } from '../../shared/components/post-comments/post-comments';
@@ -59,9 +59,9 @@ export class FeedComponent implements OnInit {
   posts: FeedPost[] = [];
 
   activeView: 'timeline' | 'map' = 'timeline';
-  private feedMap!: L.Map;
+  private feedMap!: mapboxgl.Map;
   private mapInitialized = false;
-  private markers: L.Marker[] = [];
+  private markers: mapboxgl.Marker[] = [];
   private geocodeCache = new Map<string, { lat: number; lon: number }>();
   private geocodedPostsList: Array<{ post: FeedPost; coords: { lat: number; lon: number } }> = [];
 
@@ -337,6 +337,7 @@ export class FeedComponent implements OnInit {
 
   onStopsChange(stops: TripStop[]): void {
     this.tripStops = stops;
+    this.cdr.markForCheck();
   }
 
   setPrivacy(value: string): void {
@@ -420,13 +421,16 @@ export class FeedComponent implements OnInit {
       next: (tripRes) => {
         if (tripRes.status_code === 201 && tripRes.id) {
           this.showCreateModal = false;
+          this.cdr.markForCheck();
           this.loadFeed();
         } else {
           this.imageError = tripRes.message || 'Failed to create trip.';
+          this.cdr.markForCheck();
         }
       },
       error: () => {
         this.imageError = 'Something went wrong while creating the trip. Try again.';
+        this.cdr.markForCheck();
       }
     });
   }
@@ -442,32 +446,27 @@ export class FeedComponent implements OnInit {
 
   private initMap(): void {
     if (!this.mapInitialized) {
-      this.feedMap = L.map('feed-map', {
-        zoomAnimation: true,
-        fadeAnimation: true,
-        minZoom: 2,
-        markerZoomAnimation: true,
-      }).setView([20, 0], 2);
+      mapboxgl.accessToken = environment.mapboxToken;
 
-      L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${environment.mapboxToken}`, {
-        attribution: '© <a href="https://www.mapbox.com/">Mapbox</a> © <a href="https://www.openstreetmap.org/">OpenStreetMap</a>',
-        tileSize: 512,
-        zoomOffset: -1,
-        maxZoom: 22,
-      }).addTo(this.feedMap);
+      this.feedMap = new mapboxgl.Map({
+        container: 'feed-map',
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [0, 20],
+        zoom: 2,
+        minZoom: 2
+      });
 
       this.mapInitialized = true;
     }
 
     // Clear existing markers
-    this.markers.forEach(m => this.feedMap.removeLayer(m));
+    this.markers.forEach(m => m.remove());
     this.markers = [];
     this.geocodedPostsList = [];
 
     // Load and place markers for all feed posts
     let delay = 0;
     this.posts.forEach((post) => {
-      // Prioritize using pre-resolved lat/long coordinates from backend
       if (post.lat !== undefined && post.lat !== null && post.long !== undefined && post.long !== null) {
         const coords = { lat: post.lat, lon: post.long };
         this.geocodedPostsList.push({ post, coords });
@@ -479,50 +478,57 @@ export class FeedComponent implements OnInit {
       if (!location) return;
 
       if (this.geocodeCache.has(location)) {
-        // Cached - place immediately
         const coords = this.geocodeCache.get(location)!;
         this.geocodedPostsList.push({ post, coords });
         this.redrawMarkers();
       } else {
-        // Not cached - queue with a delay
         setTimeout(() => {
           if (this.activeView !== 'map' || !this.mapInitialized) return;
 
-          this.geocodeLocation(location).subscribe(coords => {
+          this.geocodeLocation(location).subscribe((coords: { lat: number; lon: number } | null) => {
             if (coords) {
               this.geocodedPostsList.push({ post, coords });
               this.redrawMarkers();
             }
           });
         }, delay);
-        delay += 50; // Mapbox is fast and has high limits, 50ms is enough to stagger updates smoothly
+        delay += 50;
       }
     });
 
-    // Invalidate size to ensure it renders correctly
     setTimeout(() => {
-      this.feedMap.invalidateSize();
+      this.feedMap.resize();
     }, 100);
   }
 
+  private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
   private redrawMarkers(): void {
-    // Clear existing markers from map
-    this.markers.forEach(m => this.feedMap.removeLayer(m));
+    this.markers.forEach(m => m.remove());
     this.markers = [];
 
-    // Group posts that are very close to each other
     const groups: Array<Array<{ post: FeedPost; coords: { lat: number; lon: number } }>> = [];
 
     this.geocodedPostsList.forEach((item) => {
       let grouped = false;
       for (const group of groups) {
         const first = group[0];
-        const dist = this.feedMap.distance(
-          [item.coords.lat, item.coords.lon],
-          [first.coords.lat, first.coords.lon]
+        const dist = this.calculateDistance(
+          item.coords.lat,
+          item.coords.lon,
+          first.coords.lat,
+          first.coords.lon
         );
-        // If they are closer than 15km, group them to spiderfy
-        if (dist < 15000) {
+        if (dist < 15) {
           group.push(item);
           grouped = true;
           break;
@@ -533,7 +539,6 @@ export class FeedComponent implements OnInit {
       }
     });
 
-    // Render each group
     groups.forEach((group) => {
       const N = group.length;
       if (N === 1) {
@@ -543,7 +548,6 @@ export class FeedComponent implements OnInit {
         const centerLat = group.reduce((sum, item) => sum + item.coords.lat, 0) / N;
         const centerLon = group.reduce((sum, item) => sum + item.coords.lon, 0) / N;
 
-        // Spread markers in a circle around the center (0.08 degree radius spacing)
         const radius = 0.08;
 
         group.forEach((item, i) => {
@@ -561,38 +565,31 @@ export class FeedComponent implements OnInit {
     const colors = ['#f43f5e', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899', '#06b6d4', '#14b8a6', '#3b82f6'];
     const color = colors[post.id % colors.length];
 
-    // Generate initials fallback if avatar is not present
     const initials = (post.authorName || 'TR').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
     const avatarHtml = post.authorAvatar
       ? `<img src="${post.authorAvatar}" style="width: 100%; height: 100%; object-fit: cover;" />`
       : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 600; font-size: 14px;">${initials}</div>`;
 
-    const icon = L.divIcon({
-      className: '',
-      html: `
-        <div class="friend-pin">
-          <div class="friend-pin__avatar" style="background: ${color}; border-color: #fff; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-            ${avatarHtml}
-          </div>
-          <div class="friend-pin__tail" style="border-top-color: ${color};"></div>
-          <div class="friend-pin__label" style="background: ${color};">${post.authorName}</div>
-        </div>
-      `,
-      iconSize: [90, 72],
-      iconAnchor: [45, 50],
-      popupAnchor: [0, -72],
-    });
+    const el = document.createElement('div');
+    el.className = 'friend-pin';
+    el.innerHTML = `
+      <div class="friend-pin__avatar" style="background: ${color}; border-color: #fff; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+        ${avatarHtml}
+      </div>
+      <div class="friend-pin__tail" style="border-top-color: ${color};"></div>
+      <div class="friend-pin__label" style="background: ${color};">${post.authorName}</div>
+    `;
 
-    const marker = L.marker([lat, lon], { icon }).addTo(this.feedMap);
+    const popup = new mapboxgl.Popup({ offset: 30, closeButton: false }).setText(`${post.location} · ${post.createdAt}`);
 
-    marker.bindTooltip(`${post.location} · ${post.createdAt}`, {
-      direction: 'top',
-      offset: [0, -60],
-      className: 'friend-stop-tooltip'
-    });
+    const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+      .setLngLat([lon, lat])
+      .setPopup(popup)
+      .addTo(this.feedMap);
 
-    marker.on('click', () => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
       this.ngZone.run(() => {
         this.selectedPostForModal = post;
         this.showPostDetailModal = true;

@@ -23,7 +23,7 @@
       <ng-template #myInitialsAvatar>
         <p-avatar [label]="currentUserInitials" shape="circle" size="normal" />
       </ng-template>
-      <input pInputText type="text" [(ngModel)]="postTitle" placeholder="What's on your mind?" class="post-input" />
+      <input #postInput pInputText type="text" [(ngModel)]="postTitle" placeholder="What's on your mind?" class="post-input" />
     </div>
 
     @if (imagePreviews.length > 0) {

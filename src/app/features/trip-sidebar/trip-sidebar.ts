@@ -294,7 +294,6 @@ export class TripSidebarComponent implements OnInit, OnChanges {
     this.stopQuery = label;
     this.stopSuggestions = [];
     this.stopShowDropdown = false;
-    this.stopPosts = [{ description: '', photos: [], photoPreviews: [], videos: [], videoPreviews: [] }];
   }
 
   hideStopDropdown(): void {
@@ -307,84 +306,6 @@ export class TripSidebarComponent implements OnInit, OnChanges {
     this.stopSuggestions = [];
     this.stopShowDropdown = false;
     this.addStopError = '';
-
-    this.stopPosts.forEach(p => p.videoPreviews.forEach(url => URL.revokeObjectURL(url)));
-    this.stopPosts = [];
-  }
-
-  addStopPostField(): void {
-    this.stopPosts.push({ description: '', photos: [], photoPreviews: [], videos: [], videoPreviews: [] });
-    this.cdr.markForCheck();
-  }
-
-  removeStopPostField(index: number): void {
-    if (this.stopPosts.length <= 1) return;
-    const post = this.stopPosts[index];
-    if (post) {
-      post.videoPreviews.forEach(url => URL.revokeObjectURL(url));
-      this.stopPosts.splice(index, 1);
-    }
-    this.cdr.markForCheck();
-  }
-
-  onStopPostFilesSelected(event: any, postIndex: number): void {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-    const post = this.stopPosts[postIndex];
-    if (!post) return;
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      if (!file.type.startsWith('image/')) continue;
-
-      post.photos.push(file);
-      const reader = new FileReader();
-      reader.onload = () => {
-        post.photoPreviews.push(reader.result as string);
-        this.cdr.markForCheck();
-      };
-      reader.readAsDataURL(file);
-    }
-  }
-
-  removeStopPostPhoto(postIndex: number, imgIndex: number): void {
-    const post = this.stopPosts[postIndex];
-    if (post) {
-      post.photos.splice(imgIndex, 1);
-      post.photoPreviews.splice(imgIndex, 1);
-    }
-  }
-
-  onStopPostVideoSelected(event: any, postIndex: number): void {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-    const post = this.stopPosts[postIndex];
-    if (!post) return;
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      if (!file.type.startsWith('video/')) continue;
-
-      // 50MB limit
-      if (file.size > 50 * 1024 * 1024) {
-        this.addStopError = 'Videos must be under 50MB.';
-        continue;
-      }
-
-      post.videos.push(file);
-      const url = URL.createObjectURL(file);
-      post.videoPreviews.push(url);
-    }
-    this.cdr.markForCheck();
-  }
-
-  removeStopPostVideo(postIndex: number, vidIndex: number): void {
-    const post = this.stopPosts[postIndex];
-    if (post && post.videoPreviews[vidIndex]) {
-      URL.revokeObjectURL(post.videoPreviews[vidIndex]);
-      post.videos.splice(vidIndex, 1);
-      post.videoPreviews.splice(vidIndex, 1);
-    }
   }
 
   addStop(): void {
@@ -406,46 +327,35 @@ export class TripSidebarComponent implements OnInit, OnChanges {
         if (createRes.status_code === 201) {
           const stopId = createRes.id;
 
-          const finalizeStopAddition = () => {
-            this.stopsService.getTripStops(this.activeTrip!.id).subscribe({
-              next: (getRes: any) => {
-                const stops = getRes.stops ?? [];
-                console.log('Stops loaded from db:', JSON.stringify(stops));
-                this.detailStops = stops;
-                this.stopsReordered.emit(this.detailStops);
-                this.clearStopInput();
-                this.addStopLoading = false;
-                this.cdr.markForCheck();
-              },
-              error: (err) => {
-                console.error('Failed to load stops:', err);
-                this.addStopError = 'Failed to reload stops list.';
-                this.addStopLoading = false;
-                this.cdr.markForCheck();
-              }
-            });
-          };
+          this.stopsService.getTripStops(this.activeTrip!.id).subscribe({
+            next: (getRes: any) => {
+              const stops = getRes.stops ?? [];
+              this.detailStops = stops;
+              this.stopsReordered.emit(this.detailStops);
 
-          const validPosts = this.stopPosts.filter(p => p.description.trim().length > 0 || p.photos.length > 0 || p.videos.length > 0);
+              const createdStopObj = stops.find((s: any) => s.id === stopId) || {
+                id: stopId,
+                title: payload.title,
+                description: payload.description,
+                city: { lat: payload.lat, long: payload.long }
+              };
 
-          if (validPosts.length > 0) {
-            const uploadObservables = validPosts.map(p =>
-              this.postService.createPost(stopId, p.description, p.photos, p.videos)
-            );
+              this.clearStopInput();
+              this.addStopLoading = false;
 
-            forkJoin(uploadObservables).subscribe({
-              next: () => {
-                finalizeStopAddition();
-              },
-              error: (err: any) => {
-                console.error('Failed to create posts', err);
-                this.addStopError = 'Stop added, but failed to upload some post details.';
-                finalizeStopAddition();
-              }
-            });
-          } else {
-            finalizeStopAddition();
-          }
+              // Emit stopAdded & stopSelected to map component to open stop-sheet modal automatically
+              this.stopAdded.emit(createdStopObj);
+              this.stopSelected.emit(createdStopObj);
+
+              this.cdr.markForCheck();
+            },
+            error: (err) => {
+              console.error('Failed to load stops:', err);
+              this.addStopError = 'Failed to reload stops list.';
+              this.addStopLoading = false;
+              this.cdr.markForCheck();
+            }
+          });
         } else {
           this.addStopError = createRes.message ?? 'Failed to add stop.';
           this.addStopLoading = false;

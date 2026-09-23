@@ -1,23 +1,21 @@
-// src/app/shared/models/friend.model.ts
-
 export interface FriendData {
   friend_id: number;
-  username:  string;
+  username: string;
   profile_picture?: string;
 }
 
 export interface FriendsOut {
-  status_code:    number;
-  message:        string;
-  data?:          FriendData[];
-  total_pages?:   number;
+  status_code: number;
+  message: string;
+  data?: FriendData[];
+  total_pages?: number;
   total_records?: number;
-  page_size?:     number;
-  page_number?:   number;
+  page_size?: number;
+  page_number?: number;
 }
 
 export interface FriendFirstStop {
-  lat:        number;
-  lon:        number;
+  lat: number;
+  lon: number;
   stop_title: string;
 }

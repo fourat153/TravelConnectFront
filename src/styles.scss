@@ -1,6 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-@import 'leaflet/dist/leaflet.css';
-@import 'leaflet-control-geocoder/dist/Control.Geocoder.css';
+@import 'mapbox-gl/dist/mapbox-gl.css';
 @import 'primeicons/primeicons.css';
 
 * {
@@ -12,10 +11,6 @@
 body {
   font-family: 'Inter', sans-serif;
   background: #ebf4ff;
-}
-
-.leaflet-tile {
-  image-rendering: auto;
 }
 
 html,
@@ -103,14 +98,4 @@ app-map {
   font-weight: 500 !important;
   padding: 5px 10px !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
-
-  &::before {
-    border-top-color: #1a1a2e !important;
-  }
-}
-
-.leaflet-div-icon {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
 }
