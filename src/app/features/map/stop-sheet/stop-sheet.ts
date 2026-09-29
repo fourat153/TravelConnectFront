@@ -26,6 +26,7 @@ export class StopSheetComponent implements OnInit, OnChanges {
   @Input() friendProfilePicture: string = '';
   @Input() tripDate: string = '';
   @Output() closed = new EventEmitter<void>();
+  @Output() seeTrip = new EventEmitter<number>();
 
   @ViewChild('postInput') postInputElem?: ElementRef<HTMLInputElement>;
 
@@ -232,5 +233,11 @@ export class StopSheetComponent implements OnInit, OnChanges {
 
   close() {
     this.closed.emit();
+  }
+
+  viewTrip(): void {
+    if (this.stop?.trip_id) {
+      this.seeTrip.emit(this.stop.trip_id);
+    }
   }
 }

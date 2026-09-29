@@ -5,7 +5,7 @@ import { BadgeModule } from 'primeng/badge';
 import { NotificationsPanelComponent } from '../notifications-panel/notifications-panel.component';
 import { NotificationService } from '../../../core/services/notification';
 
-export type NavTab = 'home' | 'friends' | 'add-stop' | 'my-trips' | 'profile' | 'feed';
+export type NavTab = 'home' | 'add-stop' | 'my-trips' | 'profile' | 'feed';
 
 @Component({
   selector: 'app-bottom-nav',
@@ -39,4 +39,4 @@ export class BottomNavComponent implements OnInit {
     }
   }
 }
-
+

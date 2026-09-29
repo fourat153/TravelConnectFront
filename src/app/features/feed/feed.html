@@ -30,6 +30,17 @@
 
       <!-- Map View -->
       <div class="feed-map-container" [style.display]="activeView === 'map' ? 'block' : 'none'">
+        <div class="search-overlay">
+          <div class="search-bar p-input-icon-left">
+            <i class="pi pi-search"></i>
+            <input
+              type="text"
+              pInputText
+              [formControl]="mapSearchControl"
+              placeholder="Search by friend name "
+            />
+          </div>
+        </div>
         <div id="feed-map" class="feed-map-element"></div>
       </div>
 
@@ -269,6 +280,17 @@
     <div class="post-caption" style="padding: 4px 0 8px 0;">
       <span class="caption-author">{{ selectedPostForModal.authorName }}</span>
       <span class="caption-text">{{ selectedPostForModal.description }}</span>
+    </div>
+
+    <div class="modal-trip-action" *ngIf="selectedPostTripId">
+      <div class="modal-trip-title">
+        <span>Trip</span>
+        <strong>{{ selectedPostForModal.tripTitle || 'Friend trip' }}</strong>
+      </div>
+      <button class="view-trip-route-btn" type="button" (click)="viewSelectedPostTrip()">
+        <i class="pi pi-map"></i>
+        View trip route
+      </button>
     </div>
 
     <!-- Reusable Comments Component -->

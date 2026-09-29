@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { catchError, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
-import { BehaviorSubject, of, Observable } from 'rxjs';
+import { BehaviorSubject, of, Observable, tap } from 'rxjs';
 import { confirmation_code } from '../../shared/models/confirmation_code';
 import { User } from '../../shared/models/user';
 @Injectable({
@@ -66,7 +66,9 @@ export class AuthService {
     if (data.profile_picture) {
       formData.append('profile_picture', data.profile_picture);
     }
-    return this.http.put<User>(`${this.baseUrl}/users/me`, formData, { withCredentials: true });
+    return this.http.put<User>(`${this.baseUrl}/users/me`, formData, { withCredentials: true }).pipe(
+      tap(updatedUser => this.currentUser$.next(updatedUser))
+    );
   }
 
   getUserCity() {

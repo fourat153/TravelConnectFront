@@ -27,6 +27,8 @@ export interface FeedPost {
   comments: PostComment[];
   createdAt: string;
   tripTitle?: string;
+  stopId?: number;
+  tripId?: number;
   lat?: number;
   long?: number;
 }
@@ -74,6 +76,8 @@ export class FeedService {
 
             return {
               ...rawPost,
+              stopId: rawPost.stop_id ?? rawPost.stopId,
+              tripId: rawPost.trip_id ?? rawPost.tripId,
               comments
             };
           });
@@ -170,11 +174,43 @@ export class FeedService {
   }
 
   likePost(postId: number): Observable<any> {
-    return this.http.post<any>(`${this.baseUrl}/posts/${postId}/likes`, {}, { withCredentials: true });
+    return this.http.post<any>(`${this.baseUrl}/posts/${postId}/likes`, {}, { withCredentials: true }).pipe(
+      map((res) => {
+        const currentPosts = this.posts$.getValue();
+        const updatedPosts = currentPosts.map(p => {
+          if (p.id === postId) {
+            return {
+              ...p,
+              hasLiked: true,
+              likesCount: p.likesCount + 1
+            };
+          }
+          return p;
+        });
+        this.posts$.next(updatedPosts);
+        return res;
+      })
+    );
   }
 
   unlikePost(postId: number): Observable<any> {
-    return this.http.delete<any>(`${this.baseUrl}/posts/${postId}/likes`, { withCredentials: true });
+    return this.http.delete<any>(`${this.baseUrl}/posts/${postId}/likes`, { withCredentials: true }).pipe(
+      map((res) => {
+        const currentPosts = this.posts$.getValue();
+        const updatedPosts = currentPosts.map(p => {
+          if (p.id === postId) {
+            return {
+              ...p,
+              hasLiked: false,
+              likesCount: Math.max(0, p.likesCount - 1)
+            };
+          }
+          return p;
+        });
+        this.posts$.next(updatedPosts);
+        return res;
+      })
+    );
   }
 
   addComment(postId: number, commentText: string, parentId?: number | null): Observable<any> {
@@ -182,7 +218,12 @@ export class FeedService {
     if (parentId !== undefined && parentId !== null) {
       payload.parent_id = parentId;
     }
-    return this.http.post<any>(`${this.baseUrl}/posts/${postId}/comments`, payload, { withCredentials: true });
+    return this.http.post<any>(`${this.baseUrl}/posts/${postId}/comments`, payload, { withCredentials: true }).pipe(
+      map((res) => {
+        this.loadPosts();
+        return res;
+      })
+    );
   }
 
   createFeedPost(
@@ -202,7 +243,12 @@ export class FeedService {
       formData.append('images', image);
     });
 
-    return this.http.post<any>(`${this.baseUrl}/posts/feed`, formData, { withCredentials: true });
+    return this.http.post<any>(`${this.baseUrl}/posts/feed`, formData, { withCredentials: true }).pipe(
+      map((res) => {
+        this.loadPosts();
+        return res;
+      })
+    );
   }
 
   createStopPost(

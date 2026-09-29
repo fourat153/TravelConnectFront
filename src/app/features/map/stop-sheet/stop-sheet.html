@@ -10,6 +10,10 @@
           <span *ngIf="tripDate"> • Created on {{ tripDate | date:'mediumDate' }}</span>
         </p>
         <p class="stop-desc" *ngIf="stop?.description">{{ stop?.description }}</p>
+        <button *ngIf="friendName && stop?.trip_id" type="button" class="see-trip-btn" (click)="viewTrip()">
+          <i class="pi pi-map"></i>
+          View trip route
+        </button>
       </div>
       <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="secondary" (click)="close()"
         class="close-btn" />

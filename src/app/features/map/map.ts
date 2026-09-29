@@ -1,6 +1,6 @@
 import { Component, AfterViewInit, NgZone, ChangeDetectorRef, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
 import mapboxgl from 'mapbox-gl';
 import { Onboarding } from '../profile/onboarding/onboarding';
 import { inject } from '@angular/core';
@@ -16,13 +16,14 @@ import { ButtonModule } from 'primeng/button';
 
 import { StopSheetComponent } from './stop-sheet/stop-sheet';
 import { AuthService } from '../../core/services/auth';
-import { filter, take, forkJoin, of, map, switchMap, catchError } from 'rxjs';
+import { filter, take, skip, forkJoin, of, map, switchMap, catchError, debounceTime, distinctUntilChanged } from 'rxjs';
 import { OnboardingStatus } from '../../shared/enums/onboarding';
 import { PrivacyType } from '../../shared/enums/PrivacyType';
 import { OnboardingService } from '../../core/services/onboarding';
 import { BottomNavComponent, NavTab } from '../../shared/components/bottom-nav/bottom-nav';
 import { FriendService } from '../../core/services/friends';
 import { FriendData } from '../../shared/models/friends';
+import { FeedPost, FeedService } from '../../core/services/feed';
 
 import { environment } from '../../../environments/environment';
 
@@ -34,7 +35,7 @@ interface LatLng {
 @Component({
   selector: 'app-map',
   imports: [
-    CommonModule, FormsModule, AutoCompleteModule, DialogModule,
+    CommonModule, FormsModule, ReactiveFormsModule, AutoCompleteModule, DialogModule,
     InputTextModule, TextareaModule, ButtonModule,
     Onboarding, TripSidebarComponent, StopSheetComponent,
     BottomNavComponent,
@@ -52,6 +53,8 @@ export class Map implements AfterViewInit, OnInit {
   private friendPinMarkers: mapboxgl.Marker[] = [];
   private ngZone = inject(NgZone);
 
+  searchControl = new FormControl('');
+  private lastSearchedTerm = '';
   selectedStop: any = null;
   searchQuery = '';
   suggestions: any[] = [];
@@ -66,12 +69,14 @@ export class Map implements AfterViewInit, OnInit {
 
   private StopService = inject(StopsService);
   private friendService = inject(FriendService);
+  private feedService = inject(FeedService);
   private searchTimeout: any;
   private cdr = inject(ChangeDetectorRef);
   userInitials = '';
   errorMessage: any;
   selectedTripId: number | null = null;
   selectedTrip: any = null;
+  private pendingTripId: number | null = null;
   private AuthService = inject(AuthService);
   private onboardingService = inject(OnboardingService);
   private router: Router = inject(Router);
@@ -97,7 +102,36 @@ export class Map implements AfterViewInit, OnInit {
           this.onNavTabChanged(tab);
         }, 400);
       }
+      const searchParam = (params['search'] || params['q'] || '').trim();
+      if (this.searchControl.value !== searchParam) {
+        this.searchControl.setValue(searchParam, { emitEvent: false });
+      }
+      this.filterMapElements(searchParam);
+
+      const tripId = Number(params['tripId']);
+      if (Number.isInteger(tripId) && tripId > 0) {
+        if (this.map && this.map.isStyleLoaded()) {
+          this.onTripSelected(tripId);
+        } else {
+          this.pendingTripId = tripId;
+        }
+      }
     });
+
+    this.searchControl.valueChanges
+      .pipe(
+        debounceTime(400),
+        distinctUntilChanged()
+      )
+      .subscribe(query => {
+        const searchTerm = query?.trim() || '';
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { search: searchTerm || null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true
+        });
+      });
   }
 
   ngAfterViewInit() {
@@ -112,6 +146,14 @@ export class Map implements AfterViewInit, OnInit {
     });
 
     this.map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    this.map.on('load', () => {
+      this.loadFriendPosts();
+      if (this.pendingTripId) {
+        const tripId = this.pendingTripId;
+        this.pendingTripId = null;
+        this.onTripSelected(tripId);
+      }
+    });
   }
 
   private resizeMap(): void {
@@ -120,205 +162,103 @@ export class Map implements AfterViewInit, OnInit {
     }
   }
 
-  loadFriendPins(): void {
+  private loadFriendPosts(): void {
     this.clearFriendPins();
     this.friendPinsVisible = true;
+    this.feedService.loadPosts();
 
-    this.friendService.getMyFriends(1, 50).pipe(
-      switchMap((res) => {
-        if (!res.data?.length) {
-          return of([]);
-        }
-
-        const colors = ['#f43f5e', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899', '#06b6d4', '#14b8a6', '#3b82f6'];
-
-        const friendStopsObservables = res.data.map((friend) => {
-          const friendColor = colors[friend.friend_id % colors.length];
-          return this.friendService.getFriendTrips(friend.friend_id).pipe(
-            switchMap((tripRes) => {
-              const trips = tripRes.trips;
-              if (!trips || trips.length === 0) {
-                return of({ friend, stops: [], color: friendColor });
-              }
-              const lastTrip = trips[trips.length - 1];
-              return this.StopService.getTripStops(lastTrip.id).pipe(
-                map((stopsRes) => {
-                  const stops = stopsRes.stops || [];
-                  stops.sort((a, b) => a.order - b.order);
-                  return { friend, stops, color: friendColor };
-                }),
-                catchError(() => of({ friend, stops: [], color: friendColor }))
-              );
-            }),
-            catchError(() => of({ friend, stops: [], color: friendColor }))
-          );
+    forkJoin({
+      friends: this.friendService.getMyFriends(1, 50),
+      posts: this.feedService.getPosts().pipe(skip(1), take(1))
+    }).subscribe({
+      next: ({ friends, posts }) => {
+        const friendList = friends.data ?? [];
+        const friendsById = new globalThis.Map(friendList.map(friend => [friend.friend_id, friend]));
+        const friendsByUsername = new globalThis.Map(friendList.map(friend => [friend.username.toLowerCase(), friend]));
+        const friendPosts = posts.filter(post => {
+          const authorId = post.authorId ?? (post as any).author_id ?? (post as any).user_id ?? (post as any).user?.id;
+          const authorName = (post.authorName || (post as any).author_name || (post as any).username || '').toLowerCase();
+          if (post.lat === undefined || post.long === undefined) return false;
+          return friendsById.has(authorId) || friendsByUsername.has(authorName);
         });
 
-        return forkJoin(friendStopsObservables);
-      })
-    ).subscribe({
-      next: (friendsDataList) => {
-        this.renderFriendPins(friendsDataList);
+        friendPosts.forEach(post => {
+          const authorId = post.authorId ?? (post as any).author_id ?? (post as any).user_id ?? (post as any).user?.id;
+          const authorName = (post.authorName || (post as any).author_name || (post as any).username || '').toLowerCase();
+          const friend = friendsById.get(authorId)
+            ?? friendsByUsername.get(authorName);
+          if (!friend || post.lat === undefined || post.long === undefined) return;
+
+          this.placeFriendPostPin(friend, post);
+        });
       },
       error: () => {
-        this.errorMessage = 'Could not load friends.';
+        this.errorMessage = 'Could not load friends\' posts.';
       }
     });
   }
 
-  private renderFriendPins(friendsDataList: Array<{ friend: FriendData; stops: any[]; color: string }>): void {
-    const avatarsToPlace: Array<{
-      friend: FriendData;
-      lat: number;
-      lon: number;
-      stopTitle: string;
-      color: string;
-      tripId: number;
-      stop: any;
-    }> = [];
-
-    friendsDataList.forEach(({ friend, stops, color }) => {
-      if (!stops || stops.length === 0) return;
-
-      stops.forEach((stop, index) => {
-        const lat = stop.city?.lat;
-        const lon = stop.city?.long;
-        if (lat === undefined || lon === undefined) return;
-
-        if (index === stops.length - 1) {
-          avatarsToPlace.push({
-            friend,
-            lat,
-            lon,
-            stopTitle: stop.title,
-            color,
-            tripId: stop.trip_id,
-            stop,
-          });
-        } else {
-          this.ngZone.run(() => {
-            this.placeFriendStopPin(friend, lat, lon, stop.title, color, stop.trip_id, stop);
-          });
-        }
-      });
-    });
-
-    const groups: Array<typeof avatarsToPlace> = [];
-
-    avatarsToPlace.forEach((avatar) => {
-      let grouped = false;
-      for (const group of groups) {
-        const first = group[0];
-        const dist = this.calculateDistance(avatar.lat, avatar.lon, first.lat, first.lon);
-        if (dist < 15) { // ~15km
-          group.push(avatar);
-          grouped = true;
-          break;
-        }
-      }
-      if (!grouped) {
-        groups.push([avatar]);
-      }
-    });
-
-    groups.forEach((group) => {
-      const N = group.length;
-      if (N === 1) {
-        const a = group[0];
-        this.ngZone.run(() => {
-          this.placeFriendPin(a.friend, a.lat, a.lon, a.stopTitle, a.color, a.tripId, a.stop);
-        });
-      } else {
-        const centerLat = group.reduce((sum, a) => sum + a.lat, 0) / N;
-        const centerLon = group.reduce((sum, a) => sum + a.lon, 0) / N;
-
-        const radius = 0.15;
-
-        group.forEach((a, i) => {
-          const angle = (2 * Math.PI * i) / N;
-          const offsetLat = Math.sin(angle) * radius;
-          const offsetLon = (Math.cos(angle) * radius) / Math.cos((centerLat * Math.PI) / 180);
-
-          this.ngZone.run(() => {
-            this.placeFriendPin(a.friend, centerLat + offsetLat, centerLon + offsetLon, a.stopTitle, a.color, a.tripId, a.stop);
-          });
-        });
-      }
-    });
-  }
-
-  private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    const R = 6371; // Earth radius in km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  }
-
-  private placeFriendPin(friend: FriendData, lat: number, lon: number, stopTitle: string, color: string, tripId: number, stop: any): void {
+  private placeFriendPostPin(friend: FriendData, post: FeedPost): void {
+    const title = post.description || post.location || 'Travel post';
+    const location = post.location || '';
     const initials = friend.username.slice(0, 2).toUpperCase();
 
     const el = document.createElement('div');
-    el.className = 'friend-pin';
-    el.innerHTML = `
-      <div class="friend-pin__avatar" style="background: ${color}; border-color: #fff;">${initials}</div>
-      <div class="friend-pin__tail" style="border-top-color: ${color};"></div>
-      <div class="friend-pin__label" style="background: ${color};">${friend.username}</div>
-    `;
+    el.style.width = '42px';
+    el.style.height = '42px';
+    el.style.borderRadius = '50%';
+    el.style.backgroundColor = '#e5e7eb';
+    el.style.border = '3px solid white';
+    el.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.25)';
+    el.style.overflow = 'hidden';
+    el.style.cursor = 'pointer';
+    el.innerHTML = friend.profile_picture
+      ? `<img src="${friend.profile_picture}" alt="" style="width: 100%; height: 100%; object-fit: cover;" />`
+      : `<span style="display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; color: #374151; font-weight: 700; font-size: 0.8rem;">${initials}</span>`;
 
-    const popup = new mapboxgl.Popup({ offset: 30, closeButton: false }).setText(stopTitle);
+    const popup = new mapboxgl.Popup({ offset: 30, closeButton: false })
+      .setText(`${friend.username}: ${title}${location ? ` - ${location}` : ''}`);
 
     const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
-      .setLngLat([lon, lat])
+      .setLngLat([post.long!, post.lat!])
       .setPopup(popup)
       .addTo(this.map);
 
     (marker as any).friendId = friend.friend_id;
-    (marker as any).isAvatar = true;
+    (marker as any).friendName = friend.username;
+    (marker as any).stopTitle = title;
+    (marker as any).postId = post.id;
 
-    el.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.ngZone.run(() => {
-        this.onFriendPinClicked(friend);
-      });
+    el.addEventListener('click', (event) => {
+      event.stopPropagation();
+      this.ngZone.run(() => this.openFriendStopSheet(friend, post));
     });
 
     this.friendPinMarkers.push(marker);
     this.updateFriendPinsVisibility();
   }
 
-  private placeFriendStopPin(friend: FriendData, lat: number, lon: number, stopTitle: string, color: string, tripId: number, stop: any): void {
-    const el = document.createElement('div');
-    el.style.width = '14px';
-    el.style.height = '14px';
-    el.style.borderRadius = '50%';
-    el.style.backgroundColor = color;
-    el.style.border = '2.5px solid white';
-    el.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-    el.style.cursor = 'pointer';
+  private openFriendStopSheet(friend: FriendData, post: FeedPost): void {
+    if (!post.stopId) {
+      this.router.navigate(['/post', post.id]);
+      return;
+    }
 
-    const popup = new mapboxgl.Popup({ offset: 15, closeButton: false }).setText(`${friend.username}: ${stopTitle}`);
+    this.selectedFriend = friend;
+    this.isFriendTripsSidebarOpen = false;
+    this.isTripSidebarOpen = false;
+    this.selectedStop = {
+      id: post.stopId,
+      trip_id: post.tripId,
+      title: post.location || post.description || 'Travel stop',
+      description: post.description,
+      city: { lat: post.lat, long: post.long },
+    };
+    this.cdr.detectChanges();
+  }
 
-    const marker = new mapboxgl.Marker({ element: el })
-      .setLngLat([lon, lat])
-      .setPopup(popup)
-      .addTo(this.map);
-
-    (marker as any).friendId = friend.friend_id;
-    (marker as any).isAvatar = false;
-
-    el.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.ngZone.run(() => {
-        this.onFriendPinClicked(friend, tripId, stop);
-      });
-    });
-
-    this.friendPinMarkers.push(marker);
-    this.updateFriendPinsVisibility();
+  onSeeFriendTrip(tripId: number): void {
+    this.onTripSelected(tripId);
   }
 
   clearFriendPins(): void {
@@ -328,17 +268,24 @@ export class Map implements AfterViewInit, OnInit {
   }
 
   updateFriendPinsVisibility(): void {
+    const query = (this.searchControl.value || '').trim().toLowerCase();
     this.friendPinMarkers.forEach((marker) => {
       const fId = (marker as any).friendId;
+      const friendName = ((marker as any).friendName || '').toLowerCase();
       const el = marker.getElement();
+
+      const matchesSearch = !query || friendName.includes(query);
+
+      if (!matchesSearch) {
+        el.style.display = 'none';
+        return;
+      }
+
       if (!this.selectedFriend) {
         el.style.display = 'block';
-        this.updateAvatarHighlight(marker, false);
       } else {
         if (fId === this.selectedFriend.friend_id) {
           el.style.display = 'block';
-          const isAvatar = (marker as any).isAvatar;
-          this.updateAvatarHighlight(marker, isAvatar);
         } else {
           el.style.display = 'none';
         }
@@ -346,16 +293,34 @@ export class Map implements AfterViewInit, OnInit {
     });
   }
 
-  private updateAvatarHighlight(marker: mapboxgl.Marker, highlight: boolean): void {
-    const el = marker.getElement();
-    if (!el) return;
-    const pinEl = el.classList.contains('friend-pin') ? el : el.querySelector('.friend-pin');
-    if (pinEl) {
-      if (highlight) {
-        pinEl.classList.add('friend-pin--selected');
-      } else {
-        pinEl.classList.remove('friend-pin--selected');
-      }
+  filterMapElements(query: string): void {
+    const term = query.trim();
+    if (!term) {
+      this.lastSearchedTerm = '';
+      this.updateFriendPinsVisibility();
+      return;
+    }
+
+    if (term === this.lastSearchedTerm) {
+      return;
+    }
+
+    this.lastSearchedTerm = term;
+
+    this.updateFriendPinsVisibility();
+
+    const matchingMarker = this.friendPinMarkers.find(marker => {
+      const friendName = ((marker as any).friendName || '').toLowerCase();
+      return friendName.includes(term.toLowerCase());
+    });
+
+    if (matchingMarker && this.map) {
+      const lngLat = matchingMarker.getLngLat();
+      this.map.flyTo({
+        center: [lngLat.lng, lngLat.lat],
+        zoom: 8,
+        essential: true
+      });
     }
   }
 
@@ -414,12 +379,6 @@ export class Map implements AfterViewInit, OnInit {
         setTimeout(() => this.resizeMap(), 300);
         break;
 
-      case 'friends':
-        this.isTripSidebarOpen = false;
-        this.isFriendTripsSidebarOpen = false;
-        this.loadFriendPins();
-        break;
-
       case 'add-stop':
         this.isTripSidebarOpen = false;
         this.isFriendTripsSidebarOpen = false;
@@ -473,54 +432,10 @@ export class Map implements AfterViewInit, OnInit {
     this.selectedTripId = tripId;
     this.selectedStop = null;
 
-    this.markers.forEach(m => m.remove());
-    this.markers = [];
-    this.clearRouteLine();
-
     this.StopService.getTripStops(this.selectedTripId).subscribe({
       next: async (res: any) => {
         if (res.status_code === 200) {
-          const stops = res.stops;
-          const points: LatLng[] = [];
-          const bounds = new mapboxgl.LngLatBounds();
-
-          for (let i = 0; i < stops.length; i++) {
-            const stop = stops[i];
-            const lat = stop.city.lat;
-            const lng = stop.city.long;
-
-            const el = document.createElement('div');
-            el.style.width = '16px';
-            el.style.height = '16px';
-            el.style.borderRadius = '50%';
-            el.style.backgroundColor = '#3b82f6';
-            el.style.border = '3px solid white';
-            el.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-            el.style.cursor = 'pointer';
-
-            const marker = new mapboxgl.Marker({ element: el })
-              .setLngLat([lng, lat])
-              .addTo(this.map);
-
-            this.markers.push(marker);
-            points.push({ lat, lng });
-            bounds.extend([lng, lat]);
-
-            el.addEventListener('click', () => {
-              this.ngZone.run(() => {
-                this.selectedStop = stop;
-                this.cdr.detectChanges();
-              });
-            });
-          }
-
-          if (points.length > 1) {
-            await this.drawRoute(points, '#3b82f6');
-          }
-
-          if (points.length > 0) {
-            this.map.fitBounds(bounds, { padding: 50 });
-          }
+          await this.renderTripStops(res.stops ?? []);
         } else {
           this.errorMessage = res.message;
         }
@@ -529,6 +444,56 @@ export class Map implements AfterViewInit, OnInit {
         this.errorMessage = 'Something went wrong. Please try again.';
       }
     });
+  }
+
+  private async renderTripStops(stops: any[]): Promise<void> {
+    this.markers.forEach(marker => marker.remove());
+    this.markers = [];
+    this.clearRouteLine();
+
+    const points: LatLng[] = [];
+    const bounds = new mapboxgl.LngLatBounds();
+
+    stops.forEach(stop => {
+      const lat = stop.city?.lat;
+      const lng = stop.city?.long;
+      if (lat === undefined || lng === undefined) return;
+
+      this.markers.push(this.createTripStopMarker(stop, lat, lng));
+      points.push({ lat, lng });
+      bounds.extend([lng, lat]);
+    });
+
+    if (points.length > 1) {
+      await this.drawRoute(points, '#3b82f6');
+    }
+    if (points.length > 0) {
+      this.map.fitBounds(bounds, { padding: 50 });
+    }
+  }
+
+  private createTripStopMarker(stop: any, lat: number, lng: number): mapboxgl.Marker {
+    const element = document.createElement('div');
+    element.style.width = '16px';
+    element.style.height = '16px';
+    element.style.borderRadius = '50%';
+    element.style.backgroundColor = '#3b82f6';
+    element.style.border = '3px solid white';
+    element.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+    element.style.cursor = 'pointer';
+
+    const marker = new mapboxgl.Marker({ element })
+      .setLngLat([lng, lat])
+      .addTo(this.map);
+
+    element.addEventListener('click', () => {
+      this.ngZone.run(() => {
+        this.selectedStop = stop;
+        this.cdr.detectChanges();
+      });
+    });
+
+    return marker;
   }
 
   onTripCreated(trip: any): void {

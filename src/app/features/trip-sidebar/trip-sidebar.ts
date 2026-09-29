@@ -1,4 +1,4 @@
-import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter, ChangeDetectorRef, inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
@@ -8,6 +8,7 @@ import { TripService } from '../../core/services/trip';
 import { FriendService } from '../../core/services/friends';
 import { StopsService } from '../../core/services/stop';
 import { PostService } from '../../core/services/post';
+import { GeocodingCacheService } from '../../core/services/geocoding-cache';
 import { TripOut, TripCreate } from '../../shared/models/trip';
 import { StopOut, StopCreate } from '../../shared/models/stop';
 import { FriendData } from '../../shared/models/friends';
@@ -87,7 +88,7 @@ export class TripSidebarComponent implements OnInit, OnChanges {
   addStopLoading = false;
   addStopError = '';
   private stopSearch$ = new Subject<string>();
-  private suggestionCache = new Map<string, NominatimResult[]>();
+  private geocodingCacheService = inject(GeocodingCacheService);
 
   stopPosts: {
     description: string;
@@ -155,9 +156,9 @@ export class TripSidebarComponent implements OnInit, OnChanges {
           return of([]);
         }
 
-        const cacheKey = query.toLowerCase();
-        if (this.suggestionCache.has(cacheKey)) {
-          return of(this.suggestionCache.get(cacheKey)!);
+        const cached = this.geocodingCacheService.getCached(query);
+        if (cached) {
+          return of(cached);
         }
 
         this.stopSearchLoading = true;
@@ -181,7 +182,7 @@ export class TripSidebarComponent implements OnInit, OnChanges {
                 lon: f.geometry?.coordinates[0]?.toString() || '0'
               };
             });
-            this.suggestionCache.set(cacheKey, results);
+            this.geocodingCacheService.setCache(query, results);
             return results;
           }),
           catchError(() => of([]))

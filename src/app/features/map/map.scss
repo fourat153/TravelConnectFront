@@ -50,19 +50,21 @@
   align-items: center;
   background: white;
   border-radius: 50px;
-  padding: 1rem 1.5rem;
+  padding: 0.75rem 1.25rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
   gap: 0.75rem;
+  position: relative;
 
-  ::ng-deep .p-autocomplete {
-    width: 100%;
+  i {
+    color: #6c757d;
+    font-size: 1.1rem;
   }
 
-  ::ng-deep .p-autocomplete-input {
+  input[pInputText] {
     border: none !important;
     outline: none !important;
     box-shadow: none !important;
-    font-size: 1.1rem !important;
+    font-size: 1rem !important;
     width: 100% !important;
     color: #1a1a2e !important;
     background: transparent !important;
@@ -235,87 +237,6 @@
     }
   }
 }
-/* ── Append these to map.scss ─────────────────────────────── */
-
-/* ── Friend pin — Google Maps style, dark theme ──────────────
-   Replace the existing .friend-pin block in map.scss
-───────────────────────────────────────────────────────────── */
-
-.friend-pin {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  cursor: pointer;
-
-  &__avatar {
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    background: #1a1a2e;
-    color: #fff;
-    font-size: 0.8rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 3px solid #fff;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-    letter-spacing: 0.5px;
-  }
-
-  &__tail {
-    width: 0;
-    height: 0;
-    border-left: 6px solid transparent;
-    border-right: 6px solid transparent;
-    border-top: 8px solid #1a1a2e;
-    margin-top: -1px;
-    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.15));
-  }
-
-  &__label {
-    margin-top: 4px;
-    background: #1a1a2e;
-    color: #fff;
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 3px 8px;
-    border-radius: 20px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-    white-space: nowrap;
-    max-width: 90px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    letter-spacing: 0.2px;
-  }
-
-  &:hover &__avatar {
-    transform: scale(1.12);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14);
-  }
-
-  &--selected &__avatar {
-    transform: scale(1.15);
-    border-color: #fff;
-    box-shadow:
-      0 0 0 4px #3b82f6,
-      0 4px 14px rgba(59, 130, 246, 0.3);
-  }
-
-  &--selected:hover &__avatar {
-    transform: scale(1.15);
-    border-color: #fff;
-    box-shadow:
-      0 0 0 4px #2563eb,
-      0 6px 18px rgba(37, 99, 235, 0.4);
-  }
-
-  &:hover &__label {
-    background: #3b82f6;
-  }
-}
-
 /* Mapbox popup for stop title */
 .friend-stop-tooltip {
   background: #1a1a2e;

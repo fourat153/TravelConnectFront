@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, FormControl, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { BottomNavComponent, NavTab } from '../../shared/components/bottom-nav/bottom-nav';
 import { AuthService } from '../../core/services/auth';
@@ -59,6 +59,7 @@ export class FeedComponent implements OnInit {
   posts: FeedPost[] = [];
 
   activeView: 'timeline' | 'map' = 'timeline';
+  mapSearchControl = new FormControl('');
   private feedMap!: mapboxgl.Map;
   private mapInitialized = false;
   private markers: mapboxgl.Marker[] = [];
@@ -67,6 +68,19 @@ export class FeedComponent implements OnInit {
 
   showPostDetailModal = false;
   selectedPostForModal: FeedPost | null = null;
+
+  get selectedPostTripId(): number | null {
+    const post = this.selectedPostForModal as (FeedPost & { trip_id?: number }) | null;
+    return post?.tripId ?? post?.trip_id ?? null;
+  }
+
+  viewSelectedPostTrip(): void {
+    const tripId = this.selectedPostTripId;
+    if (!tripId) return;
+
+    this.showPostDetailModal = false;
+    this.router.navigate(['/map'], { queryParams: { tripId } });
+  }
 
   currentUser: any = null;
   currentUserInitials = '';
@@ -106,7 +120,6 @@ export class FeedComponent implements OnInit {
 
 
   ngOnInit() {
-    this.loadGeocodeCache();
     this.createForm = this.fb.group({
       title: ['', [Validators.required, Validators.minLength(2)]],
       privacy: ['public'],
@@ -144,6 +157,20 @@ export class FeedComponent implements OnInit {
       if (this.activeView === 'map') {
         this.initMap();
       }
+    });
+
+    this.mapSearchControl.valueChanges.subscribe(query => {
+      const term = query?.trim() || '';
+      if (!term) {
+        this.redrawMarkers();
+        return;
+      }
+
+      const lowerTerm = term.toLowerCase();
+      this.markers.forEach(marker => {
+        const authorName = ((marker as any).authorName || '').toLowerCase();
+        marker.getElement().style.display = authorName.includes(lowerTerm) ? 'block' : 'none';
+      });
     });
 
 
@@ -562,24 +589,21 @@ export class FeedComponent implements OnInit {
   }
 
   private placePostMarkerAtCoords(post: FeedPost, lat: number, lon: number): void {
-    const colors = ['#f43f5e', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899', '#06b6d4', '#14b8a6', '#3b82f6'];
-    const color = colors[post.id % colors.length];
-
     const initials = (post.authorName || 'TR').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-
     const avatarHtml = post.authorAvatar
-      ? `<img src="${post.authorAvatar}" style="width: 100%; height: 100%; object-fit: cover;" />`
-      : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 600; font-size: 14px;">${initials}</div>`;
+      ? `<img src="${post.authorAvatar}" alt="" style="width: 100%; height: 100%; object-fit: cover;" />`
+      : `<span style="display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; color: #374151; font-weight: 700; font-size: 0.8rem;">${initials}</span>`;
 
     const el = document.createElement('div');
-    el.className = 'friend-pin';
-    el.innerHTML = `
-      <div class="friend-pin__avatar" style="background: ${color}; border-color: #fff; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-        ${avatarHtml}
-      </div>
-      <div class="friend-pin__tail" style="border-top-color: ${color};"></div>
-      <div class="friend-pin__label" style="background: ${color};">${post.authorName}</div>
-    `;
+    el.style.width = '42px';
+    el.style.height = '42px';
+    el.style.borderRadius = '50%';
+    el.style.backgroundColor = '#e5e7eb';
+    el.style.border = '3px solid white';
+    el.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.25)';
+    el.style.overflow = 'hidden';
+    el.style.cursor = 'pointer';
+    el.innerHTML = avatarHtml;
 
     const popup = new mapboxgl.Popup({ offset: 30, closeButton: false }).setText(`${post.location} · ${post.createdAt}`);
 
@@ -587,6 +611,8 @@ export class FeedComponent implements OnInit {
       .setLngLat([lon, lat])
       .setPopup(popup)
       .addTo(this.feedMap);
+
+    (marker as any).authorName = post.authorName;
 
     el.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -598,32 +624,6 @@ export class FeedComponent implements OnInit {
     });
 
     this.markers.push(marker);
-  }
-
-  private loadGeocodeCache(): void {
-    try {
-      const saved = localStorage.getItem('geocode_cache');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        Object.keys(parsed).forEach(key => {
-          this.geocodeCache.set(key, parsed[key]);
-        });
-      }
-    } catch (e) {
-      console.error('Failed to load geocode cache', e);
-    }
-  }
-
-  private saveGeocodeCache(): void {
-    try {
-      const obj: { [key: string]: { lat: number; lon: number } } = {};
-      this.geocodeCache.forEach((value, key) => {
-        obj[key] = value;
-      });
-      localStorage.setItem('geocode_cache', JSON.stringify(obj));
-    } catch (e) {
-      console.error('Failed to save geocode cache', e);
-    }
   }
 
   geocodeLocation(locationName: string): Observable<{ lat: number; lon: number } | null> {
@@ -644,7 +644,6 @@ export class FeedComponent implements OnInit {
           const f = features[0];
           const coords = { lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0] };
           this.geocodeCache.set(locationName, coords);
-          this.saveGeocodeCache();
           return coords;
         }
         return null;

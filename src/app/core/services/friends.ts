@@ -11,8 +11,8 @@ import { FriendFirstStop } from '../../shared/models/friends';
 export class FriendService {
   private baseUrl = environment.apiUrl;
 
-  constructor(private http: HttpClient) {}
-
+  constructor(private http: HttpClient) { }
+  
   getMyFriends(page = 1, pageSize = 10): Observable<FriendsOut> {
     return this.http.get<FriendsOut>(
       `${this.baseUrl}/Friends/me`,
@@ -31,10 +31,20 @@ export class FriendService {
   }
 
 
-getFriendFirstStop(friendId: number): Observable<FriendFirstStop> {
-  return this.http.get<FriendFirstStop>(
-    `${this.baseUrl}/trips/friend/${friendId}/first-stop`,
-    { withCredentials: true }
-  );
-}
+  getFriendFirstStop(friendId: number): Observable<FriendFirstStop> {
+    return this.http.get<FriendFirstStop>(
+      `${this.baseUrl}/trips/friend/${friendId}/first-stop`,
+      { withCredentials: true }
+    );
+  }
+
+  searchFriendsAndStops(query: string): Observable<any> {
+    return this.http.get<any>(
+      `${this.baseUrl}/Friends/search`,
+      {
+        params: { q: query },
+        withCredentials: true
+      }
+    );
+  }
 }
