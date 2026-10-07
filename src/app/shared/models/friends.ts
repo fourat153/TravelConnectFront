@@ -19,3 +19,20 @@ export interface FriendFirstStop {
   lon: number;
   stop_title: string;
 }
+
+export type RelationshipStatus = 'none' | 'pending_sent' | 'pending_received' | 'friends';
+
+export interface FriendshipRequest {
+  message: string | null;
+  status_code: number | null;
+  id: number;
+  sender_id: number;
+  receiver_id: number;
+  status: 'pending' | 'accepted' | 'refused';
+}
+
+export interface IncomingFriendshipRequest extends FriendshipRequest {
+  status: 'pending';
+  sender_name: string;
+  sender_avatar: string | null;
+}

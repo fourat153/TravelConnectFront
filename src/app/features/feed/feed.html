@@ -70,7 +70,7 @@
           </div>
 
           <!-- Post Photo Container (Double click to like) -->
-          <div class="post-image-container">
+          <div class="post-image-container" *ngIf="post.imageUrls && post.imageUrls.length > 0">
             <p-carousel [value]="post.imageUrls" [numVisible]="1" [numScroll]="1" [circular]="true"
               [showIndicators]="post.imageUrls.length > 1" [showNavigators]="post.imageUrls.length > 1">
               <ng-template let-imgUrl pTemplate="item">
@@ -238,8 +238,8 @@
     </div>
 
     <!-- Post Photo Container (Double click to like) -->
-    <div class="post-image-container"
-      style="height: 380px; border-radius: 12px; overflow: hidden; background: #0f172a; position: relative;">
+    <div class="post-image-container" *ngIf="selectedPostForModal.imageUrls && selectedPostForModal.imageUrls.length > 0"
+      style="border-radius: 12px; overflow: hidden; position: relative;">
       <p-carousel [value]="selectedPostForModal.imageUrls" [numVisible]="1" [numScroll]="1" [circular]="true"
         [showIndicators]="selectedPostForModal.imageUrls.length > 1"
         [showNavigators]="selectedPostForModal.imageUrls.length > 1">
@@ -283,10 +283,6 @@
     </div>
 
     <div class="modal-trip-action" *ngIf="selectedPostTripId">
-      <div class="modal-trip-title">
-        <span>Trip</span>
-        <strong>{{ selectedPostForModal.tripTitle || 'Friend trip' }}</strong>
-      </div>
       <button class="view-trip-route-btn" type="button" (click)="viewSelectedPostTrip()">
         <i class="pi pi-map"></i>
         View trip route

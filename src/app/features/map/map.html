@@ -4,12 +4,7 @@
     <div class="map-wrapper" (click)="showProfileMenu = false">
       <div id="map"></div>
 
-      <div class="search-overlay">
-        <div class="search-bar p-input-icon-left">
-          <i class="pi pi-search"></i>
-          <input type="text" pInputText [formControl]="searchControl" placeholder="Search friends" />
-        </div>
-      </div>
+
 
       @if (isTripSidebarOpen || isFriendTripsSidebarOpen) {
       <app-trip-sidebar [friend]="isFriendTripsSidebarOpen ? selectedFriend : undefined" [activeTripId]="selectedTripId"
@@ -48,10 +43,11 @@
       <app-onboarding (completed)="onOnboardingComplete($event)" />
       }
 
-      @if (selectedStop) {
-      <app-stop-sheet [stop]="selectedStop" [friendName]="activeStopFriendName"
-        [friendProfilePicture]="selectedFriend?.profile_picture || ''" [tripDate]="activeStopTripDate"
-        (closed)="selectedStop = null" (seeTrip)="onSeeFriendTrip($event)">
+      @if (selectedStop && activeStopOwnerId !== undefined) {
+      <app-stop-sheet [stop]="selectedStop" [ownerId]="activeStopOwnerId"
+        [ownerName]="activeStopOwnerName" [ownerProfilePicture]="activeStopOwnerProfilePicture"
+        [tripDate]="activeStopTripDate"
+        (closed)="onStopSheetClosed()" (seeTrip)="onSeeFriendTrip($event)">
       </app-stop-sheet>
       }
 

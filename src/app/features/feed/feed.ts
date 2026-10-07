@@ -78,8 +78,19 @@ export class FeedComponent implements OnInit {
     const tripId = this.selectedPostTripId;
     if (!tripId) return;
 
+    const ownerId = this.selectedPostForModal?.authorId ?? (this.selectedPostForModal as any)?.author_id;
+    const ownerName = this.selectedPostForModal?.authorName || '';
+    const ownerProfilePicture = this.selectedPostForModal?.authorAvatar || (this.selectedPostForModal as any)?.author_avatar || (this.selectedPostForModal as any)?.profile_picture || '';
+
     this.showPostDetailModal = false;
-    this.router.navigate(['/map'], { queryParams: { tripId } });
+    this.router.navigate(['/map'], {
+      queryParams: {
+        tripId,
+        ownerId: ownerId ?? null,
+        ownerName: ownerName || null,
+        ownerProfilePicture: ownerProfilePicture || null
+      }
+    });
   }
 
   currentUser: any = null;
@@ -102,13 +113,9 @@ export class FeedComponent implements OnInit {
   popularEmojis = POPULAR_EMOJIS;
   heartOverlayPostId: number | null = null;
 
-  // Video upload state
   selectedVideo: File | null = null;
   videoPreviewUrl: string | null = null;
 
-
-
-  // Trip Form Properties
   createForm!: FormGroup;
   tripStops: TripStop[] = [];
   privacyOptions = [
@@ -116,8 +123,6 @@ export class FeedComponent implements OnInit {
     { value: 'friends_only', label: 'Friends', color: '#178FD8' },
     { value: 'private', label: 'Private', color: '#888780' },
   ];
-
-
 
   ngOnInit() {
     this.createForm = this.fb.group({
@@ -128,20 +133,13 @@ export class FeedComponent implements OnInit {
 
     // Firebase Messaging service token retrieval and registration
     this.firebaseMessagingService.getFCMToken().then(token => {
-      console.log('FCM Token retrieved:', token);
       if (token) {
         this.firebaseMessagingService.registerToken(token).subscribe({
-          next: () => {
-            console.log('Successfully registered FCM token with backend');
-          },
-          error: (err) => {
-            console.error('Failed to register FCM token with backend', err);
-          }
+          next: () => {},
+          error: () => {}
         });
       }
-    }).catch(err => {
-      console.error('FCM Token retrieval error:', err);
-    });
+    }).catch(() => {});
 
     this.authService.currentUser$.subscribe(user => {
       if (user) {
@@ -173,9 +171,6 @@ export class FeedComponent implements OnInit {
       });
     });
 
-
-
-    // Explicitly load feed posts when visiting feed page
     this.loadFeed();
   }
 
@@ -206,7 +201,7 @@ export class FeedComponent implements OnInit {
       this.router.navigate(['/profile']);
       return;
     }
-    // Redirect back to map dashboard with the tab selector
+
     this.router.navigate(['/map'], { queryParams: { tab } });
   }
 
@@ -214,7 +209,6 @@ export class FeedComponent implements OnInit {
     const originalHasLiked = post.hasLiked;
     const originalLikesCount = post.likesCount;
 
-    // Optimistically update UI
     post.hasLiked = !post.hasLiked;
     post.likesCount = post.hasLiked ? post.likesCount + 1 : post.likesCount - 1;
     this.cdr.detectChanges();
@@ -224,9 +218,7 @@ export class FeedComponent implements OnInit {
       : this.feedService.likePost(post.id);
 
     request$.subscribe({
-      error: (err) => {
-        // Rollback on error
-        console.error('Failed to update like status', err);
+      error: () => {
         post.hasLiked = originalHasLiked;
         post.likesCount = originalLikesCount;
         this.cdr.detectChanges();
@@ -254,9 +246,7 @@ export class FeedComponent implements OnInit {
       next: () => {
         this.loadFeed();
       },
-      error: (err) => {
-        console.error('Failed to delete post', err);
-      }
+      error: () => {}
     });
   }
 
@@ -298,8 +288,7 @@ export class FeedComponent implements OnInit {
           newComment.id = res.id;
         }
       },
-      error: (err) => {
-        console.error('Failed to submit comment', err);
+      error: () => {
         post.comments = post.comments.filter(c => c !== newComment);
         this.commentInputs[post.id] = text;
         this.activeReplyComment[post.id] = replyTarget ?? null;
@@ -339,7 +328,7 @@ export class FeedComponent implements OnInit {
         continue;
       }
 
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      if (file.size > 5 * 1024 * 1024) { 
         this.imageError = 'Images must be under 5MB.';
         continue;
       }
@@ -401,7 +390,7 @@ export class FeedComponent implements OnInit {
       return;
     }
 
-    if (file.size > 50 * 1024 * 1024) { // 50MB limit
+    if (file.size > 50 * 1024 * 1024) { 
       this.imageError = 'Video must be under 50MB.';
       return;
     }
@@ -486,12 +475,10 @@ export class FeedComponent implements OnInit {
       this.mapInitialized = true;
     }
 
-    // Clear existing markers
     this.markers.forEach(m => m.remove());
     this.markers = [];
     this.geocodedPostsList = [];
 
-    // Load and place markers for all feed posts
     let delay = 0;
     this.posts.forEach((post) => {
       if (post.lat !== undefined && post.lat !== null && post.long !== undefined && post.long !== null) {

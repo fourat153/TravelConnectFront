@@ -21,8 +21,6 @@ const messaging = firebase.messaging();
 
 // Handle data-only background messages
 messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Received background message ', payload);
-
   const title = payload.data?.title || 'New Notification';
   const options = {
     body: payload.data?.body || '',
@@ -35,10 +33,20 @@ messaging.onBackgroundMessage((payload) => {
 
 // Handle click on background notification
 self.addEventListener('notificationclick', (event) => {
-  console.log('[firebase-messaging-sw.js] Notification clicked: ', event.notification);
   event.notification.close();
 
-  const urlToOpen = event.notification.data?.url || '/';
+  const data = event.notification.data || {};
+  const type = String(data.type || data.notification_type || '').toLowerCase();
+  let urlToOpen = data.url || '/';
+
+  if (type.includes('friend') && type.includes('request')) {
+    urlToOpen = '/friend-requests';
+  } else if (type.includes('friend') && type.includes('accept')) {
+    const actorId = data.actor_id || data.actorId;
+    if (actorId) {
+      urlToOpen = `/profile/${actorId}`;
+    }
+  }
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {

@@ -48,6 +48,12 @@ export const routes: Routes = [
       import('./features/profile/profile').then(m => m.Profile),
     canActivate: [authGuard]
   },
+  {
+    path: 'friend-requests',
+    loadComponent: () =>
+      import('./features/friend-requests/friend-requests').then(m => m.FriendRequests),
+    canActivate: [authGuard]
+  },
 
   {
     path: 'post/:id',

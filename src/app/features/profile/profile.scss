@@ -221,6 +221,17 @@
     ::ng-deep .p-button {
       width: 100%;
     }
+
+    .relationship-btn {
+      margin-top: 1rem;
+      min-width: 150px;
+    }
+
+    .relationship-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
   }
 }
 

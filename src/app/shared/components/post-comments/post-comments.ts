@@ -88,8 +88,7 @@ export class PostCommentsComponent {
           newComment.id = res.id;
         }
       },
-      error: (err) => {
-        console.error('Failed to submit comment', err);
+      error: () => {
         this.comments = (this.comments || []).filter(c => c !== newComment);
         this.commentInput = text;
         this.activeReplyComment = replyTarget;

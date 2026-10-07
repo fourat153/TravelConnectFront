@@ -85,7 +85,6 @@ export class PostDetailComponent implements OnInit {
         }
       },
       error: (err) => {
-        console.error('Failed to submit comment', err);
         if (this.post) {
           this.post.comments = this.post.comments.filter(c => c !== newComment);
           this.commentInput = text;
@@ -124,7 +123,6 @@ export class PostDetailComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: (err: any) => {
-        console.error('Error fetching post detail:', err);
         this.loading = false;
         this.errorMessage = 'Post not found or failed to load.';
         this.cdr.detectChanges();
@@ -158,7 +156,6 @@ export class PostDetailComponent implements OnInit {
 
     request$.subscribe({
       error: (err) => {
-        console.error('Failed to update like status', err);
         if (this.post) {
           this.post.hasLiked = originalHasLiked;
           this.post.likesCount = originalLikesCount;

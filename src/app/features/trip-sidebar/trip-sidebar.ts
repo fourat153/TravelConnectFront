@@ -351,7 +351,6 @@ export class TripSidebarComponent implements OnInit, OnChanges {
               this.cdr.markForCheck();
             },
             error: (err) => {
-              console.error('Failed to load stops:', err);
               this.addStopError = 'Failed to reload stops list.';
               this.addStopLoading = false;
               this.cdr.markForCheck();
@@ -449,9 +448,7 @@ export class TripSidebarComponent implements OnInit, OnChanges {
       this.stopsReordered.emit(this.detailStops);
 
       const stopIds = this.detailStops.map(s => s.id);
-      this.stopsService.reorderStops(this.activeTrip.id, stopIds).subscribe({
-        error: (err) => console.error('Failed to persist stop order', err)
-      });
+      this.stopsService.reorderStops(this.activeTrip.id, stopIds).subscribe();
     }
   }
 

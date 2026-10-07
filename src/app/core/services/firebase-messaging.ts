@@ -30,7 +30,6 @@ export class FirebaseMessagingService {
         const permission = await Notification.requestPermission();
 
         if (permission !== 'granted') {
-            console.log('Notification permission denied.');
             return null;
         }
 
@@ -39,11 +38,8 @@ export class FirebaseMessagingService {
                 vapidKey: 'BJ8f1d3zLK-VexZZ6ROvf2MkSbnjuoYOJsAFKBzD53rVOCwSWGliKlhNWtaVY8wc4SOeivWOxirGnqvwG7vuOZ4'
             });
 
-            console.log('FCM Token:', token);
-
             return token;
         } catch (error) {
-            console.error('Error getting FCM token:', error);
             return null;
         }
     }
@@ -62,28 +58,27 @@ export class FirebaseMessagingService {
     listenToForegroundMessages(): void {
         try {
             onMessage(messaging, (payload: MessagePayload) => {
-                console.log('Foreground FCM Message received:', payload);
-
                 const title = payload.notification?.title || payload.data?.['title'] || 'New Notification';
                 const body = payload.notification?.body || payload.data?.['body'] || '';
 
                 const rawPostId = payload.data?.['post_id'] || payload.data?.['postId'];
                 const postId = rawPostId ? parseInt(rawPostId.toString(), 10) : null;
 
+                const rawTripId = payload.data?.['trip_id'] || payload.data?.['tripId'];
+                const tripId = rawTripId ? parseInt(rawTripId.toString(), 10) : null;
+
                 const rawActorId = payload.data?.['actor_id'] || payload.data?.['actorId'];
                 const actorId = rawActorId ? parseInt(rawActorId.toString(), 10) : null;
 
                 const customUrl = payload.data?.['url'] || payload.data?.['click_action'];
-
-                console.log(`[Foreground FCM Notification] Title: "${title}", Body: "${body}"`);
-
+                const notificationType = payload.data?.['type'] || payload.data?.['notification_type'];
                 // Show visual PrimeNG Toast notification in app
                 this.messageService.add({
                     severity: 'info',
                     summary: title,
                     detail: body,
                     life: 6000,
-                    data: { postId, actorId, customUrl }
+                    data: { postId, tripId, actorId, customUrl, notificationType }
                 });
 
                 // Emit payload to any active subscribers
@@ -92,9 +87,7 @@ export class FirebaseMessagingService {
                 // Automatically update UI state and unread count by fetching the latest notifications
                 this.notificationService.refreshNotifications();
             });
-        } catch (error) {
-            console.error('Error setting up onMessage listener:', error);
-        }
+        } catch (error) {}
     }
 
     /**
@@ -102,11 +95,39 @@ export class FirebaseMessagingService {
      */
     handleToastClick(message: any): void {
         const postId = message?.data?.postId;
+        const rawTripId = message?.data?.tripId;
+        const tripId = rawTripId ? Number(rawTripId) : null;
         const actorId = message?.data?.actorId;
         const customUrl = message?.data?.customUrl;
+        const rawType = (message?.data?.notificationType || '').toLowerCase();
+        const notificationType = this.getNotificationType(message?.data?.notificationType);
+
+        if (typeof tripId === 'number' && Number.isInteger(tripId) && tripId > 0) {
+            this.router.navigate(['/map'], {
+                queryParams: {
+                    tripId,
+                    ownerId: actorId || undefined
+                }
+            });
+            return;
+        }
+
+        if (rawType.includes('trip')) {
+            return;
+        }
 
         if (postId) {
             this.router.navigate(['/post', postId]);
+            return;
+        }
+
+        if (notificationType === 'friend_request') {
+            this.router.navigate(['/friend-requests']);
+            return;
+        }
+
+        if (notificationType === 'friend_accepted' && actorId) {
+            this.router.navigate(['/profile', actorId]);
             return;
         }
 
@@ -119,5 +140,12 @@ export class FirebaseMessagingService {
             this.router.navigateByUrl(customUrl);
             return;
         }
+    }
+
+    private getNotificationType(type: string | undefined): 'friend_request' | 'friend_accepted' | null {
+        const normalized = type?.toLowerCase() ?? '';
+        if (normalized.includes('accept')) return 'friend_accepted';
+        if (normalized.includes('friend') && normalized.includes('request')) return 'friend_request';
+        return null;
     }
 }

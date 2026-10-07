@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { FriendsOut } from '../../shared/models/friends';
+import { FriendsOut, FriendshipRequest, IncomingFriendshipRequest, RelationshipStatus } from '../../shared/models/friends';
 import { environment } from '../../../environments/environment';
 import { TripsOut } from '../../shared/models/trip';
 
@@ -45,6 +45,44 @@ export class FriendService {
         params: { q: query },
         withCredentials: true
       }
+    );
+  }
+
+  sendFriendRequest(receiverId: number): Observable<FriendshipRequest> {
+    return this.http.post<FriendshipRequest>(
+      `${this.baseUrl}/friendship-requests`,
+      { receiver_id: receiverId },
+      { withCredentials: true }
+    );
+  }
+
+  getRelationshipStatus(userId: number): Observable<{ status: RelationshipStatus }> {
+    return this.http.get<{ status: RelationshipStatus }>(
+      `${this.baseUrl}/friendship-status/${userId}`,
+      { withCredentials: true }
+    );
+  }
+
+  getIncomingFriendRequests(): Observable<IncomingFriendshipRequest[]> {
+    return this.http.get<IncomingFriendshipRequest[]>(
+      `${this.baseUrl}/friend-requests/incoming`,
+      { withCredentials: true }
+    );
+  }
+
+  acceptFriendRequest(requestId: number): Observable<FriendshipRequest> {
+    return this.http.patch<FriendshipRequest>(
+      `${this.baseUrl}/friend-requests/${requestId}/accept`,
+      null,
+      { withCredentials: true }
+    );
+  }
+
+  declineFriendRequest(requestId: number): Observable<FriendshipRequest> {
+    return this.http.patch<FriendshipRequest>(
+      `${this.baseUrl}/friend-requests/${requestId}/decline`,
+      null,
+      { withCredentials: true }
     );
   }
 }

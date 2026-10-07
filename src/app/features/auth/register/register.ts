@@ -49,9 +49,8 @@ export class Register {
         this.isLoading = false;
         this.router.navigate(['/users']);
       },
-      error: (err) => {
+      error: () => {
         this.isLoading = false;
-        console.error(err);
       }
     });
   }

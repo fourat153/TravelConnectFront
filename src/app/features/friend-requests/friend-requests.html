@@ -1,0 +1,42 @@
+<div class="friend-requests-layout">
+  <app-bottom-nav active="profile" (tabChanged)="onNavTabChanged($event)"></app-bottom-nav>
+
+  <main class="friend-requests-content">
+    <section class="requests-card" aria-labelledby="requests-title">
+      <h1 id="requests-title">Incoming Friend Requests</h1>
+
+      @if (errorMessage) {
+        <div class="alert" role="alert">{{ errorMessage }}</div>
+      }
+
+      @if (loading) {
+        <p class="state-message"><i class="pi pi-spin pi-spinner"></i> Loading requests...</p>
+      } @else if (requests.length === 0) {
+        <p class="state-message">You have no incoming friend requests.</p>
+      } @else {
+        <div class="request-list">
+          @for (request of requests; track request.id) {
+            <article class="request-item">
+              <button class="sender" (click)="viewSender(request)" [attr.aria-label]="'View ' + senderName(request) + '\'s profile'">
+                @if (request.sender_avatar) {
+                  <img [src]="request.sender_avatar" [alt]="senderName(request)" class="sender-avatar">
+                } @else {
+                  <span class="sender-avatar sender-initials">{{ senderInitials(request) }}</span>
+                }
+                <span>{{ senderName(request) }}</span>
+              </button>
+              <div class="request-actions">
+                <button class="btn btn-primary" [disabled]="actionRequestId !== null"
+                  (click)="respondToRequest(request, 'accept')">
+                  {{ actionRequestId === request.id ? 'Working...' : 'Accept' }}
+                </button>
+                <button class="btn btn-secondary" [disabled]="actionRequestId !== null"
+                  (click)="respondToRequest(request, 'decline')">Decline</button>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    </section>
+  </main>
+</div>

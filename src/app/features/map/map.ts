@@ -86,6 +86,10 @@ export class Map implements AfterViewInit, OnInit {
   isFriendTripsSidebarOpen = false;
   friendPinsVisible = false;
 
+  activeStopOwnerId?: number;
+  activeStopOwnerName = '';
+  activeStopOwnerProfilePicture = '';
+
   ngOnInit() {
     this.AuthService.currentUser$
       .pipe(filter(user => !!user), take(1))
@@ -93,6 +97,11 @@ export class Map implements AfterViewInit, OnInit {
         this.currentUser = user;
         this.showOnboarding = user!.has_completed_onboarding !== OnboardingStatus.Onboarded;
         this.userInitials = (user.firstname?.[0] ?? '') + (user.lastname?.[0] ?? '');
+        if (this.activeStopOwnerId === undefined && !this.selectedFriend) {
+          this.activeStopOwnerId = user.id;
+          this.activeStopOwnerName = (user.firstname ? `${user.firstname} ${user.lastname || ''}`.trim() : user.username) || '';
+          this.activeStopOwnerProfilePicture = user.profile_picture || '';
+        }
       });
 
     this.route.queryParams.subscribe(params => {
@@ -107,6 +116,15 @@ export class Map implements AfterViewInit, OnInit {
         this.searchControl.setValue(searchParam, { emitEvent: false });
       }
       this.filterMapElements(searchParam);
+
+      const ownerId = params['ownerId'] ? Number(params['ownerId']) : undefined;
+      const ownerName = params['ownerName'] || params['friendName'] || '';
+      const ownerProfilePicture = params['ownerProfilePicture'] || params['friendProfilePicture'] || '';
+      if (ownerId !== undefined && !isNaN(ownerId)) {
+        this.activeStopOwnerId = ownerId;
+        this.activeStopOwnerName = ownerName;
+        this.activeStopOwnerProfilePicture = ownerProfilePicture;
+      }
 
       const tripId = Number(params['tripId']);
       if (Number.isInteger(tripId) && tripId > 0) {
@@ -145,9 +163,7 @@ export class Map implements AfterViewInit, OnInit {
       minZoom: 3
     });
 
-    this.map.addControl(new mapboxgl.NavigationControl(), 'top-right');
     this.map.on('load', () => {
-      this.loadFriendPosts();
       if (this.pendingTripId) {
         const tripId = this.pendingTripId;
         this.pendingTripId = null;
@@ -245,6 +261,9 @@ export class Map implements AfterViewInit, OnInit {
     }
 
     this.selectedFriend = friend;
+    this.activeStopOwnerId = friend.friend_id;
+    this.activeStopOwnerName = friend.username;
+    this.activeStopOwnerProfilePicture = friend.profile_picture || '';
     this.isFriendTripsSidebarOpen = false;
     this.isTripSidebarOpen = false;
     this.selectedStop = {
@@ -328,6 +347,7 @@ export class Map implements AfterViewInit, OnInit {
     this.selectedTripId = null;
     this.selectedTrip = null;
     this.selectedStop = null;
+    this.selectedFriend = undefined;
     this.markers.forEach(m => m.remove());
     this.markers = [];
     this.clearRouteLine();
@@ -349,6 +369,9 @@ export class Map implements AfterViewInit, OnInit {
       this.clearActiveTripRoute();
     } else {
       this.selectedFriend = friend;
+      this.activeStopOwnerId = friend.friend_id;
+      this.activeStopOwnerName = friend.username;
+      this.activeStopOwnerProfilePicture = friend.profile_picture || '';
       this.isFriendTripsSidebarOpen = true;
       this.isTripSidebarOpen = false;
       if (tripId) {
@@ -388,6 +411,11 @@ export class Map implements AfterViewInit, OnInit {
       case 'my-trips':
         this.isFriendTripsSidebarOpen = false;
         this.clearFriendPins();
+        if (this.currentUser) {
+          this.activeStopOwnerId = this.currentUser.id;
+          this.activeStopOwnerName = (this.currentUser.firstname ? `${this.currentUser.firstname} ${this.currentUser.lastname || ''}`.trim() : this.currentUser.username) || '';
+          this.activeStopOwnerProfilePicture = this.currentUser.profile_picture || '';
+        }
         if (this.isTripSidebarOpen) {
           this.tripSidebar?.loadTrips();
         } else {
@@ -431,6 +459,16 @@ export class Map implements AfterViewInit, OnInit {
   onTripSelected(tripId: number): void {
     this.selectedTripId = tripId;
     this.selectedStop = null;
+
+    if (this.selectedFriend) {
+      this.activeStopOwnerId = this.selectedFriend.friend_id;
+      this.activeStopOwnerName = this.selectedFriend.username;
+      this.activeStopOwnerProfilePicture = this.selectedFriend.profile_picture || '';
+    } else if (this.activeStopOwnerId === undefined && this.currentUser) {
+      this.activeStopOwnerId = this.currentUser.id;
+      this.activeStopOwnerName = (this.currentUser.firstname ? `${this.currentUser.firstname} ${this.currentUser.lastname || ''}`.trim() : this.currentUser.username) || '';
+      this.activeStopOwnerProfilePicture = this.currentUser.profile_picture || '';
+    }
 
     this.StopService.getTripStops(this.selectedTripId).subscribe({
       next: async (res: any) => {
@@ -670,7 +708,7 @@ export class Map implements AfterViewInit, OnInit {
             lon: f.geometry?.coordinates[0]?.toString() || '0'
           }));
         })
-        .catch((err) => console.error('Error searching location:', err));
+        .catch(() => { });
     }, 400);
   }
 
@@ -786,11 +824,19 @@ export class Map implements AfterViewInit, OnInit {
     }
   }
 
+  onStopSheetClosed(): void {
+    this.selectedStop = null;
+  }
+
+  get isCurrentStopOwner(): boolean {
+    return !this.selectedFriend;
+  }
+
   get activeStopFriendName(): string {
-    if (this.isFriendTripsSidebarOpen && this.selectedFriend) {
+    if (this.selectedFriend) {
       return this.selectedFriend.username;
     }
-    return this.currentUser?.username || '';
+    return '';
   }
 
   get activeStopTripDate(): string {

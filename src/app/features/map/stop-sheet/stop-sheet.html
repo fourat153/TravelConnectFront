@@ -6,11 +6,11 @@
       <div>
         <h2 class="stop-title-bold">{{ stop?.title }}</h2>
         <p class="stop-meta">
-          <span>By {{ friendName }}</span>
+          <span>By {{ authorName }}</span>
           <span *ngIf="tripDate"> • Created on {{ tripDate | date:'mediumDate' }}</span>
         </p>
         <p class="stop-desc" *ngIf="stop?.description">{{ stop?.description }}</p>
-        <button *ngIf="friendName && stop?.trip_id" type="button" class="see-trip-btn" (click)="viewTrip()">
+        <button *ngIf="!isOwner && stop?.trip_id" type="button" class="see-trip-btn" (click)="viewTrip()">
           <i class="pi pi-map"></i>
           View trip route
         </button>
@@ -20,7 +20,7 @@
     </div>
   </div>
 
-  <div class="post-form" *ngIf="!friendName">
+  <div class="post-form" *ngIf="isOwner">
     <div class="form-top">
       <p-avatar *ngIf="currentUser?.profile_picture; else myInitialsAvatar" [image]="currentUser.profile_picture"
         shape="circle" size="normal" />
@@ -61,7 +61,7 @@
             <p-avatar [label]="authorInitials" shape="circle" size="normal" class="author-avatar" />
           </ng-template>
           <div class="post-header-info">
-            <span class="post-author-name">{{ friendName || currentUser?.username }}</span>
+            <span class="post-author-name">{{ authorName }}</span>
             <span class="post-date-time">{{ post.created_at | date:'short' }}</span>
           </div>
         </div>

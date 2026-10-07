@@ -66,9 +66,39 @@
             </div>
             <h2 class="user-fullname">{{ visitedUser?.firstname }} {{ visitedUser?.lastname }}</h2>
             <p class="user-email-text">{{ visitedUser?.email }}</p>
-            <div class="status-badge">
-              <i class="pi pi-users"></i> Friend
-            </div>
+            @if (relationshipLoading) {
+              <button class="btn btn-secondary relationship-btn" disabled>
+                <i class="pi pi-spin pi-spinner"></i> Loading...
+              </button>
+            } @else {
+              @switch (relationshipStatus) {
+                @case ('none') {
+                  <button class="btn btn-primary relationship-btn" [disabled]="relationshipActionLoading"
+                    (click)="sendFriendRequest()">
+                    <i class="pi" [class.pi-spin]="relationshipActionLoading"
+                      [class.pi-spinner]="relationshipActionLoading"
+                      [class.pi-user-plus]="!relationshipActionLoading"></i>
+                    {{ relationshipActionLoading ? 'Sending...' : 'Send Request' }}
+                  </button>
+                }
+                @case ('pending_sent') {
+                  <button class="btn btn-secondary relationship-btn" disabled>
+                    <i class="pi pi-clock"></i> Requested
+                  </button>
+                }
+                @case ('pending_received') {
+                  <span class="relationship-actions">
+                    <button class="btn btn-primary" [disabled]="relationshipActionLoading"
+                      (click)="respondToFriendRequest('accept')">Accept</button>
+                    <button class="btn btn-secondary" [disabled]="relationshipActionLoading"
+                      (click)="respondToFriendRequest('decline')">Decline</button>
+                  </span>
+                }
+                @case ('friends') {
+                  <div class="status-badge"><i class="pi pi-users"></i> Friends</div>
+                }
+              }
+            }
           </ng-template>
         </div>
 

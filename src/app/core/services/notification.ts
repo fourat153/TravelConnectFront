@@ -27,14 +27,25 @@ export class NotificationService {
     }).pipe(
       map((res) => {
         // Handle both raw list and wrapped payload formats gracefully
-        if (Array.isArray(res)) {
-          return res;
-        } else if (res && Array.isArray(res.data)) {
-          return res.data;
-        } else if (res && Array.isArray(res.notifications)) {
-          return res.notifications;
-        }
-        return [];
+        const notifications = Array.isArray(res)
+          ? res
+          : res && Array.isArray(res.data)
+            ? res.data
+            : res && Array.isArray(res.notifications)
+              ? res.notifications
+              : [];
+
+        return notifications.map((notification: Notification & { tripId?: number | string | null }) => {
+          const rawTripId = notification.trip_id ?? notification.tripId;
+          const tripId = typeof rawTripId === 'string' ? Number(rawTripId) : rawTripId;
+
+          return {
+            ...notification,
+            trip_id: typeof tripId === 'number' && Number.isInteger(tripId) && tripId > 0
+              ? tripId
+              : null
+          };
+        });
       }),
       tap((notifications) => {
         this.notificationsSubject.next(notifications);
@@ -70,7 +81,7 @@ export class NotificationService {
 
   refreshNotifications(): void {
     this.getNotifications().subscribe({
-      error: (err) => console.error('Failed to refresh notifications:', err)
+      error: () => {}
     });
   }
 }

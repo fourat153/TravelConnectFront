@@ -82,12 +82,9 @@ export class FeedService {
             };
           });
 
-          const sorted = posts.sort((a, b) => b.id - a.id);
-          this.posts$.next(sorted);
+          this.posts$.next(posts);
         },
-        error: (err) => {
-          console.error('Failed to load feed posts', err);
-        }
+        error: () => {}
       });
   }
 

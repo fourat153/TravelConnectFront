@@ -22,8 +22,9 @@ import { PostCommentsComponent } from '../../../shared/components/post-comments/
 })
 export class StopSheetComponent implements OnInit, OnChanges {
   @Input() stop: any = null;
-  @Input() friendName: string = '';
-  @Input() friendProfilePicture: string = '';
+  @Input({ required: true }) ownerId!: number;
+  @Input() ownerName: string = '';
+  @Input() ownerProfilePicture: string = '';
   @Input() tripDate: string = '';
   @Output() closed = new EventEmitter<void>();
   @Output() seeTrip = new EventEmitter<number>();
@@ -33,7 +34,7 @@ export class StopSheetComponent implements OnInit, OnChanges {
   private postService = inject(PostService);
   private authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
-  
+
   currentUser: any = null;
   currentUserInitials = '';
 
@@ -83,12 +84,30 @@ export class StopSheetComponent implements OnInit, OnChanges {
     });
   }
 
+  get isOwner(): boolean {
+    if (!this.currentUser || this.ownerId === undefined || this.ownerId === null) {
+      return false;
+    }
+    return Number(this.currentUser.id) === Number(this.ownerId);
+  }
+
+  get authorName(): string {
+    if (this.isOwner) {
+      const full = (this.currentUser?.firstname ? `${this.currentUser.firstname} ${this.currentUser.lastname || ''}`.trim() : this.currentUser?.username);
+      return full || 'Me';
+    }
+    return this.ownerName || 'Traveler';
+  }
+
   get authorPhoto(): string | undefined {
-    return this.friendName ? this.friendProfilePicture : this.currentUser?.profile_picture;
+    return this.isOwner ? this.currentUser?.profile_picture : (this.ownerProfilePicture || undefined);
   }
 
   get authorInitials(): string {
-    return this.friendName ? this.getInitials(this.friendName) : this.currentUserInitials;
+    if (this.isOwner) {
+      return this.currentUserInitials;
+    }
+    return this.getInitials(this.ownerName);
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -111,7 +130,7 @@ export class StopSheetComponent implements OnInit, OnChanges {
       this.postInputElem?.nativeElement?.focus();
     }, 150);
   }
-  
+
   loadPosts() {
     this.postService.getStopPosts(this.stop.id).subscribe({
       next: (res) => {
@@ -187,9 +206,7 @@ export class StopSheetComponent implements OnInit, OnChanges {
         this.loadComments(post);
         this.cdr.detectChanges();
       },
-      error: (err) => {
-        console.error('Error adding comment:', err);
-      }
+      error: () => {}
     });
   }
 
@@ -209,13 +226,13 @@ export class StopSheetComponent implements OnInit, OnChanges {
       reader.readAsDataURL(file);
     });
   }
- 
+
   submitPost() {
     if (!this.postTitle.trim()) return;
     this.isSubmitting = true;
     this.postService.createPost(this.stop.id, this.postTitle, this.selectedImages).subscribe({
       next: (res) => {
-        if (res.post  ) { //need to be fixed the return of post x
+        if (res.post) { //need to be fixed the return of post x
           this.postTitle = '';
           this.selectedImages = [];
           this.imagePreviews = [];
