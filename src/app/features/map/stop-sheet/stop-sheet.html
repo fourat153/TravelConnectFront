@@ -27,22 +27,53 @@
       <ng-template #myInitialsAvatar>
         <p-avatar [label]="currentUserInitials" shape="circle" size="normal" />
       </ng-template>
-      <input #postInput pInputText type="text" [(ngModel)]="postTitle" placeholder="What's on your mind?" class="post-input" />
-    </div>
+      <div class="post-composer">
+        <input #postInput pInputText type="text" [(ngModel)]="postTitle" placeholder="What's on your mind?"
+          class="post-input" (keydown.escape)="emojiPickerOpen = false" />
 
-    @if (imagePreviews.length > 0) {
-    <div class="image-previews">
-      @for (preview of imagePreviews; track preview) {
-      <img [src]="preview" class="preview-img" />
-      }
-    </div>
-    }
+        @if (imagePreviews.length > 0) {
+        <div class="image-previews">
+          @for (preview of imagePreviews; track preview) {
+          <img [src]="preview" class="preview-img" alt="Selected photo preview" />
+          }
+          @for (preview of videoPreviews; track preview) {
+          <video [src]="preview" class="preview-img" controls aria-label="Selected video preview"></video>
+          }
+        </div>
+        }
+        @if (videoPreviews.length > 0 && imagePreviews.length === 0) {
+        <div class="image-previews">
+          @for (preview of videoPreviews; track preview) {
+          <video [src]="preview" class="preview-img" controls aria-label="Selected video preview"></video>
+          }
+        </div>
+        }
 
-    <div class="form-actions">
-      <p-button icon="pi pi-image" label="Photo" [text]="true" size="small" (click)="fileInput.click()" />
-      <input #fileInput type="file" multiple accept="image/*" (change)="onImagesSelected($event)" hidden />
-      <p-button label="{{ isSubmitting ? 'Posting...' : 'Post' }}" [disabled]="isSubmitting || !postTitle.trim()"
-        size="small" (click)="submitPost()" />
+        <div class="composer-actions">
+          <div class="composer-tools">
+            <p-button icon="pi pi-image" [text]="true" size="small" ariaLabel="Add photos"
+              (click)="fileInput.click()" />
+            <p-button icon="pi pi-video" [text]="true" size="small" ariaLabel="Add videos"
+              (click)="videoInput.click()" />
+            <button type="button" class="emoji-trigger" [class.active]="emojiPickerOpen"
+              [attr.aria-expanded]="emojiPickerOpen" aria-label="Add an emoji" (click)="toggleEmojiPicker()">
+              <span aria-hidden="true">😊</span>
+            </button>
+            @if (emojiPickerOpen) {
+            <div class="emoji-picker" role="group" aria-label="Choose an emoji">
+              @for (emoji of popularEmojis; track emoji) {
+              <button type="button" class="emoji-option" [attr.aria-label]="'Add ' + emoji"
+                (click)="insertEmoji(emoji)">{{ emoji }}</button>
+              }
+            </div>
+            }
+          </div>
+          <input #fileInput type="file" multiple accept="image/*" (change)="onImagesSelected($event)" hidden />
+          <input #videoInput type="file" multiple accept="video/*" (change)="onVideosSelected($event)" hidden />
+          <p-button label="{{ isSubmitting ? 'Posting...' : 'Post' }}"
+            [disabled]="isSubmitting || !postTitle.trim()" size="small" (click)="submitPost()" />
+        </div>
+      </div>
     </div>
   </div>
 

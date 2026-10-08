@@ -1,7 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { FriendsOut, FriendshipRequest, IncomingFriendshipRequest, RelationshipStatus } from '../../shared/models/friends';
+import {
+  FriendsOut,
+  FriendshipRequest,
+  IncomingFriendshipRequest,
+  RelationshipStatus,
+  UserSearchResult
+} from '../../shared/models/friends';
 import { environment } from '../../../environments/environment';
 import { TripsOut } from '../../shared/models/trip';
 
@@ -67,6 +73,16 @@ export class FriendService {
     return this.http.get<IncomingFriendshipRequest[]>(
       `${this.baseUrl}/friend-requests/incoming`,
       { withCredentials: true }
+    );
+  }
+
+  searchUsers(query: string): Observable<UserSearchResult[]> {
+    return this.http.get<UserSearchResult[]>(
+      `${this.baseUrl}/users/search`,
+      {
+        params: { query },
+        withCredentials: true
+      }
     );
   }
 

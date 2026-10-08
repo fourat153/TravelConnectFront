@@ -134,16 +134,33 @@
     gap: 10px;
   }
 
-  .post-input {
+  .post-composer {
+    position: relative;
     flex: 1;
-    padding: 8px 14px;
+    min-height: 86px;
+    padding: 8px 10px 48px;
     border: 1px solid #e0e0e0;
-    border-radius: 20px;
+    border-radius: 14px;
+    background: #fff;
+    transition: border-color 0.15s, box-shadow 0.15s;
+
+    &:focus-within {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+  }
+
+  .post-input {
+    width: 100%;
+    padding: 3px 0;
+    border: 0;
+    border-radius: 0;
     outline: none;
     font-size: 14px;
+    background: transparent;
 
     &:focus {
-      border-color: #3b82f6;
+      border-color: transparent;
     }
   }
 
@@ -151,21 +168,104 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-top: 10px;
+    margin-top: 8px;
 
     .preview-img {
-      width: 80px;
-      height: 80px;
+      width: 56px;
+      height: 56px;
       border-radius: 8px;
       object-fit: cover;
+      background: #111827;
+    }
+  }
+
+  .composer-actions {
+    position: absolute;
+    right: 10px;
+    bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    left: 10px;
+  }
+
+  .composer-tools {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+
+    :deep(.p-button) {
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      color: #2563eb;
     }
   }
 
   .form-actions {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
+    gap: 12px;
+    padding-left: 50px;
     margin-top: 10px;
+  }
+
+  .emoji-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #2563eb;
+    cursor: pointer;
+    font-size: 18px;
+
+    &:hover,
+    &.active {
+      background: #f3f4f6;
+      color: #2563eb;
+    }
+  }
+
+  .emoji-picker {
+    position: absolute;
+    z-index: 10;
+    bottom: calc(100% + 8px);
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 2px;
+    width: 238px;
+    padding: 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);
+  }
+
+  .emoji-option {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    cursor: pointer;
+    font-size: 21px;
+
+    &:hover,
+    &:focus-visible {
+      background: #eff6ff;
+      outline: none;
+    }
   }
 }
 

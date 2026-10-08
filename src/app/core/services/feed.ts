@@ -40,12 +40,14 @@ export class FeedService {
   private http = inject(HttpClient);
   private readonly baseUrl = environment.apiUrl;
   private posts$ = new BehaviorSubject<FeedPost[]>([]);
+  private loading$ = new BehaviorSubject<boolean>(true);
 
   constructor() {
     this.loadPosts();
   }
 
   loadPosts(): void {
+    this.loading$.next(true);
     this.http.get<any[]>(`${this.baseUrl}/posts/feed?_=${new Date().getTime()}`, { withCredentials: true })
       .subscribe({
         next: (rawPosts) => {
@@ -83,9 +85,17 @@ export class FeedService {
           });
 
           this.posts$.next(posts);
+          this.loading$.next(false);
         },
-        error: () => {}
+        error: () => {
+          this.posts$.next([]);
+          this.loading$.next(false);
+        }
       });
+  }
+
+  getLoading(): Observable<boolean> {
+    return this.loading$.asObservable();
   }
 
   getPosts(): Observable<FeedPost[]> {

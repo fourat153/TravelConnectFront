@@ -23,6 +23,7 @@ import mapboxgl from 'mapbox-gl';
 import { environment } from '../../../environments/environment';
 import { POPULAR_EMOJIS } from '../../shared/constants/emojis';
 import { PostCommentsComponent } from '../../shared/components/post-comments/post-comments';
+import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 
 @Component({
   selector: 'app-feed',
@@ -38,7 +39,8 @@ import { PostCommentsComponent } from '../../shared/components/post-comments/pos
     ButtonModule,
     CarouselModule,
     TripStopInputComponent,
-    PostCommentsComponent
+    PostCommentsComponent,
+    EmptyStateComponent
   ],
   templateUrl: './feed.html',
   styleUrl: './feed.scss'
@@ -57,6 +59,7 @@ export class FeedComponent implements OnInit {
   private firebaseMessagingService = inject(FirebaseMessagingService);
 
   posts: FeedPost[] = [];
+  isLoading = true;
 
   activeView: 'timeline' | 'map' = 'timeline';
   mapSearchControl = new FormControl('');
@@ -149,10 +152,15 @@ export class FeedComponent implements OnInit {
 
     });
 
+    this.feedService.getLoading().subscribe(loading => {
+      this.isLoading = loading;
+      this.cdr.detectChanges();
+    });
+
     this.feedService.getPosts().subscribe(posts => {
       this.posts = posts;
       this.cdr.detectChanges();
-      if (this.activeView === 'map') {
+      if (this.activeView === 'map' && this.posts.length > 0) {
         this.initMap();
       }
     });
@@ -172,6 +180,10 @@ export class FeedComponent implements OnInit {
     });
 
     this.loadFeed();
+  }
+
+  onFindFriends(): void {
+    this.router.navigate(['/friend-requests']);
   }
 
   loadFeed(): void {
@@ -453,7 +465,7 @@ export class FeedComponent implements OnInit {
 
   setActiveView(view: 'timeline' | 'map'): void {
     this.activeView = view;
-    if (view === 'map') {
+    if (view === 'map' && this.posts.length > 0) {
       setTimeout(() => {
         this.initMap();
       }, 50);
@@ -461,6 +473,9 @@ export class FeedComponent implements OnInit {
   }
 
   private initMap(): void {
+    const container = document.getElementById('feed-map');
+    if (!container) return;
+
     if (!this.mapInitialized) {
       mapboxgl.accessToken = environment.mapboxToken;
 

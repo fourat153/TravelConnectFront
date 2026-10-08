@@ -22,6 +22,13 @@ export interface FriendFirstStop {
 
 export type RelationshipStatus = 'none' | 'pending_sent' | 'pending_received' | 'friends';
 
+export interface UserSearchResult {
+  id: number;
+  name: string;
+  avatarUrl: string | null;
+  relationshipStatus: 'none' | 'pending_sent' | 'pending_received';
+}
+
 export interface FriendshipRequest {
   message: string | null;
   status_code: number | null;

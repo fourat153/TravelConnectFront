@@ -2,20 +2,74 @@
   <app-bottom-nav active="profile" (tabChanged)="onNavTabChanged($event)"></app-bottom-nav>
 
   <main class="friend-requests-content">
+    <section class="requests-card search-card" aria-labelledby="search-title">
+      <h2 id="search-title">Find people</h2>
+      <label class="search-label" for="user-search">Search by name or email</label>
+      <div class="search-box">
+        <i class="pi pi-search" aria-hidden="true"></i>
+        <input
+          id="user-search"
+          type="search"
+          autocomplete="off"
+          [value]="searchQuery()"
+          (input)="onSearchInput($event)"
+          placeholder="Search users..."
+          aria-describedby="search-help">
+      </div>
+      <p id="search-help" class="search-help">Enter at least one character to search.</p>
+
+      @if (searchLoading()) {
+        <p class="state-message"><i class="pi pi-spin pi-spinner"></i> Searching...</p>
+      } @else if (searchError()) {
+        <div class="alert" role="alert">{{ searchError() }}</div>
+      } @else if (searchQuery() && searchResults().length === 0) {
+        <p class="state-message">No users found.</p>
+      } @else if (searchResults().length > 0) {
+        <div class="request-list" aria-live="polite">
+          @for (user of searchResults(); track user.id) {
+            <article class="request-item">
+              <button class="sender" (click)="viewUser(user.id)" [attr.aria-label]="'View ' + user.name + '\'s profile'">
+                @if (user.avatarUrl) {
+                  <img [src]="user.avatarUrl" [alt]="user.name" class="sender-avatar">
+                } @else {
+                  <span class="sender-avatar sender-initials">{{ userInitials(user) }}</span>
+                }
+                <span>{{ user.name }}</span>
+              </button>
+              @switch (user.relationshipStatus) {
+                @case ('none') {
+                  <button class="btn btn-primary" [disabled]="actionRequestId() !== null"
+                    (click)="sendRequest(user)">
+                    {{ actionRequestId() === user.id ? 'Sending...' : 'Add friend' }}
+                  </button>
+                }
+                @case ('pending_sent') {
+                  <button class="btn btn-secondary" disabled>Requested</button>
+                }
+                @case ('pending_received') {
+                  <button class="btn btn-secondary" disabled>Request received</button>
+                }
+              }
+            </article>
+          }
+        </div>
+      }
+    </section>
+
     <section class="requests-card" aria-labelledby="requests-title">
       <h1 id="requests-title">Incoming Friend Requests</h1>
 
-      @if (errorMessage) {
-        <div class="alert" role="alert">{{ errorMessage }}</div>
+      @if (errorMessage()) {
+        <div class="alert" role="alert">{{ errorMessage() }}</div>
       }
 
-      @if (loading) {
+      @if (loading()) {
         <p class="state-message"><i class="pi pi-spin pi-spinner"></i> Loading requests...</p>
-      } @else if (requests.length === 0) {
+      } @else if (requests().length === 0) {
         <p class="state-message">You have no incoming friend requests.</p>
       } @else {
         <div class="request-list">
-          @for (request of requests; track request.id) {
+          @for (request of requests(); track request.id) {
             <article class="request-item">
               <button class="sender" (click)="viewSender(request)" [attr.aria-label]="'View ' + senderName(request) + '\'s profile'">
                 @if (request.sender_avatar) {
@@ -26,11 +80,11 @@
                 <span>{{ senderName(request) }}</span>
               </button>
               <div class="request-actions">
-                <button class="btn btn-primary" [disabled]="actionRequestId !== null"
+                <button class="btn btn-primary" [disabled]="actionRequestId() !== null"
                   (click)="respondToRequest(request, 'accept')">
-                  {{ actionRequestId === request.id ? 'Working...' : 'Accept' }}
+                  {{ actionRequestId() === request.id ? 'Working...' : 'Accept' }}
                 </button>
-                <button class="btn btn-secondary" [disabled]="actionRequestId !== null"
+                <button class="btn btn-secondary" [disabled]="actionRequestId() !== null"
                   (click)="respondToRequest(request, 'decline')">Decline</button>
               </div>
             </article>

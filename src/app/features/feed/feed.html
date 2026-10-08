@@ -29,23 +29,55 @@
       </div>
 
       <!-- Map View -->
-      <div class="feed-map-container" [style.display]="activeView === 'map' ? 'block' : 'none'">
-        <div class="search-overlay">
-          <div class="search-bar p-input-icon-left">
-            <i class="pi pi-search"></i>
-            <input
-              type="text"
-              pInputText
-              [formControl]="mapSearchControl"
-              placeholder="Search by friend name "
-            />
-          </div>
+      <ng-container *ngIf="activeView === 'map'">
+        <div class="feed-empty-container" *ngIf="!isLoading && posts.length === 0">
+          <app-empty-state
+            icon="pi pi-map"
+            title="No activity yet"
+            description="Find friends to see their trips on the map, or start your own"
+            secondaryActionLabel="Find Friends"
+            secondaryActionIcon="pi pi-user-plus"
+            primaryActionLabel="Create a Trip"
+            primaryActionIcon="pi pi-plus"
+            (secondaryAction)="onFindFriends()"
+            (primaryAction)="openCreateModal()">
+          </app-empty-state>
         </div>
-        <div id="feed-map" class="feed-map-element"></div>
-      </div>
 
-      <!-- Feed Posts list -->
-      <div class="posts-list" *ngIf="activeView === 'timeline'">
+        <div class="feed-map-container" *ngIf="posts.length > 0">
+          <div class="search-overlay">
+            <div class="search-bar p-input-icon-left">
+              <i class="pi pi-search"></i>
+              <input
+                type="text"
+                pInputText
+                [formControl]="mapSearchControl"
+                placeholder="Search by friend name "
+              />
+            </div>
+          </div>
+          <div id="feed-map" class="feed-map-element"></div>
+        </div>
+      </ng-container>
+
+      <!-- Timeline View -->
+      <ng-container *ngIf="activeView === 'timeline'">
+        <div class="feed-empty-container" *ngIf="!isLoading && posts.length === 0">
+          <app-empty-state
+            icon="pi pi-compass"
+            title="No activity yet"
+            description="Find friends to see their trips, or start your own"
+            secondaryActionLabel="Find Friends"
+            secondaryActionIcon="pi pi-user-plus"
+            primaryActionLabel="Create a Trip"
+            primaryActionIcon="pi pi-plus"
+            (secondaryAction)="onFindFriends()"
+            (primaryAction)="openCreateModal()">
+          </app-empty-state>
+        </div>
+
+        <!-- Feed Posts list -->
+        <div class="posts-list" *ngIf="posts.length > 0">
 
         <div class="post-card" *ngFor="let post of posts">
 
@@ -124,6 +156,7 @@
         </div>
 
       </div>
+      </ng-container>
 
     </div>
 

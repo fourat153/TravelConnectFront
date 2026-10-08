@@ -13,6 +13,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { GalleriaModule } from 'primeng/galleria';
 
 import { PostCommentsComponent } from '../../../shared/components/post-comments/post-comments';
+import { POPULAR_EMOJIS } from '../../../shared/constants/emojis';
 
 @Component({
   selector: 'app-stop-sheet',
@@ -42,6 +43,10 @@ export class StopSheetComponent implements OnInit, OnChanges {
   postTitle = '';
   selectedImages: File[] = [];
   imagePreviews: string[] = [];
+  selectedVideos: File[] = [];
+  videoPreviews: string[] = [];
+  emojiPickerOpen = false;
+  popularEmojis = POPULAR_EMOJIS;
   isSubmitting = false;
   errorMessage = '';
   commentInputs: { [postId: number]: string } = {};
@@ -116,6 +121,9 @@ export class StopSheetComponent implements OnInit, OnChanges {
       this.postTitle = '';
       this.selectedImages = [];
       this.imagePreviews = [];
+      this.selectedVideos = [];
+      this.videoPreviews = [];
+      this.emojiPickerOpen = false;
       this.isSubmitting = false;
       this.errorMessage = '';
       this.commentInputs = {};
@@ -225,17 +233,53 @@ export class StopSheetComponent implements OnInit, OnChanges {
       reader.onload = (e) => this.imagePreviews.push(e.target?.result as string);
       reader.readAsDataURL(file);
     });
+    input.value = '';
+  }
+
+  onVideosSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files) return;
+
+    const videos = Array.from(input.files).filter(file => file.type.startsWith('video/'));
+    this.selectedVideos = [...this.selectedVideos, ...videos];
+    this.videoPreviews = this.selectedVideos.map(video => URL.createObjectURL(video));
+    input.value = '';
+  }
+
+  toggleEmojiPicker(): void {
+    this.emojiPickerOpen = !this.emojiPickerOpen;
+  }
+
+  insertEmoji(emoji: string): void {
+    const input = this.postInputElem?.nativeElement;
+    if (!input) {
+      this.postTitle += emoji;
+    } else {
+      const start = input.selectionStart ?? this.postTitle.length;
+      const end = input.selectionEnd ?? start;
+      this.postTitle = `${this.postTitle.slice(0, start)}${emoji}${this.postTitle.slice(end)}`;
+    }
+
+    this.emojiPickerOpen = false;
+    setTimeout(() => {
+      input?.focus();
+      const cursorPosition = (input?.selectionStart ?? this.postTitle.length) + emoji.length;
+      input?.setSelectionRange(cursorPosition, cursorPosition);
+    });
   }
 
   submitPost() {
     if (!this.postTitle.trim()) return;
     this.isSubmitting = true;
-    this.postService.createPost(this.stop.id, this.postTitle, this.selectedImages).subscribe({
+    this.postService.createPost(this.stop.id, this.postTitle, this.selectedImages, this.selectedVideos).subscribe({
       next: (res) => {
         if (res.post) { //need to be fixed the return of post x
           this.postTitle = '';
           this.selectedImages = [];
           this.imagePreviews = [];
+          this.selectedVideos = [];
+          this.videoPreviews = [];
+          this.emojiPickerOpen = false;
           this.isSubmitting = false;
           this.loadPosts();
           this.cdr.detectChanges();
