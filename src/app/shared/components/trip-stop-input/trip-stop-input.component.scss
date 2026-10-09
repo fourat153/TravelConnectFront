@@ -4,15 +4,11 @@
   gap: 0;
 }
 
-// ── Stop list ────────────────────────────────────────────────
-
 .stop-list {
   display: flex;
   flex-direction: column;
   position: relative;
 }
-
-// ── Single row ───────────────────────────────────────────────
 
 .stop-row {
   display: flex;
@@ -25,8 +21,6 @@
     opacity: 1;
   }
 }
-
-// ── Drag handle ──────────────────────────────────────────────
 
 .drag-handle {
   display: flex;
@@ -48,8 +42,6 @@
     cursor: grabbing;
   }
 }
-
-// ── Stop icon column ─────────────────────────────────────────
 
 .stop-icon {
   display: flex;
@@ -100,8 +92,6 @@
   font-size: 0.6rem;
   font-weight: 700;
 }
-
-// ── Input group ──────────────────────────────────────────────
 
 .stop-input-group {
   flex: 1;
@@ -179,8 +169,6 @@
   }
 }
 
-// ── Suggestions dropdown ─────────────────────────────────────
-
 .suggestions {
   position: absolute;
   top: calc(100% + 4px);
@@ -241,8 +229,6 @@
   text-overflow: ellipsis;
 }
 
-// ── Remove button ────────────────────────────────────────────
-
 .remove-btn {
   display: flex;
   align-items: center;
@@ -267,8 +253,6 @@
     color: var(--p-red-500, #ef4444);
   }
 }
-
-// ── Swap button ──────────────────────────────────────────────
 
 .swap-row {
   display: flex;
@@ -300,8 +284,6 @@
   }
 }
 
-// ── Add a stop ───────────────────────────────────────────────
-
 .add-stop-btn {
   display: flex;
   align-items: center;
@@ -327,8 +309,6 @@
   }
 }
 
-// ── CDK drag ────────────────────────────────────────────────
-
 .cdk-drag-preview {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   border-radius: 8px;
@@ -351,8 +331,6 @@
 .stop-list.cdk-drop-list-dragging .stop-row:not(.cdk-drag-placeholder) {
   transition: transform 200ms ease;
 }
-
-// ── Stop Photos ──────────────────────────────────────────────
 
 .stop-photos-section {
   display: flex;
@@ -457,5 +435,3 @@
     border-color: var(--p-primary-color, #3b82f6);
   }
 }
-
-

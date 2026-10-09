@@ -18,6 +18,9 @@ export interface CommentData {
 export interface PostOut {
   id: number;
   stop_id: number;
+  user_id?: number;
+  author_id?: number;
+  owner_id?: number;
   title: string;
   created_at: string;
   images: ImageOut[];

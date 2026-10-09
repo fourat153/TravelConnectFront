@@ -1,12 +1,9 @@
 <div class="profile-layout">
-  <!-- Sidebar Navigation -->
   <app-bottom-nav active="profile" (tabChanged)="onNavTabChanged($event)"></app-bottom-nav>
 
-  <!-- Main Profile Content -->
   <div class="profile-main-content">
     <div class="profile-container">
 
-      <!-- Back button for visiting other profiles -->
       <div class="back-navigation" *ngIf="!isOwnProfile">
         <button class="back-btn" (click)="goBack()">
           <i class="pi pi-arrow-left"></i>
@@ -14,7 +11,6 @@
         </button>
       </div>
 
-      <!-- Status messages -->
       <div *ngIf="successMessage" class="alert alert-success">
         <i class="pi pi-check-circle"></i>
         <span>{{ successMessage }}</span>
@@ -26,7 +22,6 @@
       </div>
 
       <div class="profile-card">
-        <!-- Left Section: Profile Avatar & Upload -->
         <div class="avatar-section">
           <ng-container *ngIf="isOwnProfile; else visitedAvatar">
             <div class="avatar-wrapper" [class.editable]="isEditMode" (click)="triggerFileInput(fileInput)">
@@ -102,7 +97,6 @@
           </ng-template>
         </div>
 
-        <!-- Right Section: Details Form (Own Profile) -->
         <div class="details-section" *ngIf="isOwnProfile">
           <div class="section-title">
             <h3>Personal Information</h3>
@@ -114,7 +108,6 @@
 
           <form (submit)="saveProfile()" #profileForm="ngForm" class="profile-form">
             <div class="form-grid">
-              <!-- First Name -->
               <div class="form-group">
                 <label for="firstname">First Name</label>
                 <div class="input-container" [class.readonly]="!isEditMode">
@@ -124,7 +117,6 @@
                 </div>
               </div>
 
-              <!-- Last Name -->
               <div class="form-group">
                 <label for="lastname">Last Name</label>
                 <div class="input-container" [class.readonly]="!isEditMode">
@@ -134,7 +126,6 @@
                 </div>
               </div>
 
-              <!-- Email -->
               <div class="form-group">
                 <label for="email">Email Address</label>
                 <div class="input-container" [class.readonly]="!isEditMode">
@@ -144,7 +135,6 @@
                 </div>
               </div>
 
-              <!-- Phone Number -->
               <div class="form-group">
                 <label for="phone_number">Phone Number</label>
                 <div class="input-container" [class.readonly]="!isEditMode">
@@ -154,7 +144,6 @@
                 </div>
               </div>
 
-              <!-- Gender -->
               <div class="form-group">
                 <label for="gender">Gender</label>
                 <div class="input-container" [class.readonly]="!isEditMode">
@@ -167,7 +156,6 @@
                 </div>
               </div>
 
-              <!-- Home City -->
               <div class="form-group city-form-group">
                 <label for="city">Home City</label>
                 <div class="input-container" [class.readonly]="!isEditMode">
@@ -176,7 +164,6 @@
                     [(ngModel)]="citySearchQuery" (input)="onCitySearch()" [readonly]="!isEditMode" />
                 </div>
 
-                <!-- Suggestions dropdown -->
                 <div class="suggestions-dropdown" *ngIf="isEditMode && citySuggestions.length > 0">
                   <div class="suggestion-item" *ngFor="let suggestion of citySuggestions"
                     (click)="selectCity(suggestion)">
@@ -187,7 +174,6 @@
               </div>
             </div>
 
-            <!-- Action buttons -->
             <div class="form-actions" *ngIf="isEditMode">
               <button type="submit" class="btn btn-primary" [disabled]="isSaving">
                 <i class="pi pi-spin pi-spinner" *ngIf="isSaving"></i>
@@ -198,7 +184,6 @@
           </form>
         </div>
 
-        <!-- Right Section: Friend Info (Visited Profile) -->
         <div class="details-section" *ngIf="!isOwnProfile">
           <div class="section-title">
             <h3>Friend Information</h3>
@@ -224,26 +209,22 @@
         </div>
       </div>
 
-      <!-- Instagram-Style Post Grid Section -->
       <div class="profile-posts-section">
         <div class="posts-section-header">
           <i class="pi pi-th-large"></i>
           <span>POSTS</span>
         </div>
 
-        <!-- Loading state -->
         <div class="posts-loading" *ngIf="postsLoading">
           <i class="pi pi-spin pi-spinner"></i>
           <span>Loading posts...</span>
         </div>
 
-        <!-- Empty state -->
         <div class="posts-empty" *ngIf="!postsLoading && posts.length === 0">
           <i class="pi pi-camera"></i>
           <p>No posts shared yet</p>
         </div>
 
-        <!-- Grid layout -->
         <div class="posts-grid" *ngIf="!postsLoading && posts.length > 0">
           <div class="grid-item" *ngFor="let post of posts" (click)="openPostDetail(post)">
             <div class="grid-image-wrapper">
@@ -266,14 +247,12 @@
   </div>
 </div>
 
-<!-- Post Detail Modal (when clicked from Instagram grid) -->
 <p-dialog [(visible)]="showPostDetailModal" [modal]="true" [draggable]="false" [resizable]="false"
   [header]="selectedPostForModal?.tripTitle || 'Trip Details'"
   [style]="{ width: '550px', 'max-width': '95vw', 'border-radius': '20px', overflow: 'hidden' }">
 
   <div class="post-card detail-modal-card" *ngIf="selectedPostForModal"
     style="border: none; box-shadow: none; margin: 0; padding: 0;">
-    <!-- Post Header -->
     <div class="post-header" style="padding: 0 0 12px 0;">
       <div class="post-author-info">
         <div class="author-avatar-wrapper">
@@ -290,7 +269,6 @@
       </div>
     </div>
 
-    <!-- Post Photo Container (Double click to like) -->
     <div class="post-image-container"
       style="height: 380px; border-radius: 12px; overflow: hidden; background: #0f172a; position: relative;">
       <p-carousel [value]="selectedPostForModal.imageUrls" [numVisible]="1" [numScroll]="1" [circular]="true"
@@ -302,13 +280,11 @@
         </ng-template>
       </p-carousel>
 
-      <!-- Large floating heart double click animation overlay -->
       <div class="heart-animation-overlay" *ngIf="heartOverlayPostId === selectedPostForModal.id">
         <i class="pi pi-heart-fill animated-heart"></i>
       </div>
     </div>
 
-    <!-- Action buttons (Like, Comment) -->
     <div class="post-actions" style="padding: 12px 0 6px 0;">
       <div class="left-actions">
         <button class="action-btn like-btn" [class.liked]="selectedPostForModal.hasLiked"
@@ -324,18 +300,15 @@
       </button>
     </div>
 
-    <!-- Likes Count -->
     <div class="post-likes-info" style="padding: 0 0 4px 0;">
       <span class="likes-text">{{ selectedPostForModal.likesCount }} likes</span>
     </div>
 
-    <!-- Post Caption -->
     <div class="post-caption" style="padding: 4px 0 8px 0;">
       <span class="caption-author">{{ selectedPostForModal.authorName }}</span>
       <span class="caption-text">{{ selectedPostForModal.description }}</span>
     </div>
 
-    <!-- Reusable Comments Component -->
     <app-post-comments
       #profileModalCommentsComp
       [postId]="selectedPostForModal.id"

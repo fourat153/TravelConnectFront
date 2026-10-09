@@ -121,8 +121,6 @@ export class TripStopInputComponent implements OnDestroy {
 
   onInput(row: StopRow): void {
     row.resolved = null;
-
-    // Clear any pending timeout for this row
     if (this.searchTimeouts.has(row.id)) {
       clearTimeout(this.searchTimeouts.get(row.id));
     }
@@ -137,7 +135,6 @@ export class TripStopInputComponent implements OnDestroy {
       return;
     }
 
-    // Return cached suggestions instantly if available
     const cached = this.geocodingCacheService.getCached(q);
     if (cached) {
       row.suggestions = cached;
@@ -150,7 +147,6 @@ export class TripStopInputComponent implements OnDestroy {
     row.loading = true;
     this.cdr.markForCheck();
 
-    // Call Mapbox Geocoding API directly for place suggestions
     const timeoutId = setTimeout(() => {
       this.http
         .get<any>(`https://api.mapbox.com/search/geocode/v6/forward`, {

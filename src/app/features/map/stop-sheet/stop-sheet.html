@@ -83,8 +83,6 @@
     } @else {
     <div class="instagram-feed">
       <div *ngFor="let post of posts" class="instagram-post-card">
-
-        <!-- Post Header -->
         <div class="instagram-post-header">
           <p-avatar *ngIf="authorPhoto; else authorInitialsAvatar" [image]="authorPhoto" shape="circle" size="normal"
             class="author-avatar" />
@@ -95,51 +93,39 @@
             <span class="post-author-name">{{ authorName }}</span>
             <span class="post-date-time">{{ post.created_at | date:'short' }}</span>
           </div>
+          <button *ngIf="canDeletePost(post)" type="button" class="post-menu-btn"
+            (click)="requestPostDeletion(post, $event)" aria-label="Post options">
+            <i class="pi pi-ellipsis-v"></i>
+          </button>
         </div>
-
-        <!-- Post Title/Heading at the top -->
         <div class="post-title-top">
           <h3>{{ post.title }}</h3>
         </div>
-
-        <!-- Post Photos (Custom Image Slider) -->
         <div class="custom-slider" *ngIf="post.images && post.images.length > 0">
           <div class="slider-container">
             <img [src]="post.images[currentImageIndex[post.id] || 0]?.link" class="slider-img" />
-
-            <!-- Left Arrow -->
             <button *ngIf="post.images.length > 1" (click)="prevImage(post)" class="slider-btn prev">
               <i class="pi pi-chevron-left slider-btn-icon"></i>
             </button>
-
-            <!-- Right Arrow -->
             <button *ngIf="post.images.length > 1" (click)="nextImage(post)" class="slider-btn next">
               <i class="pi pi-chevron-right slider-btn-icon"></i>
             </button>
           </div>
-
-          <!-- Dot Indicators -->
           <div *ngIf="post.images.length > 1" class="slider-dots">
             <span *ngFor="let img of post.images; let i = index" (click)="setImageIndex(post, i)"
               [style.background]="(currentImageIndex[post.id] || 0) === i ? '#3b82f6' : '#ccc'" class="slider-dot">
             </span>
           </div>
         </div>
-
-        <!-- Post Description Text below the photos -->
         <div class="post-description-section">
           <p class="description-text">{{ post.title }}</p>
         </div>
-
-        <!-- Like Button -->
         <div class="post-actions-row">
           <button class="like-btn" [class.liked]="post.has_liked" (click)="toggleLike(post)">
             <i class="pi" [ngClass]="post.has_liked ? 'pi-heart-fill' : 'pi-heart'"></i>
             <span class="likes-count">{{ post.likes_count || 0 }}</span>
           </button>
         </div>
-
-        <!-- Reusable Comments Component -->
         <div style="padding: 10px 16px;">
           <app-post-comments
             [postId]="post.id"
@@ -147,8 +133,21 @@
             [currentUsername]="currentUser?.username || 'Me'">
           </app-post-comments>
         </div>
-
       </div>
+
+      <p-dialog [visible]="!!postPendingDeletion" [modal]="true" [closable]="!deletingPost"
+        [dismissableMask]="!deletingPost" [showHeader]="false" [style]="{ width: 'min(92vw, 380px)' }"
+        (onHide)="cancelPostDeletion()">
+        <div class="delete-dialog">
+          <h2>Delete post?</h2>
+          <p>Delete this post?</p>
+          <div class="delete-dialog__actions">
+            <p-button label="Cancel" severity="secondary" [outlined]="true" [disabled]="deletingPost"
+              (click)="cancelPostDeletion()" />
+            <p-button label="Delete" severity="danger" [loading]="deletingPost" (click)="confirmPostDeletion()" />
+          </div>
+        </div>
+      </p-dialog>
     </div>
     }
   </div>

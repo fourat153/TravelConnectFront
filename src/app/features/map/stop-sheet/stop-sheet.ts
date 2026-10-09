@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, inject, ChangeDetectorRef, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { PostService } from '../../../core/services/post';
+import { FeedService } from '../../../core/services/feed';
 import { AuthService } from '../../../core/services/auth';
 import { PostOut } from '../../../shared/models/post';
 
@@ -11,13 +11,13 @@ import { AvatarModule } from 'primeng/avatar';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { GalleriaModule } from 'primeng/galleria';
-
+import { DialogModule } from 'primeng/dialog';
 import { PostCommentsComponent } from '../../../shared/components/post-comments/post-comments';
 import { POPULAR_EMOJIS } from '../../../shared/constants/emojis';
 
 @Component({
   selector: 'app-stop-sheet',
-  imports: [CommonModule, FormsModule, TimelineModule, CardModule, AvatarModule, ButtonModule, InputTextModule, GalleriaModule, PostCommentsComponent],
+  imports: [CommonModule, FormsModule, TimelineModule, CardModule, AvatarModule, ButtonModule, InputTextModule, GalleriaModule, DialogModule, PostCommentsComponent],
   templateUrl: './stop-sheet.html',
   styleUrl: './stop-sheet.scss'
 })
@@ -32,7 +32,7 @@ export class StopSheetComponent implements OnInit, OnChanges {
 
   @ViewChild('postInput') postInputElem?: ElementRef<HTMLInputElement>;
 
-  private postService = inject(PostService);
+  private feedService = inject(FeedService);
   private authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
 
@@ -49,8 +49,8 @@ export class StopSheetComponent implements OnInit, OnChanges {
   popularEmojis = POPULAR_EMOJIS;
   isSubmitting = false;
   errorMessage = '';
-  commentInputs: { [postId: number]: string } = {};
-  activeReplyComment: { [postId: number]: any | null } = {};
+  postPendingDeletion: PostOut | null = null;
+  deletingPost = false;
   currentImageIndex: { [postId: number]: number } = {};
   responsiveOptions = [
     { breakpoint: '1024px', numVisible: 5 },
@@ -115,6 +115,50 @@ export class StopSheetComponent implements OnInit, OnChanges {
     return this.getInitials(this.ownerName);
   }
 
+  getInitials(name: string): string {
+    if (!name) return '?';
+    return name.split(' ').map(part => part[0]).join('').toUpperCase().slice(0, 2);
+  }
+
+  canDeletePost(post: PostOut): boolean {
+    const postOwnerId = post.user_id ?? post.author_id ?? post.owner_id;
+    return postOwnerId === undefined
+      ? this.isOwner
+      : Number(postOwnerId) === Number(this.currentUser?.id);
+  }
+
+  requestPostDeletion(post: PostOut, event: Event): void {
+    event.stopPropagation();
+    if (this.canDeletePost(post)) {
+      this.postPendingDeletion = post;
+    }
+  }
+
+  cancelPostDeletion(): void {
+    if (!this.deletingPost) {
+      this.postPendingDeletion = null;
+    }
+  }
+
+  confirmPostDeletion(): void {
+    if (!this.postPendingDeletion || this.deletingPost) return;
+
+    const post = this.postPendingDeletion;
+    this.deletingPost = true;
+    this.feedService.deletePost(post.id).subscribe({
+      next: () => {
+        this.posts = this.posts.filter(item => item.id !== post.id);
+        delete this.currentImageIndex[post.id];
+        this.deletingPost = false;
+        this.postPendingDeletion = null;
+      },
+      error: () => {
+        this.errorMessage = 'Failed to delete post. Please try again.';
+        this.deletingPost = false;
+      }
+    });
+  }
+
   ngOnChanges(changes: SimpleChanges) {
     if (changes['stop'] && this.stop) {
       this.posts = [];
@@ -126,7 +170,6 @@ export class StopSheetComponent implements OnInit, OnChanges {
       this.emojiPickerOpen = false;
       this.isSubmitting = false;
       this.errorMessage = '';
-      this.commentInputs = {};
       this.currentImageIndex = {};
       this.loadPosts();
       this.focusPostInput();
@@ -140,13 +183,11 @@ export class StopSheetComponent implements OnInit, OnChanges {
   }
 
   loadPosts() {
-    this.postService.getStopPosts(this.stop.id).subscribe({
+    this.feedService.getStopPosts(this.stop.id).subscribe({
       next: (res) => {
         if (res.status_code === 200 && res.posts) {
           this.posts = res.posts;
-          this.posts.forEach(post => {
-            this.loadComments(post);
-          });
+          this.posts.forEach(post => this.loadComments(post));
         }
       },
       error: () => { this.errorMessage = 'Failed to load posts.'; }
@@ -154,7 +195,7 @@ export class StopSheetComponent implements OnInit, OnChanges {
   }
 
   loadComments(post: PostOut) {
-    this.postService.getPostComments(post.id).subscribe({
+    this.feedService.getPostComments(post.id).subscribe({
       next: (res) => {
         if (res.status_code === 200 && res.data) {
           post.comments = res.data.map((c: any) => ({
@@ -165,62 +206,35 @@ export class StopSheetComponent implements OnInit, OnChanges {
           }));
           this.cdr.detectChanges();
         }
-      }
-    });
-  }
-
-  toggleLike(post: PostOut) {
-    if (post.has_liked) {
-      this.postService.unlikePost(post.id).subscribe({
-        next: () => {
-          post.has_liked = false;
-          post.likes_count = Math.max(0, (post.likes_count || 1) - 1);
-          this.cdr.detectChanges();
-        }
-      });
-    } else {
-      this.postService.likePost(post.id).subscribe({
-        next: () => {
-          post.has_liked = true;
-          post.likes_count = (post.likes_count || 0) + 1;
-          this.cdr.detectChanges();
-        }
-      });
-    }
-  }
-
-  replyToComment(post: any, comment: any, inputElem?: HTMLInputElement): void {
-    this.activeReplyComment[post.id] = comment;
-    if (inputElem) {
-      setTimeout(() => inputElem.focus(), 50);
-    }
-  }
-
-  cancelReply(postId: number): void {
-    this.activeReplyComment[postId] = null;
-  }
-
-  addComment(post: PostOut) {
-    const text = this.commentInputs[post.id];
-    if (!text || !text.trim()) return;
-
-    const replyTarget = this.activeReplyComment[post.id];
-    const parentId = replyTarget?.id ?? null;
-
-    this.postService.addComment(post.id, text, parentId).subscribe({
-      next: () => {
-        this.commentInputs[post.id] = '';
-        this.activeReplyComment[post.id] = null;
-        this.loadComments(post);
-        this.cdr.detectChanges();
       },
       error: () => {}
     });
   }
 
-  getInitials(name: string): string {
-    if (!name) return '?';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  toggleLike(post: PostOut) {
+    if (post.has_liked) {
+      this.feedService.unlikePost(post.id).subscribe({
+        next: () => {
+          post.has_liked = false;
+          post.likes_count = Math.max(0, (post.likes_count || 1) - 1);
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.errorMessage = 'Failed to update like.';
+        }
+      });
+    } else {
+      this.feedService.likePost(post.id).subscribe({
+        next: () => {
+          post.has_liked = true;
+          post.likes_count = (post.likes_count || 0) + 1;
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.errorMessage = 'Failed to update like.';
+        }
+      });
+    }
   }
 
   onImagesSelected(event: Event) {
@@ -271,9 +285,9 @@ export class StopSheetComponent implements OnInit, OnChanges {
   submitPost() {
     if (!this.postTitle.trim()) return;
     this.isSubmitting = true;
-    this.postService.createPost(this.stop.id, this.postTitle, this.selectedImages, this.selectedVideos).subscribe({
-      next: (res) => {
-        if (res.post) { //need to be fixed the return of post x
+    this.feedService.createStopPost(this.stop.id, this.postTitle, this.selectedImages, this.selectedVideos).subscribe({
+      next: (res: any) => {
+        if (res && (res.post || res.status_code === 200 || res.status_code === 201)) {
           this.postTitle = '';
           this.selectedImages = [];
           this.imagePreviews = [];
@@ -281,8 +295,12 @@ export class StopSheetComponent implements OnInit, OnChanges {
           this.videoPreviews = [];
           this.emojiPickerOpen = false;
           this.isSubmitting = false;
+          this.errorMessage = '';
           this.loadPosts();
           this.cdr.detectChanges();
+        } else {
+          this.errorMessage = res?.message || 'Failed to create post.';
+          this.isSubmitting = false;
         }
       },
       error: () => {

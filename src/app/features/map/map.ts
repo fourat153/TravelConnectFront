@@ -727,10 +727,17 @@ export class Map implements AfterViewInit, OnInit {
   }
 
   logout(): void {
-    this.AuthService.logout().subscribe((res: any) => {
-      this.AuthService.currentUser$.next(null);
-      this.showProfileMenu = false;
-      this.router.navigateByUrl('/auth/login');
+    this.AuthService.logout().subscribe({
+      next: () => {
+        this.AuthService.currentUser$.next(null);
+        this.showProfileMenu = false;
+        this.router.navigateByUrl('/auth/login');
+      },
+      error: () => {
+        this.AuthService.currentUser$.next(null);
+        this.showProfileMenu = false;
+        this.router.navigateByUrl('/auth/login');
+      }
     });
   }
 

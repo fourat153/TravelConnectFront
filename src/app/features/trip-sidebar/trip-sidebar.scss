@@ -93,6 +93,37 @@
   list-style: none;
 }
 
+.trip-item-shell {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.trip-item {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--sidebar-bg);
+  transition: transform 0.18s ease, background 0.15s;
+}
+
+.trip-item__swipe-delete {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 72px;
+  border: 0;
+  background: var(--sidebar-bg);
+  color: #fff;
+  cursor: pointer;
+
+  &.revealed {
+    background: #b91c1c;
+  }
+}
+
 .trip-item {
   gap: 14px;
   padding: 12px;
@@ -130,7 +161,16 @@
   .trip-date { margin-top: 2px; color: var(--sidebar-muted); font-size: 11px; }
 }
 
-.trip-item__arrow { margin-left: auto; color: #555; font-size: 12px; }
+.trip-item__arrow { color: #555; font-size: 12px; }
+.trip-item__menu {
+  margin-left: auto;
+  padding: 6px;
+  border: 0;
+  background: transparent;
+  color: #888;
+  cursor: pointer;
+  &:hover { color: #fff; }
+}
 
 .state-msg {
   display: flex;
@@ -199,7 +239,22 @@
 
   &__body { display: flex; flex: 1; flex-direction: column; min-width: 0; }
   &__title { overflow: hidden; color: var(--sidebar-text); font-size: 14px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
-  &__drag-handle { margin-left: auto; padding: 4px; color: #555; cursor: grab; font-size: 12px; &:hover { color: #888; } }
+  &__drag-handle { padding: 4px; color: #555; cursor: grab; font-size: 12px; &:hover { color: #888; } }
+  &__delete {
+    margin-left: auto;
+    padding: 5px;
+    border: 0;
+    background: transparent;
+    color: #ef4444;
+    cursor: pointer;
+    &:hover { color: #f87171; }
+  }
+}
+
+.delete-dialog {
+  h2 { margin: 0 0 10px; color: #111827; }
+  p { margin: 0; color: #4b5563; line-height: 1.5; }
+  &__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
 }
 
 .field {

@@ -1,5 +1,4 @@
 <div class="post-comments-wrapper">
-  <!-- Comments Area -->
   <div class="post-comments-section" *ngIf="comments && comments.length > 0">
     <div class="comments-list" [style.max-height]="maxListHeight">
       <div class="comment-item" *ngFor="let comment of comments" [class.is-reply]="comment.parentId">
@@ -22,7 +21,6 @@
     No comments yet.
   </div>
 
-  <!-- Add Comment Input Box -->
   <div class="add-comment-wrapper">
     <div class="reply-banner" *ngIf="activeReplyComment">
       <span>Replying to <strong class="reply-username">@{{ activeReplyComment.username }}</strong></span>

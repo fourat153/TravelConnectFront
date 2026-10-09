@@ -7,7 +7,6 @@ import { environment } from '../../../environments/environment';
 import { TripService } from '../../core/services/trip';
 import { FriendService } from '../../core/services/friends';
 import { StopsService } from '../../core/services/stop';
-import { PostService } from '../../core/services/post';
 import { GeocodingCacheService } from '../../core/services/geocoding-cache';
 import { TripOut, TripCreate } from '../../shared/models/trip';
 import { StopOut, StopCreate } from '../../shared/models/stop';
@@ -17,6 +16,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { MessageModule } from 'primeng/message';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { DialogModule } from 'primeng/dialog';
 import { TripStopInputComponent, TripStop } from '../../shared/components/trip-stop-input/trip-stop-input.component';
 import { Subject, forkJoin } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap, catchError, map } from 'rxjs/operators';
@@ -52,6 +52,7 @@ type View = 'list' | 'detail' | 'create';
     ProgressSpinnerModule,
     MessageModule,
     ToggleSwitchModule,
+    DialogModule,
     TripStopInputComponent,
     DragDropModule,
   ]
@@ -115,6 +116,12 @@ export class TripSidebarComponent implements OnInit, OnChanges {
   private isDragging = false;
   translateY = 'translateY(0px)';
   transition = 'none';
+  tripPendingDeletion: TripOut | null = null;
+  stopPendingDeletion: StopOut | null = null;
+  deletingTrip = false;
+  deletingStop = false;
+  private tripSwipeStartX = 0;
+  private tripSwipeOffset = new Map<number, number>();
 
   get isFriendMode(): boolean { return !!this.friend; }
   get headerTitle(): string { return this.isFriendMode ? this.friend!.username : 'My Trips'; }
@@ -133,7 +140,6 @@ export class TripSidebarComponent implements OnInit, OnChanges {
     private tripService: TripService,
     private friendService: FriendService,
     private stopsService: StopsService,
-    private postService: PostService,
     private http: HttpClient,
     private cdr: ChangeDetectorRef,
     private router: Router
@@ -242,6 +248,7 @@ export class TripSidebarComponent implements OnInit, OnChanges {
           if (foundTrip) {
             this.activeTrip = foundTrip;
           }
+
         }
         this.cdr.markForCheck();
       },
@@ -249,6 +256,89 @@ export class TripSidebarComponent implements OnInit, OnChanges {
         this.tripsError = 'Could not load trips.';
         this.tripsLoading = false;
         this.cdr.markForCheck();
+      }
+    });
+  }
+
+  onTripTouchStart(event: TouchEvent, trip: TripOut): void {
+    this.tripSwipeStartX = event.touches[0].clientX;
+    this.tripSwipeOffset.set(trip.id, 0);
+  }
+
+  onTripTouchMove(event: TouchEvent, trip: TripOut): void {
+    const delta = event.touches[0].clientX - this.tripSwipeStartX;
+    if (delta < 0) {
+      event.preventDefault();
+      this.tripSwipeOffset.set(trip.id, Math.max(delta, -72));
+    }
+  }
+
+  onTripTouchEnd(event: TouchEvent, trip: TripOut): void {
+    const delta = event.changedTouches[0].clientX - this.tripSwipeStartX;
+    this.tripSwipeOffset.set(trip.id, delta < -36 ? -72 : 0);
+  }
+
+  tripOffset(trip: TripOut): number {
+    return this.tripSwipeOffset.get(trip.id) ?? 0;
+  }
+
+  requestTripDeletion(trip: TripOut, event?: Event): void {
+    event?.stopPropagation();
+    this.tripPendingDeletion = trip;
+    this.tripSwipeOffset.set(trip.id, 0);
+  }
+
+  requestStopDeletion(stop: StopOut, event?: Event): void {
+    event?.stopPropagation();
+    this.stopPendingDeletion = stop;
+  }
+
+  cancelDeletion(): void {
+    if (!this.deletingTrip && !this.deletingStop) {
+      this.tripPendingDeletion = null;
+      this.stopPendingDeletion = null;
+    }
+  }
+
+  confirmTripDeletion(): void {
+    if (!this.tripPendingDeletion || this.deletingTrip) return;
+
+    const trip = this.tripPendingDeletion;
+    this.deletingTrip = true;
+    this.tripService.deleteTrip(trip.id).subscribe({
+      next: () => {
+        this.trips = this.trips.filter(item => item.id !== trip.id);
+        if (this.selectedTripId === trip.id) {
+          this.selectedTripId = undefined;
+          this.activeTrip = undefined;
+          this.view = 'list';
+          this.backToList.emit();
+        }
+        this.deletingTrip = false;
+        this.tripPendingDeletion = null;
+      },
+      error: () => {
+        this.tripsError = 'Could not delete this trip. Please try again.';
+        this.deletingTrip = false;
+      }
+    });
+  }
+
+  confirmStopDeletion(): void {
+    if (!this.stopPendingDeletion || this.deletingStop) return;
+
+    const stop = this.stopPendingDeletion;
+    this.deletingStop = true;
+    this.stopsService.deleteStop(stop.id).subscribe({
+      next: () => {
+        this.detailStops = this.detailStops.filter(item => item.id !== stop.id);
+        this.deletingStop = false;
+        this.stopPendingDeletion = null;
+        this.stopsReordered.emit(this.detailStops);
+      },
+      error: () => {
+        this.detailError = 'Could not delete this stop. Please try again.';
+        this.deletingStop = false;
       }
     });
   }
@@ -447,8 +537,16 @@ export class TripSidebarComponent implements OnInit, OnChanges {
       moveItemInArray(this.detailStops, event.previousIndex, targetIndex);
       this.stopsReordered.emit(this.detailStops);
 
+      const previousOrder = [...this.detailStops];
       const stopIds = this.detailStops.map(s => s.id);
-      this.stopsService.reorderStops(this.activeTrip.id, stopIds).subscribe();
+      this.stopsService.reorderStops(this.activeTrip.id, stopIds).subscribe({
+        error: () => {
+          this.detailStops = previousOrder;
+          this.stopsReordered.emit(this.detailStops);
+          this.detailError = 'Failed to save the new stop order. Please try again.';
+          this.cdr.markForCheck();
+        }
+      });
     }
   }
 

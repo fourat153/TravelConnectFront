@@ -72,7 +72,6 @@ export class FirebaseMessagingService {
 
                 const customUrl = payload.data?.['url'] || payload.data?.['click_action'];
                 const notificationType = payload.data?.['type'] || payload.data?.['notification_type'];
-                // Show visual PrimeNG Toast notification in app
                 this.messageService.add({
                     severity: 'info',
                     summary: title,
@@ -81,7 +80,6 @@ export class FirebaseMessagingService {
                     data: { postId, tripId, actorId, customUrl, notificationType }
                 });
 
-                // Emit payload to any active subscribers
                 this.currentMessageSubject.next(payload);
 
                 // Automatically update UI state and unread count by fetching the latest notifications

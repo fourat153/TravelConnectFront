@@ -4,7 +4,6 @@
   <div class="feed-content">
     <div class="feed-main-container">
 
-      <!-- Header with back button -->
       <header class="feed-header">
         <div class="header-left">
           <button class="back-btn" (click)="goBack()">
@@ -14,23 +13,19 @@
         </div>
       </header>
 
-      <!-- Loading state -->
       <div class="loading-container" *ngIf="loading">
         <i class="pi pi-spin pi-spinner spinner-icon"></i>
         <span>Loading post details...</span>
       </div>
 
-      <!-- Error state -->
       <div class="error-container" *ngIf="!loading && errorMessage">
         <i class="pi pi-exclamation-triangle error-icon"></i>
         <p>{{ errorMessage }}</p>
         <button pButton label="Go back to Feed" icon="pi pi-arrow-left" (click)="goBack()"></button>
       </div>
 
-      <!-- Post Card (Same design & info as feed) -->
       <div class="post-card" *ngIf="!loading && post">
 
-        <!-- Post Header -->
         <div class="post-header">
           <div class="post-author-info">
             <div class="author-avatar-wrapper" (click)="viewProfile(post.authorId)" style="cursor: pointer;">
@@ -48,7 +43,6 @@
           </div>
         </div>
 
-        <!-- Post Photos / Media Carousel -->
         <div class="post-image-container" *ngIf="post.imageUrls && post.imageUrls.length > 0">
           <p-carousel [value]="post.imageUrls" [numVisible]="1" [numScroll]="1" [circular]="true"
             [showIndicators]="post.imageUrls.length > 1" [showNavigators]="post.imageUrls.length > 1">
@@ -57,13 +51,11 @@
             </ng-template>
           </p-carousel>
 
-          <!-- Heart overlay animation -->
           <div class="heart-animation-overlay" *ngIf="heartOverlay">
             <i class="pi pi-heart-fill animated-heart"></i>
           </div>
         </div>
 
-        <!-- Actions -->
         <div class="post-actions">
           <div class="left-actions">
             <button class="action-btn like-btn" [class.liked]="post.hasLiked" (click)="toggleLike()">
@@ -78,12 +70,10 @@
           </button>
         </div>
 
-        <!-- Likes Count -->
         <div class="post-likes-info">
           <span class="likes-text">{{ post.likesCount }} likes</span>
         </div>
 
-        <!-- Caption -->
         <div class="post-caption">
           <span class="caption-author" (click)="viewProfile(post.authorId)" style="cursor: pointer;">
             {{ post.authorName }}
@@ -91,7 +81,6 @@
           <span class="caption-text">{{ post.description }}</span>
         </div>
 
-        <!-- Reusable Comments Component -->
         <app-post-comments #detailCommentsComp [postId]="post.id" [comments]="post.comments"
           [currentUsername]="currentUser ? (currentUser.firstname + ' ' + currentUser.lastname).trim() : 'Traveler'"
           (authorClicked)="viewProfile($event)">

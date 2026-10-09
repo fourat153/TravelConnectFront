@@ -16,7 +16,9 @@ export class App implements OnInit {
   private firebaseMessagingService = inject(FirebaseMessagingService);
 
   ngOnInit() {
-    this.authService.fetchCurrentUser();
+    this.authService.fetchCurrentUser().subscribe({
+      error: () => {}
+    });
   }
 
   onToastClick(message: any) {

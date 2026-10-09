@@ -4,13 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { BottomNavComponent, NavTab } from '../../shared/components/bottom-nav/bottom-nav';
 import { AuthService } from '../../core/services/auth';
-import { FeedService, FeedPost, PostComment } from '../../core/services/feed';
+import { FeedService, FeedPost } from '../../core/services/feed';
 import { User } from '../../shared/models/user';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { CarouselModule } from 'primeng/carousel';
 import { environment } from '../../../environments/environment';
-import { POPULAR_EMOJIS } from '../../shared/constants/emojis';
 
 import { PostCommentsComponent } from '../../shared/components/post-comments/post-comments';
 import { FriendService } from '../../core/services/friends';
@@ -34,7 +33,6 @@ export class Profile implements OnInit {
   user: User | null = null;
   userInitials = '';
 
-  // Visited profile state
   isOwnProfile = true;
   visitedUser: User | null = null;
   visitedUserInitials = '';
@@ -45,16 +43,10 @@ export class Profile implements OnInit {
   relationshipActionLoading = false;
   relationshipRequestId: number | null = null;
 
-  // Post detail modal state
   showPostDetailModal = false;
   selectedPostForModal: FeedPost | null = null;
-  commentInputs: { [postId: number]: string } = {};
-  activeReplyComment: { [postId: number]: PostComment | null } = {};
-  activeEmojiPickerPostId: number | null = null;
-  popularEmojis = POPULAR_EMOJIS;
   heartOverlayPostId: number | null = null;
 
-  // Edit Mode state
   isEditMode = false;
   editForm = {
     firstname: '',
@@ -66,13 +58,11 @@ export class Profile implements OnInit {
     city_lon: null as number | null,
   };
 
-  // City Autocomplete state
   citySearchQuery = '';
   citySuggestions: any[] = [];
   selectedCity: any = null;
   private searchTimeout: any;
 
-  // Image Upload state
   selectedFile: File | null = null;
   imagePreview: string | null = null;
   errorMessage = '';
@@ -87,7 +77,6 @@ export class Profile implements OnInit {
       this.authService.currentUser$.subscribe((currentUser) => {
         if (currentUser) {
           if (!visitedUserId || visitedUserId === currentUser.id) {
-            // Own profile
             this.isOwnProfile = true;
             this.user = currentUser;
             this.userInitials =
@@ -96,16 +85,17 @@ export class Profile implements OnInit {
             this.fetchUserCity();
             this.loadUserPosts(currentUser.id);
           } else {
-            // Visited friend profile
             this.isOwnProfile = false;
-            this.user = currentUser; // current logged in user
+            this.user = currentUser;
             this.userInitials =
               (currentUser.firstname?.[0] ?? '') + (currentUser.lastname?.[0] ?? '');
             this.fetchVisitedUser(visitedUserId);
           }
         } else {
           // Fetch current user if not loaded in BehaviorSubject
-          this.authService.fetchCurrentUser();
+          this.authService.fetchCurrentUser().subscribe({
+            error: () => {}
+          });
         }
       });
     });
@@ -267,7 +257,10 @@ export class Profile implements OnInit {
         this.authService.currentUser$.next(null);
         this.router.navigate(['/auth/login']);
       },
-      error: (err) => {}
+      error: () => {
+        this.authService.currentUser$.next(null);
+        this.router.navigate(['/auth/login']);
+      }
     });
   }
 
@@ -407,66 +400,6 @@ export class Profile implements OnInit {
         this.heartOverlayPostId = null;
       }
     }, 800);
-  }
-
-  replyToComment(post: FeedPost, comment: PostComment, inputElem?: HTMLInputElement): void {
-    this.activeReplyComment[post.id] = comment;
-    if (inputElem) {
-      setTimeout(() => inputElem.focus(), 50);
-    }
-  }
-
-  cancelReply(postId: number): void {
-    this.activeReplyComment[postId] = null;
-  }
-
-  submitComment(post: FeedPost): void {
-    const text = this.commentInputs[post.id];
-    if (!text || !text.trim()) return;
-
-    const replyTarget = this.activeReplyComment[post.id];
-    const parentId = replyTarget?.id ?? null;
-    const userFullName = `${this.user?.firstname} ${this.user?.lastname}`;
-
-    const newComment: PostComment = {
-      username: userFullName,
-      text: text,
-      createdAt: 'Just now',
-      parentId: parentId,
-      replyToUsername: replyTarget?.username
-    };
-
-    post.comments = [...post.comments, newComment];
-    this.commentInputs[post.id] = '';
-    this.activeReplyComment[post.id] = null;
-    this.cdr.detectChanges();
-
-    this.feedService.addComment(post.id, text, parentId).subscribe({
-      next: (res) => {
-        if (res && res.id) {
-          newComment.id = res.id;
-        }
-      },
-      error: (err) => {
-        post.comments = post.comments.filter(c => c !== newComment);
-        this.commentInputs[post.id] = text;
-        this.activeReplyComment[post.id] = replyTarget ?? null;
-        this.cdr.detectChanges();
-      }
-    });
-  }
-
-  toggleEmojiPicker(postId: number): void {
-    if (this.activeEmojiPickerPostId === postId) {
-      this.activeEmojiPickerPostId = null;
-    } else {
-      this.activeEmojiPickerPostId = postId;
-    }
-  }
-
-  addEmoji(postId: number, emoji: string): void {
-    this.commentInputs[postId] = (this.commentInputs[postId] || '') + emoji;
-    this.activeEmojiPickerPostId = null;
   }
 
   goBack() {

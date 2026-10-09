@@ -1,27 +1,24 @@
 import { Component, OnInit, inject, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, FormControl, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { BottomNavComponent, NavTab } from '../../shared/components/bottom-nav/bottom-nav';
 import { AuthService } from '../../core/services/auth';
 import { FirebaseMessagingService } from '../../core/services/firebase-messaging';
-import { FeedService, FeedPost, PostComment } from '../../core/services/feed';
+import { FeedService, FeedPost } from '../../core/services/feed';
 import { TripService } from '../../core/services/trip';
 import { TripCreate } from '../../shared/models/trip';
-import { StopsService } from '../../core/services/stop';
 import { TripStopInputComponent, TripStop } from '../../shared/components/trip-stop-input/trip-stop-input.component';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
-import { TextareaModule } from 'primeng/textarea';
 import { ButtonModule } from 'primeng/button';
 import { CarouselModule } from 'primeng/carousel';
 
-import { forkJoin, of, Observable } from 'rxjs';
+import { of, Observable } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
 import mapboxgl from 'mapbox-gl';
 import { environment } from '../../../environments/environment';
-import { POPULAR_EMOJIS } from '../../shared/constants/emojis';
 import { PostCommentsComponent } from '../../shared/components/post-comments/post-comments';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 
@@ -30,12 +27,10 @@ import { EmptyStateComponent } from '../../shared/components/empty-state/empty-s
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
     ReactiveFormsModule,
     BottomNavComponent,
     DialogModule,
     InputTextModule,
-    TextareaModule,
     ButtonModule,
     CarouselModule,
     TripStopInputComponent,
@@ -50,7 +45,6 @@ export class FeedComponent implements OnInit {
   private authService = inject(AuthService);
   private feedService = inject(FeedService);
   private tripService = inject(TripService);
-  private stopsService = inject(StopsService);
 
   private fb = inject(FormBuilder);
   private cdr = inject(ChangeDetectorRef);
@@ -99,25 +93,10 @@ export class FeedComponent implements OnInit {
   currentUser: any = null;
   currentUserInitials = '';
 
-
-
-  // Create post modal state
   showCreateModal = false;
-  newDescription = '';
-  newLocation = '';
-  newImageUrlsBase64: string[] = [];
-  selectedImages: File[] = [];
   imageError = '';
 
-  // Comment / Emoji Picker state
-  commentInputs: { [postId: number]: string } = {};
-  activeReplyComment: { [postId: number]: PostComment | null } = {};
-  activeEmojiPickerPostId: number | null = null;
-  popularEmojis = POPULAR_EMOJIS;
   heartOverlayPostId: number | null = null;
-
-  selectedVideo: File | null = null;
-  videoPreviewUrl: string | null = null;
 
   createForm!: FormGroup;
   tripStops: TripStop[] = [];
@@ -134,7 +113,6 @@ export class FeedComponent implements OnInit {
       include_home_city: [false],
     });
 
-    // Firebase Messaging service token retrieval and registration
     this.firebaseMessagingService.getFCMToken().then(token => {
       if (token) {
         this.firebaseMessagingService.registerToken(token).subscribe({
@@ -262,107 +240,6 @@ export class FeedComponent implements OnInit {
     });
   }
 
-  replyToComment(post: FeedPost, comment: PostComment, inputElem?: HTMLInputElement): void {
-    this.activeReplyComment[post.id] = comment;
-    if (inputElem) {
-      setTimeout(() => inputElem.focus(), 50);
-    }
-  }
-
-  cancelReply(postId: number): void {
-    this.activeReplyComment[postId] = null;
-  }
-
-  submitComment(post: FeedPost): void {
-    const text = this.commentInputs[post.id];
-    if (!text || !text.trim()) return;
-
-    const replyTarget = this.activeReplyComment[post.id];
-    const parentId = replyTarget?.id ?? null;
-    const userFullName = this.getDisplayName(this.currentUser);
-
-    const newComment: PostComment = {
-      username: userFullName,
-      text: text,
-      createdAt: 'Just now',
-      parentId: parentId,
-      replyToUsername: replyTarget?.username
-    };
-
-    post.comments = [...post.comments, newComment];
-    this.commentInputs[post.id] = '';
-    this.activeReplyComment[post.id] = null;
-    this.cdr.detectChanges();
-
-    this.feedService.addComment(post.id, text, parentId).subscribe({
-      next: (res) => {
-        if (res && res.id) {
-          newComment.id = res.id;
-        }
-      },
-      error: () => {
-        post.comments = post.comments.filter(c => c !== newComment);
-        this.commentInputs[post.id] = text;
-        this.activeReplyComment[post.id] = replyTarget ?? null;
-        this.cdr.detectChanges();
-      }
-    });
-  }
-
-  toggleEmojiPicker(postId: number): void {
-    if (this.activeEmojiPickerPostId === postId) {
-      this.activeEmojiPickerPostId = null;
-    } else {
-      this.activeEmojiPickerPostId = postId;
-    }
-  }
-
-  addEmoji(postId: number, emoji: string): void {
-    this.commentInputs[postId] = (this.commentInputs[postId] || '') + emoji;
-    this.activeEmojiPickerPostId = null;
-  }
-
-  triggerImageUpload(fileInput: HTMLInputElement): void {
-    fileInput.click();
-  }
-
-  onFileSelected(event: any): void {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-
-    this.imageError = '';
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-
-      if (!file.type.startsWith('image/')) {
-        this.imageError = 'Please select valid image files only.';
-        continue;
-      }
-
-      if (file.size > 5 * 1024 * 1024) { 
-        this.imageError = 'Images must be under 5MB.';
-        continue;
-      }
-
-      this.selectedImages.push(file);
-
-      const reader = new FileReader();
-      reader.onload = () => {
-        this.newImageUrlsBase64.push(reader.result as string);
-      };
-      reader.onerror = () => {
-        this.imageError = 'Error reading file.';
-      };
-      reader.readAsDataURL(file);
-    }
-  }
-
-  removeUploadedImage(index: number): void {
-    this.newImageUrlsBase64.splice(index, 1);
-    this.selectedImages.splice(index, 1);
-  }
-
   onStopsChange(stops: TripStop[]): void {
     this.tripStops = stops;
     this.cdr.markForCheck();
@@ -378,46 +255,9 @@ export class FeedComponent implements OnInit {
 
   openCreateModal(): void {
     this.showCreateModal = true;
-    this.newDescription = '';
-    this.newLocation = '';
-    this.newImageUrlsBase64 = [];
-    this.selectedImages = [];
     this.imageError = '';
-    this.selectedVideo = null;
-    this.videoPreviewUrl = null;
     this.tripStops = [];
     this.createForm?.reset({ title: '', privacy: 'public', include_home_city: false });
-  }
-
-  hasAnyStopPhotos(): boolean {
-    return this.selectedImages.length > 0;
-  }
-
-  onVideoSelected(event: any): void {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('video/')) {
-      this.imageError = 'Please select a valid video file.';
-      return;
-    }
-
-    if (file.size > 50 * 1024 * 1024) { 
-      this.imageError = 'Video must be under 50MB.';
-      return;
-    }
-
-    this.imageError = '';
-    this.selectedVideo = file;
-    this.videoPreviewUrl = URL.createObjectURL(file);
-  }
-
-  removeVideo(): void {
-    if (this.videoPreviewUrl) {
-      URL.revokeObjectURL(this.videoPreviewUrl);
-    }
-    this.selectedVideo = null;
-    this.videoPreviewUrl = null;
   }
 
   submitPost(): void {

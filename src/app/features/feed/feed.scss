@@ -9,7 +9,6 @@
   height: 100%;
 }
 
-/* Layout */
 .app-shell {
   display: flex;
   width: 100vw;
@@ -40,7 +39,6 @@
   padding: 24px 0 100px;
 }
 
-/* Common Flex Helpers */
 .feed-header,
 .logo-wrapper,
 .post-author-info,
@@ -53,7 +51,6 @@
   align-items: center;
 }
 
-/* Header */
 .feed-header {
   justify-content: space-between;
   padding: 10px 4px 16px;
@@ -104,7 +101,6 @@
   }
 }
 
-/* View Toggle (Timeline / Map) */
 .feed-view-toggle {
   display: flex;
   justify-content: center;
@@ -141,7 +137,6 @@
   }
 }
 
-/* Map View */
 .feed-map-container {
   position: relative;
   z-index: 1;
@@ -200,7 +195,6 @@
   margin: 12px 0 24px;
 }
 
-/* Posts List & Cards */
 .posts-list {
   display: flex;
   flex-direction: column;
@@ -394,7 +388,6 @@
   }
 }
 
-/* Right Sidebar */
 .feed-right-sidebar {
   position: sticky;
   top: 0;
@@ -476,7 +469,6 @@
   }
 }
 
-/* Create Post Modal */
 .create-post-form {
   display: flex;
   flex-direction: column;
@@ -582,7 +574,6 @@
   box-shadow: 0 4px 12px rgb(126 17 154 / 15%);
 }
 
-/* Detail Modal Card (From Map) */
 .detail-modal-card {
   border: 0;
   box-shadow: none;
@@ -621,7 +612,6 @@
   }
 }
 
-/* Animations */
 @keyframes heart-pop {
   0% { opacity: 0; transform: scale(0); }
   15% { opacity: 0.9; transform: scale(1.2); }
@@ -636,7 +626,6 @@
   50% { transform: scale(0.95); }
 }
 
-/* Responsive Media Queries */
 @media (max-width: 1000px) {
   .feed-right-sidebar {
     display: none;
@@ -687,7 +676,6 @@
   }
 }
 
-/* PrimeNG Overrides */
 ::ng-deep {
   .p-dialog {
     border: 0 !important;

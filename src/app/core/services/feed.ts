@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
+import { PostsOut } from '../../shared/models/post';
 
 export interface PostComment {
   id?: number;
@@ -180,6 +181,14 @@ export class FeedService {
     return this.http.get<FeedPost[]>(`${this.baseUrl}/posts/user/${userId}`, { withCredentials: true });
   }
 
+  getStopPosts(stopId: number): Observable<PostsOut> {
+    return this.http.get<PostsOut>(`${this.baseUrl}/stops/${stopId}/posts`, { withCredentials: true });
+  }
+
+  getPostComments(postId: number): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/posts/${postId}/comments`, { withCredentials: true });
+  }
+
   likePost(postId: number): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/posts/${postId}/likes`, {}, { withCredentials: true }).pipe(
       map((res) => {
@@ -244,7 +253,7 @@ export class FeedService {
     formData.append('title', description);
     formData.append('location', location);
     formData.append('lat', lat.toString());
-    formData.append('long', lon.toString()); // Backend expects long
+    formData.append('long', lon.toString()); 
 
     images.forEach(image => {
       formData.append('images', image);
@@ -261,12 +270,16 @@ export class FeedService {
   createStopPost(
     stopId: number,
     description: string,
-    images: File[]
+    images: File[],
+    videos: File[] = []
   ): Observable<any> {
     const formData = new FormData();
     formData.append('title', description);
     images.forEach(image => {
       formData.append('images', image);
+    });
+    videos.forEach(video => {
+      formData.append('videos', video);
     });
     return this.http.post<any>(`${this.baseUrl}/stops/${stopId}/posts`, formData, { withCredentials: true });
   }

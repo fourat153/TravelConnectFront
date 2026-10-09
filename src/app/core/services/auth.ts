@@ -40,9 +40,10 @@ export class AuthService {
     return this.http.patch(`${this.baseUrl}/confirmAccount`, confirmationcode);
   }
 
-  fetchCurrentUser() {
-    return this.http.get<User>(`${this.baseUrl}/users/me`, { withCredentials: true })
-      .subscribe(user => this.currentUser$.next(user));
+  fetchCurrentUser(): Observable<User> {
+    return this.http.get<User>(`${this.baseUrl}/users/me`, { withCredentials: true }).pipe(
+      tap(user => this.currentUser$.next(user))
+    );
   }
 
   updateProfile(data: {

@@ -2,12 +2,11 @@ import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { FeedService, FeedPost, PostComment } from '../../core/services/feed';
+import { FeedService, FeedPost } from '../../core/services/feed';
 import { AuthService } from '../../core/services/auth';
 import { BottomNavComponent, NavTab } from '../../shared/components/bottom-nav/bottom-nav';
 import { CarouselModule } from 'primeng/carousel';
 import { ButtonModule } from 'primeng/button';
-import { POPULAR_EMOJIS } from '../../shared/constants/emojis';
 
 import { PostCommentsComponent } from '../../shared/components/post-comments/post-comments';
 
@@ -36,64 +35,8 @@ export class PostDetailComponent implements OnInit {
   loading = true;
   errorMessage = '';
 
-  activeReplyComment: PostComment | null = null;
   currentUser: any = null;
-  commentInput = '';
-  activeEmojiPicker = false;
-  popularEmojis = POPULAR_EMOJIS;
   heartOverlay = false;
-
-  replyToComment(comment: PostComment, inputElem?: HTMLInputElement): void {
-    this.activeReplyComment = comment;
-    if (inputElem) {
-      setTimeout(() => inputElem.focus(), 50);
-    }
-  }
-
-  cancelReply(): void {
-    this.activeReplyComment = null;
-  }
-
-  submitComment(): void {
-    if (!this.post || !this.commentInput || !this.commentInput.trim()) return;
-
-    const replyTarget = this.activeReplyComment;
-    const parentId = replyTarget?.id ?? null;
-
-    const userFullName = this.currentUser
-      ? `${this.currentUser.firstname || ''} ${this.currentUser.lastname || ''}`.trim()
-      : 'Traveler';
-
-    const text = this.commentInput;
-    const newComment: PostComment = {
-      username: userFullName || 'Traveler',
-      text: text,
-      createdAt: 'Just now',
-      parentId: parentId,
-      replyToUsername: replyTarget?.username
-    };
-
-    this.post.comments = [...this.post.comments, newComment];
-    this.commentInput = '';
-    this.activeReplyComment = null;
-    this.cdr.detectChanges();
-
-    this.feedService.addComment(this.post.id, text, parentId).subscribe({
-      next: (res) => {
-        if (res && res.id) {
-          newComment.id = res.id;
-        }
-      },
-      error: (err) => {
-        if (this.post) {
-          this.post.comments = this.post.comments.filter(c => c !== newComment);
-          this.commentInput = text;
-          this.activeReplyComment = replyTarget;
-          this.cdr.detectChanges();
-        }
-      }
-    });
-  }
 
   ngOnInit(): void {
     this.authService.currentUser$.subscribe(user => {
@@ -175,15 +118,6 @@ export class PostDetailComponent implements OnInit {
       this.heartOverlay = false;
       this.cdr.detectChanges();
     }, 800);
-  }
-
-  toggleEmojiPicker(): void {
-    this.activeEmojiPicker = !this.activeEmojiPicker;
-  }
-
-  addEmoji(emoji: string): void {
-    this.commentInput = (this.commentInput || '') + emoji;
-    this.activeEmojiPicker = false;
   }
 
   onNavTabChanged(tab: NavTab): void {

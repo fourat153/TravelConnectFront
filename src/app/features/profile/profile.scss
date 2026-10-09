@@ -95,7 +95,6 @@
   }
 }
 
-// Left Section: Avatar
 .avatar-section {
   background: linear-gradient(180deg, rgba(59, 130, 246, 0.03) 0%, rgba(30, 58, 138, 0.05) 100%);
   padding: 3rem 2rem;
@@ -235,7 +234,6 @@
   }
 }
 
-// Right Section: Form Details
 .details-section {
   padding: 3rem;
 
@@ -353,7 +351,6 @@
   }
 }
 
-// Suggestions Auto-complete
 .suggestions-dropdown {
   position: absolute;
   top: 100%;
@@ -387,7 +384,6 @@
   }
 }
 
-// Buttons & Actions
 .btn {
   display: inline-flex;
   align-items: center;
@@ -679,7 +675,6 @@
   }
 }
 
-// Visited Profile & Instagram Grid Extensions
 .back-navigation {
   align-self: flex-start;
   margin-bottom: 0.5rem;
@@ -1192,7 +1187,6 @@
   }
 }
 
-// Carousel customization for modal
 ::ng-deep {
   .post-image-container {
     .p-carousel-content {

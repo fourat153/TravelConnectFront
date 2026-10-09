@@ -44,7 +44,6 @@
   }
 }
 
-/* Header */
 .sheet-header {
   padding: 0 16px 12px;
   border-bottom: 1px solid #f0f0f0;
@@ -54,6 +53,12 @@
     justify-content: space-between;
     align-items: flex-start;
     margin-top: 8px;
+  }
+
+  .delete-dialog {
+    h2 { margin: 0 0 10px; color: #111827; }
+    p { margin: 0; color: #4b5563; }
+    &__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
   }
 
   .stop-title-bold {
@@ -123,7 +128,6 @@
   }
 }
 
-/* Post Creation Form */
 .post-form {
   padding: 12px 16px;
   border-bottom: 1px solid #f0f0f0;
@@ -269,7 +273,6 @@
   }
 }
 
-/* Feed List & Posts */
 .feed {
   flex: 1;
   padding: 12px 16px;
@@ -308,6 +311,21 @@
   padding: 14px 16px;
   border-bottom: 1px solid #f5f5f5;
 
+  .post-menu-btn {
+    margin-left: auto;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    border: 0;
+    background: transparent;
+    color: #666;
+    cursor: pointer;
+
+    &:hover {
+      color: #111;
+    }
+  }
+
   .author-avatar {
     ::ng-deep .p-avatar {
       background: #8e2de2 !important;
@@ -345,7 +363,6 @@
   }
 }
 
-/* Custom Image Slider */
 .custom-slider {
   position: relative;
   max-width: 400px;

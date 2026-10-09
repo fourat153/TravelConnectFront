@@ -6,7 +6,6 @@
 
     <div class="feed-main-container">
 
-      <!-- Top header bar for Feed -->
       <header class="feed-header">
         <div class="logo-wrapper">
           <i class="pi pi-compass logo-icon"></i>
@@ -16,7 +15,6 @@
           (onClick)="openCreateModal()"></p-button>
       </header>
 
-      <!-- View Toggle at the top -->
       <div class="feed-view-toggle">
         <button class="toggle-btn" [class.active]="activeView === 'timeline'" (click)="setActiveView('timeline')">
           <i class="pi pi-list"></i>
@@ -28,7 +26,6 @@
         </button>
       </div>
 
-      <!-- Map View -->
       <ng-container *ngIf="activeView === 'map'">
         <div class="feed-empty-container" *ngIf="!isLoading && posts.length === 0">
           <app-empty-state
@@ -60,7 +57,6 @@
         </div>
       </ng-container>
 
-      <!-- Timeline View -->
       <ng-container *ngIf="activeView === 'timeline'">
         <div class="feed-empty-container" *ngIf="!isLoading && posts.length === 0">
           <app-empty-state
@@ -76,12 +72,9 @@
           </app-empty-state>
         </div>
 
-        <!-- Feed Posts list -->
         <div class="posts-list" *ngIf="posts.length > 0">
-
         <div class="post-card" *ngFor="let post of posts">
 
-          <!-- Post Header -->
           <div class="post-header">
             <div class="post-author-info">
               <div class="author-avatar-wrapper" (click)="viewProfile(post.authorId)" style="cursor: pointer;">
@@ -101,7 +94,6 @@
             </button>
           </div>
 
-          <!-- Post Photo Container (Double click to like) -->
           <div class="post-image-container" *ngIf="post.imageUrls && post.imageUrls.length > 0">
             <p-carousel [value]="post.imageUrls" [numVisible]="1" [numScroll]="1" [circular]="true"
               [showIndicators]="post.imageUrls.length > 1" [showNavigators]="post.imageUrls.length > 1">
@@ -110,13 +102,11 @@
               </ng-template>
             </p-carousel>
 
-            <!-- Large floating heart double click animation overlay -->
             <div class="heart-animation-overlay" *ngIf="heartOverlayPostId === post.id">
               <i class="pi pi-heart-fill animated-heart"></i>
             </div>
           </div>
 
-          <!-- Action buttons (Like, Comment, Share) -->
           <div class="post-actions">
             <div class="left-actions">
               <button class="action-btn like-btn" [class.liked]="post.hasLiked" (click)="toggleLike(post)">
@@ -125,26 +115,22 @@
               <button class="action-btn comment-btn" (click)="timelineCommentsComp.focusInput()">
                 <i class="pi pi-comment"></i>
               </button>
-
             </div>
             <button class="action-btn bookmark-btn">
               <i class="pi pi-bookmark"></i>
             </button>
           </div>
 
-          <!-- Likes Count -->
           <div class="post-likes-info">
             <span class="likes-text">{{ post.likesCount }} likes</span>
           </div>
 
-          <!-- Post Caption -->
           <div class="post-caption">
             <span class="caption-author" (click)="viewProfile(post.authorId)" style="cursor: pointer;">{{
               post.authorName }}</span>
             <span class="caption-text">{{ post.description }}</span>
           </div>
 
-          <!-- Reusable Comments Component -->
           <app-post-comments
             #timelineCommentsComp
             [postId]="post.id"
@@ -152,15 +138,12 @@
             [currentUsername]="getDisplayName(currentUser)"
             (authorClicked)="viewProfile($event)">
           </app-post-comments>
-
         </div>
-
-      </div>
+        </div>
       </ng-container>
 
     </div>
 
-    <!-- Right suggestions sidebar (desktop only) -->
     <aside class="feed-right-sidebar">
 
       <div class="user-profile-row">
@@ -189,19 +172,16 @@
 
 </div>
 
-<!-- PrimeNG Modal Dialog for Sharing a New Trip Post -->
 <p-dialog [(visible)]="showCreateModal" [modal]="true" [draggable]="false" [resizable]="false" header="Create New Trip"
   [style]="{ width: '500px', 'max-width': '95vw', 'border-radius': '20px', overflow: 'hidden' }">
 
   <div class="create-post-form">
 
-    <!-- Image Error message -->
     <div class="form-error-msg" *ngIf="imageError">
       <i class="pi pi-exclamation-triangle"></i> {{ imageError }}
     </div>
 
     <div [formGroup]="createForm">
-      <!-- Trip Title -->
       <div class="form-field">
         <label for="title">Trip Title</label>
         <input pInputText id="title" formControlName="title" placeholder="e.g. Weekend in Tunis"
@@ -211,7 +191,6 @@
         </small>
       </div>
 
-      <!-- Privacy -->
       <div class="form-field">
         <label>Privacy</label>
         <div class="seg">
@@ -223,7 +202,6 @@
         </div>
       </div>
 
-      <!-- Route -->
       <div class="form-field">
         <label>Route</label>
         <app-trip-stop-input [allowPhotos]="false" [maxStops]="2" (stopsChange)="onStopsChange($event)" />
@@ -233,7 +211,6 @@
 
     </div>
 
-    <!-- Actions Footer -->
     <div class="form-actions-footer">
       <button class="dialog-cancel-btn" (click)="showCreateModal = false">Cancel</button>
       <p-button label="Save" icon="pi pi-check" styleClass="share-trip-btn dialog-submit-btn"
@@ -244,14 +221,12 @@
 
 </p-dialog>
 
-<!-- Post Detail Modal (when clicked from map) -->
 <p-dialog [(visible)]="showPostDetailModal" [modal]="true" [draggable]="false" [resizable]="false"
   [header]="selectedPostForModal?.tripTitle || 'Trip Details'"
   [style]="{ width: '550px', 'max-width': '95vw', 'border-radius': '20px', overflow: 'hidden' }">
 
   <div class="post-card detail-modal-card" *ngIf="selectedPostForModal"
     style="border: none; box-shadow: none; margin: 0; padding: 0;">
-    <!-- Post Header -->
     <div class="post-header" style="padding: 0 0 12px 0;">
       <div class="post-author-info">
         <div class="author-avatar-wrapper" (click)="viewProfile(selectedPostForModal.authorId)"
@@ -270,7 +245,6 @@
       </div>
     </div>
 
-    <!-- Post Photo Container (Double click to like) -->
     <div class="post-image-container" *ngIf="selectedPostForModal.imageUrls && selectedPostForModal.imageUrls.length > 0"
       style="border-radius: 12px; overflow: hidden; position: relative;">
       <p-carousel [value]="selectedPostForModal.imageUrls" [numVisible]="1" [numScroll]="1" [circular]="true"
@@ -282,13 +256,11 @@
         </ng-template>
       </p-carousel>
 
-      <!-- Large floating heart double click animation overlay -->
       <div class="heart-animation-overlay" *ngIf="heartOverlayPostId === selectedPostForModal.id">
         <i class="pi pi-heart-fill animated-heart"></i>
       </div>
     </div>
 
-    <!-- Action buttons (Like, Comment) -->
     <div class="post-actions" style="padding: 12px 0 6px 0;">
       <div class="left-actions">
         <button class="action-btn like-btn" [class.liked]="selectedPostForModal.hasLiked"
@@ -304,12 +276,10 @@
       </button>
     </div>
 
-    <!-- Likes Count -->
     <div class="post-likes-info" style="padding: 0 0 4px 0;">
       <span class="likes-text">{{ selectedPostForModal.likesCount }} likes</span>
     </div>
 
-    <!-- Post Caption -->
     <div class="post-caption" style="padding: 4px 0 8px 0;">
       <span class="caption-author">{{ selectedPostForModal.authorName }}</span>
       <span class="caption-text">{{ selectedPostForModal.description }}</span>
@@ -322,7 +292,6 @@
       </button>
     </div>
 
-    <!-- Reusable Comments Component -->
     <app-post-comments
       #modalCommentsComp
       [postId]="selectedPostForModal.id"
