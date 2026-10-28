@@ -44,6 +44,10 @@
             <div class="status-badge" *ngIf="user?.has_completed_onboarding === 'Onboarded'">
               <i class="pi pi-verified"></i> Onboarded
             </div>
+            <p-button label="Find Friends" icon="pi pi-users"
+              styleClass="p-button-secondary p-button-outlined p-button-sm mt-3 w-full"
+              (onClick)="findFriends()">
+            </p-button>
             <p-button label="Logout" icon="pi pi-sign-out"
               styleClass="p-button-danger p-button-outlined p-button-sm mt-3 w-full" (onClick)="logout()">
             </p-button>
@@ -228,7 +232,24 @@
         <div class="posts-grid" *ngIf="!postsLoading && posts.length > 0">
           <div class="grid-item" *ngFor="let post of posts" (click)="openPostDetail(post)">
             <div class="grid-image-wrapper">
-              <img [src]="post.imageUrls[0] || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=300'"
+              <!-- If post has images -->
+              <img *ngIf="post.imageUrls && post.imageUrls.length > 0"
+                [src]="post.imageUrls[0]"
+                [alt]="post.location" class="grid-image" />
+
+              <!-- If post only has videos -->
+              <video *ngIf="(!post.imageUrls || post.imageUrls.length === 0) && post.videoUrls && post.videoUrls.length > 0"
+                [src]="post.videoUrls[0]" class="grid-image grid-video" muted playsinline preload="metadata">
+              </video>
+
+              <!-- Video badge indicator -->
+              <div class="grid-video-badge" *ngIf="post.videoUrls && post.videoUrls.length > 0">
+                <i class="pi pi-video"></i>
+              </div>
+
+              <!-- Fallback if neither exists -->
+              <img *ngIf="(!post.imageUrls || post.imageUrls.length === 0) && (!post.videoUrls || post.videoUrls.length === 0)"
+                src="https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=300"
                 [alt]="post.location" class="grid-image" />
             </div>
             <div class="grid-overlay">
@@ -269,8 +290,8 @@
       </div>
     </div>
 
-    <div class="post-image-container"
-      style="height: 380px; border-radius: 12px; overflow: hidden; background: #0f172a; position: relative;">
+    <!-- Images Carousel in Detail Modal -->
+    <div class="post-image-container" *ngIf="selectedPostForModal.imageUrls && selectedPostForModal.imageUrls.length > 0">
       <p-carousel [value]="selectedPostForModal.imageUrls" [numVisible]="1" [numScroll]="1" [circular]="true"
         [showIndicators]="selectedPostForModal.imageUrls.length > 1"
         [showNavigators]="selectedPostForModal.imageUrls.length > 1">
@@ -283,6 +304,17 @@
       <div class="heart-animation-overlay" *ngIf="heartOverlayPostId === selectedPostForModal.id">
         <i class="pi pi-heart-fill animated-heart"></i>
       </div>
+    </div>
+
+    <!-- Videos Carousel in Detail Modal -->
+    <div class="post-image-container post-video-container" *ngIf="selectedPostForModal.videoUrls && selectedPostForModal.videoUrls.length > 0">
+      <p-carousel [value]="selectedPostForModal.videoUrls" [numVisible]="1" [numScroll]="1" [circular]="true"
+        [showIndicators]="selectedPostForModal.videoUrls.length > 1"
+        [showNavigators]="selectedPostForModal.videoUrls.length > 1">
+        <ng-template let-videoUrl pTemplate="item">
+          <video [src]="videoUrl" class="post-video" controls playsinline></video>
+        </ng-template>
+      </p-carousel>
     </div>
 
     <div class="post-actions" style="padding: 12px 0 6px 0;">

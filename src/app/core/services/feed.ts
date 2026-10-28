@@ -22,6 +22,7 @@ export interface FeedPost {
   authorAvatar: string;
   location: string;
   imageUrls: string[];
+  videoUrls: string[];
   description: string;
   likesCount: number;
   hasLiked: boolean;
@@ -42,61 +43,174 @@ export class FeedService {
   private readonly baseUrl = environment.apiUrl;
   private posts$ = new BehaviorSubject<FeedPost[]>([]);
   private loading$ = new BehaviorSubject<boolean>(true);
+  private loadingMore$ = new BehaviorSubject<boolean>(false);
+  private hasMore$ = new BehaviorSubject<boolean>(true);
+
+  private currentPage = 1;
+  private readonly pageSize = 10;
+  private totalPages = 1;
+  private isFetching = false;
 
   constructor() {
     this.loadPosts();
   }
 
-  loadPosts(): void {
-    this.loading$.next(true);
-    this.http.get<any[]>(`${this.baseUrl}/posts/feed?_=${new Date().getTime()}`, { withCredentials: true })
+  private getMediaUrls(rawMedia: unknown): string[] {
+    if (!Array.isArray(rawMedia)) {
+      return [];
+    }
+
+    return rawMedia
+      .map((media: unknown) => {
+        if (typeof media === 'string') {
+          return media;
+        }
+
+        if (media && typeof media === 'object') {
+          const item = media as {
+            link?: unknown;
+            url?: unknown;
+            path?: unknown;
+            src?: unknown;
+            video_url?: unknown;
+            file_url?: unknown;
+          };
+          const url = item.link ?? item.url ?? item.path ?? item.src ?? item.video_url ?? item.file_url;
+          return typeof url === 'string' ? url : '';
+        }
+
+        return '';
+      })
+      .filter((url): url is string => Boolean(url));
+  }
+
+  private getVideoUrls(rawPost: any): string[] {
+    const videos = this.getMediaUrls(
+      rawPost.videos ??
+      rawPost.videoUrls ??
+      rawPost.video_urls ??
+      (rawPost.video ? [rawPost.video] : [])
+    );
+    if (videos.length > 0) {
+      return videos;
+    }
+
+    if (!Array.isArray(rawPost.media)) {
+      return [];
+    }
+
+    return rawPost.media
+      .filter((media: any) => media?.type?.startsWith('video/') || media?.media_type === 'video')
+      .map((media: any) => this.getMediaUrls([media])[0] || '')
+      .filter((url: string): url is string => Boolean(url));
+  }
+
+  private transformPost(rawPost: any): FeedPost {
+    const rawComments = rawPost.comments || [];
+    const comments: PostComment[] = rawComments.map((c: any) => {
+      const username = c.username || c.user_name || (c.user ? `${c.user.firstname || ''} ${c.user.lastname || ''}`.trim() : '') || 'Traveler';
+      const parentId = c.parent_id ?? c.parentId ?? null;
+      let replyToUsername: string | undefined = undefined;
+
+      if (parentId) {
+        const parent = rawComments.find((pc: any) => pc.id === parentId);
+        if (parent) {
+          replyToUsername = parent.username || parent.user_name || (parent.user ? `${parent.user.firstname || ''} ${parent.user.lastname || ''}`.trim() : '') || 'Traveler';
+        }
+      }
+
+      return {
+        id: c.id,
+        userId: c.user_id || c.userId,
+        username: username,
+        text: c.text || c.content || '',
+        createdAt: c.createdAt || c.created_at || 'Just now',
+        parentId: parentId,
+        replyToUsername: replyToUsername
+      };
+    });
+
+    return {
+      ...rawPost,
+      imageUrls: this.getMediaUrls(rawPost.images ?? rawPost.imageUrls),
+      videoUrls: this.getVideoUrls(rawPost),
+      stopId: rawPost.stop_id ?? rawPost.stopId,
+      tripId: rawPost.trip_id ?? rawPost.tripId,
+      comments
+    };
+  }
+
+  loadPosts(reset: boolean = true): void {
+    if (this.isFetching) return;
+
+    if (reset) {
+      this.currentPage = 1;
+      this.loading$.next(true);
+    } else {
+      this.loadingMore$.next(true);
+    }
+
+    this.isFetching = true;
+
+    const pageToLoad = reset ? 1 : this.currentPage + 1;
+    const url = `${this.baseUrl}/posts/feed?page_number=${pageToLoad}&page_size=${this.pageSize}&_=${new Date().getTime()}`;
+
+    this.http.get<any>(url, { withCredentials: true })
       .subscribe({
-        next: (rawPosts) => {
-          const posts: FeedPost[] = (rawPosts ?? []).map((rawPost: any) => {
-            const rawComments = rawPost.comments || [];
-            const comments: PostComment[] = rawComments.map((c: any) => {
-              const username = c.username || c.user_name || (c.user ? `${c.user.firstname || ''} ${c.user.lastname || ''}`.trim() : '') || 'Traveler';
-              const parentId = c.parent_id ?? c.parentId ?? null;
-              let replyToUsername: string | undefined = undefined;
+        next: (response) => {
+          const rawPostsList = Array.isArray(response)
+            ? response
+            : (response?.posts ?? response?.data ?? response?.items ?? []);
 
-              if (parentId) {
-                const parent = rawComments.find((pc: any) => pc.id === parentId);
-                if (parent) {
-                  replyToUsername = parent.username || parent.user_name || (parent.user ? `${parent.user.firstname || ''} ${parent.user.lastname || ''}`.trim() : '') || 'Traveler';
-                }
-              }
+          const newPosts: FeedPost[] = rawPostsList.map((rawPost: any) => this.transformPost(rawPost));
 
-              return {
-                id: c.id,
-                userId: c.user_id || c.userId,
-                username: username,
-                text: c.text || c.content || '',
-                createdAt: c.createdAt || c.created_at || 'Just now',
-                parentId: parentId,
-                replyToUsername: replyToUsername
-              };
-            });
+          this.currentPage = response?.page_number ?? pageToLoad;
+          this.totalPages = response?.total_pages ?? (newPosts.length < this.pageSize ? this.currentPage : this.currentPage + 1);
+          this.hasMore$.next(this.currentPage < this.totalPages && newPosts.length > 0);
 
-            return {
-              ...rawPost,
-              stopId: rawPost.stop_id ?? rawPost.stopId,
-              tripId: rawPost.trip_id ?? rawPost.tripId,
-              comments
-            };
-          });
+          if (reset) {
+            this.posts$.next(newPosts);
+            this.loading$.next(false);
+          } else {
+            const currentPosts = this.posts$.getValue();
+            // Prevent duplicate posts if any
+            const existingIds = new Set(currentPosts.map(p => p.id));
+            const filteredNew = newPosts.filter(p => !existingIds.has(p.id));
+            this.posts$.next([...currentPosts, ...filteredNew]);
+            this.loadingMore$.next(false);
+          }
 
-          this.posts$.next(posts);
-          this.loading$.next(false);
+          this.isFetching = false;
         },
         error: () => {
-          this.posts$.next([]);
-          this.loading$.next(false);
+          if (reset) {
+            this.posts$.next([]);
+            this.loading$.next(false);
+          } else {
+            this.loadingMore$.next(false);
+          }
+          this.isFetching = false;
         }
       });
   }
 
+  loadNextPage(): void {
+    if (!this.hasMore$.getValue() || this.isFetching) {
+      return;
+    }
+    this.loadPosts(false);
+  }
+
   getLoading(): Observable<boolean> {
     return this.loading$.asObservable();
+  }
+
+  getLoadingMore(): Observable<boolean> {
+    return this.loadingMore$.asObservable();
+  }
+
+  getHasMore(): Observable<boolean> {
+    return this.hasMore$.asObservable();
   }
 
   getPosts(): Observable<FeedPost[]> {
@@ -112,10 +226,8 @@ export class FeedService {
         }
 
         const imageUrls = Array.isArray(rawPost.images)
-          ? rawPost.images.map((img: any) => (typeof img === 'string' ? img : img.link || img.url || ''))
-          : Array.isArray(rawPost.imageUrls)
-            ? rawPost.imageUrls
-            : [];
+          ? this.getMediaUrls(rawPost.images)
+          : this.getMediaUrls(rawPost.imageUrls);
 
         const authorId = rawPost.authorId || rawPost.author_id || rawPost.user_id || rawPost.user?.id;
         const authorName =
@@ -162,6 +274,7 @@ export class FeedService {
           authorAvatar: authorAvatar,
           location: rawPost.location || rawPost.title || '',
           imageUrls: imageUrls,
+          videoUrls: this.getVideoUrls(rawPost),
           description: rawPost.description || rawPost.title || '',
           likesCount: rawPost.likes_count ?? rawPost.likesCount ?? 0,
           hasLiked: rawPost.has_liked ?? rawPost.hasLiked ?? false,
@@ -178,11 +291,32 @@ export class FeedService {
   }
 
   getUserPosts(userId: number): Observable<FeedPost[]> {
-    return this.http.get<FeedPost[]>(`${this.baseUrl}/posts/user/${userId}`, { withCredentials: true });
+    return this.http.get<any>(`${this.baseUrl}/posts/user/${userId}`, { withCredentials: true }).pipe(
+      map((res) => {
+        const list = Array.isArray(res) ? res : (res?.posts ?? res?.data ?? []);
+        return list.map((rawPost: any) => this.transformPost(rawPost));
+      })
+    );
   }
 
   getStopPosts(stopId: number): Observable<PostsOut> {
-    return this.http.get<PostsOut>(`${this.baseUrl}/stops/${stopId}/posts`, { withCredentials: true });
+    return this.http.get<PostsOut>(`${this.baseUrl}/stops/${stopId}/posts`, { withCredentials: true }).pipe(
+      map((res) => ({
+        ...res,
+        posts: (res.posts ?? []).map((post: any) => ({
+          ...post,
+          images: this.getMediaUrls(post.images).map((link, index) => ({
+            id: post.images?.[index]?.id ?? index,
+            link,
+            caption: post.images?.[index]?.caption ?? null
+          })),
+          videos: this.getVideoUrls(post).map((link, index) => ({
+            id: post.videos?.[index]?.id ?? index,
+            link
+          }))
+        }))
+      }))
+    );
   }
 
   getPostComments(postId: number): Observable<any> {

@@ -56,6 +56,16 @@
           </div>
         </div>
 
+        <div class="post-image-container post-video-container" *ngIf="post.videoUrls && post.videoUrls.length > 0">
+          <p-carousel [value]="post.videoUrls" [numVisible]="1" [numScroll]="1" [circular]="true"
+            [showIndicators]="post.videoUrls.length > 1" [showNavigators]="post.videoUrls.length > 1">
+            <ng-template let-videoUrl pTemplate="item">
+              <video [src]="videoUrl" [attr.aria-label]="post.location + ' video'" class="post-video"
+                controls playsinline></video>
+            </ng-template>
+          </p-carousel>
+        </div>
+
         <div class="post-actions">
           <div class="left-actions">
             <button class="action-btn like-btn" [class.liked]="post.hasLiked" (click)="toggleLike()">

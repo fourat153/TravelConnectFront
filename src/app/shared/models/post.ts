@@ -4,6 +4,11 @@ export interface ImageOut {
   caption: string | null;
 }
 
+export interface VideoOut {
+  id: number;
+  link: string;
+}
+
 export interface CommentData {
   id?: number;
   userId?: number;
@@ -24,6 +29,7 @@ export interface PostOut {
   title: string;
   created_at: string;
   images: ImageOut[];
+  videos?: VideoOut[];
   likes_count?: number;
   has_liked?: boolean;
   comments?: CommentData[];

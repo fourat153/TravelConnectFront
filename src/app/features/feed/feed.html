@@ -2,7 +2,7 @@
 
   <app-bottom-nav active="feed" (tabChanged)="onNavTabChanged($event)"></app-bottom-nav>
 
-  <div class="feed-content">
+  <div class="feed-content" (scroll)="onScroll($event)">
 
     <div class="feed-main-container">
 
@@ -107,6 +107,16 @@
             </div>
           </div>
 
+          <div class="post-image-container post-video-container" *ngIf="post.videoUrls && post.videoUrls.length > 0">
+            <p-carousel [value]="post.videoUrls" [numVisible]="1" [numScroll]="1" [circular]="true"
+              [showIndicators]="post.videoUrls.length > 1" [showNavigators]="post.videoUrls.length > 1">
+              <ng-template let-videoUrl pTemplate="item">
+                <video [src]="videoUrl" [attr.aria-label]="post.location + ' video'" class="post-video"
+                  controls playsinline></video>
+              </ng-template>
+            </p-carousel>
+          </div>
+
           <div class="post-actions">
             <div class="left-actions">
               <button class="action-btn like-btn" [class.liked]="post.hasLiked" (click)="toggleLike(post)">
@@ -139,6 +149,18 @@
             (authorClicked)="viewProfile($event)">
           </app-post-comments>
         </div>
+        </div>
+
+        <!-- Infinite Scroll Loading Indicator -->
+        <div class="feed-loading-more" *ngIf="isLoadingMore">
+          <i class="pi pi-spin pi-spinner feed-spinner"></i>
+          <span>Loading more adventures...</span>
+        </div>
+
+        <!-- End of Feed Message -->
+        <div class="feed-end-notice" *ngIf="!hasMore && posts.length > 0 && !isLoading">
+          <i class="pi pi-check-circle"></i>
+          <span>You're all caught up!</span>
         </div>
       </ng-container>
 
@@ -259,6 +281,19 @@
       <div class="heart-animation-overlay" *ngIf="heartOverlayPostId === selectedPostForModal.id">
         <i class="pi pi-heart-fill animated-heart"></i>
       </div>
+    </div>
+
+    <div class="post-image-container post-video-container"
+      *ngIf="selectedPostForModal.videoUrls && selectedPostForModal.videoUrls.length > 0"
+      style="height: 380px; border-radius: 12px; overflow: hidden; background: #0f172a; position: relative;">
+      <p-carousel [value]="selectedPostForModal.videoUrls" [numVisible]="1" [numScroll]="1" [circular]="true"
+        [showIndicators]="selectedPostForModal.videoUrls.length > 1"
+        [showNavigators]="selectedPostForModal.videoUrls.length > 1">
+        <ng-template let-videoUrl pTemplate="item">
+          <video [src]="videoUrl" [attr.aria-label]="selectedPostForModal.location + ' video'"
+            class="post-video" controls playsinline></video>
+        </ng-template>
+      </p-carousel>
     </div>
 
     <div class="post-actions" style="padding: 12px 0 6px 0;">

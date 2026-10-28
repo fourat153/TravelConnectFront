@@ -264,6 +264,10 @@ export class Profile implements OnInit {
     });
   }
 
+  findFriends(): void {
+    this.router.navigate(['/friend-requests']);
+  }
+
   fetchVisitedUser(userId: number) {
     this.relationshipLoading = true;
     this.authService.getUserById(userId).subscribe({

@@ -16,14 +16,12 @@ import { ButtonModule } from 'primeng/button';
 
 import { StopSheetComponent } from './stop-sheet/stop-sheet';
 import { AuthService } from '../../core/services/auth';
-import { filter, take, skip, forkJoin, of, map, switchMap, catchError, debounceTime, distinctUntilChanged } from 'rxjs';
+import { filter, take, of, map, switchMap, catchError, debounceTime, distinctUntilChanged } from 'rxjs';
 import { OnboardingStatus } from '../../shared/enums/onboarding';
 import { PrivacyType } from '../../shared/enums/PrivacyType';
 import { OnboardingService } from '../../core/services/onboarding';
 import { BottomNavComponent, NavTab } from '../../shared/components/bottom-nav/bottom-nav';
-import { FriendService } from '../../core/services/friends';
 import { FriendData } from '../../shared/models/friends';
-import { FeedPost, FeedService } from '../../core/services/feed';
 
 import { environment } from '../../../environments/environment';
 
@@ -50,11 +48,8 @@ export class Map implements AfterViewInit, OnInit {
   private activeRouteLayerId = 'trip-route-layer';
   private activeRouteSourceId = 'trip-route-source';
   private draggableMarker: mapboxgl.Marker | null = null;
-  private friendPinMarkers: mapboxgl.Marker[] = [];
   private ngZone = inject(NgZone);
 
-  searchControl = new FormControl('');
-  private lastSearchedTerm = '';
   selectedStop: any = null;
   searchQuery = '';
   suggestions: any[] = [];
@@ -68,8 +63,6 @@ export class Map implements AfterViewInit, OnInit {
   currentUser: any = null;
 
   private StopService = inject(StopsService);
-  private friendService = inject(FriendService);
-  private feedService = inject(FeedService);
   private searchTimeout: any;
   private cdr = inject(ChangeDetectorRef);
   userInitials = '';
@@ -84,7 +77,6 @@ export class Map implements AfterViewInit, OnInit {
 
   selectedFriend?: FriendData;
   isFriendTripsSidebarOpen = false;
-  friendPinsVisible = false;
 
   activeStopOwnerId?: number;
   activeStopOwnerName = '';
@@ -111,11 +103,6 @@ export class Map implements AfterViewInit, OnInit {
           this.onNavTabChanged(tab);
         }, 400);
       }
-      const searchParam = (params['search'] || params['q'] || '').trim();
-      if (this.searchControl.value !== searchParam) {
-        this.searchControl.setValue(searchParam, { emitEvent: false });
-      }
-      this.filterMapElements(searchParam);
 
       const ownerId = params['ownerId'] ? Number(params['ownerId']) : undefined;
       const ownerName = params['ownerName'] || params['friendName'] || '';
@@ -135,21 +122,6 @@ export class Map implements AfterViewInit, OnInit {
         }
       }
     });
-
-    this.searchControl.valueChanges
-      .pipe(
-        debounceTime(400),
-        distinctUntilChanged()
-      )
-      .subscribe(query => {
-        const searchTerm = query?.trim() || '';
-        this.router.navigate([], {
-          relativeTo: this.route,
-          queryParams: { search: searchTerm || null },
-          queryParamsHandling: 'merge',
-          replaceUrl: true
-        });
-      });
   }
 
   ngAfterViewInit() {
@@ -178,169 +150,8 @@ export class Map implements AfterViewInit, OnInit {
     }
   }
 
-  private loadFriendPosts(): void {
-    this.clearFriendPins();
-    this.friendPinsVisible = true;
-    this.feedService.loadPosts();
-
-    forkJoin({
-      friends: this.friendService.getMyFriends(1, 50),
-      posts: this.feedService.getPosts().pipe(skip(1), take(1))
-    }).subscribe({
-      next: ({ friends, posts }) => {
-        const friendList = friends.data ?? [];
-        const friendsById = new globalThis.Map(friendList.map(friend => [friend.friend_id, friend]));
-        const friendsByUsername = new globalThis.Map(friendList.map(friend => [friend.username.toLowerCase(), friend]));
-        const friendPosts = posts.filter(post => {
-          const authorId = post.authorId ?? (post as any).author_id ?? (post as any).user_id ?? (post as any).user?.id;
-          const authorName = (post.authorName || (post as any).author_name || (post as any).username || '').toLowerCase();
-          if (post.lat === undefined || post.long === undefined) return false;
-          return friendsById.has(authorId) || friendsByUsername.has(authorName);
-        });
-
-        friendPosts.forEach(post => {
-          const authorId = post.authorId ?? (post as any).author_id ?? (post as any).user_id ?? (post as any).user?.id;
-          const authorName = (post.authorName || (post as any).author_name || (post as any).username || '').toLowerCase();
-          const friend = friendsById.get(authorId)
-            ?? friendsByUsername.get(authorName);
-          if (!friend || post.lat === undefined || post.long === undefined) return;
-
-          this.placeFriendPostPin(friend, post);
-        });
-      },
-      error: () => {
-        this.errorMessage = 'Could not load friends\' posts.';
-      }
-    });
-  }
-
-  private placeFriendPostPin(friend: FriendData, post: FeedPost): void {
-    const title = post.description || post.location || 'Travel post';
-    const location = post.location || '';
-    const initials = friend.username.slice(0, 2).toUpperCase();
-
-    const el = document.createElement('div');
-    el.style.width = '42px';
-    el.style.height = '42px';
-    el.style.borderRadius = '50%';
-    el.style.backgroundColor = '#e5e7eb';
-    el.style.border = '3px solid white';
-    el.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.25)';
-    el.style.overflow = 'hidden';
-    el.style.cursor = 'pointer';
-    el.innerHTML = friend.profile_picture
-      ? `<img src="${friend.profile_picture}" alt="" style="width: 100%; height: 100%; object-fit: cover;" />`
-      : `<span style="display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; color: #374151; font-weight: 700; font-size: 0.8rem;">${initials}</span>`;
-
-    const popup = new mapboxgl.Popup({ offset: 30, closeButton: false })
-      .setText(`${friend.username}: ${title}${location ? ` - ${location}` : ''}`);
-
-    const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
-      .setLngLat([post.long!, post.lat!])
-      .setPopup(popup)
-      .addTo(this.map);
-
-    (marker as any).friendId = friend.friend_id;
-    (marker as any).friendName = friend.username;
-    (marker as any).stopTitle = title;
-    (marker as any).postId = post.id;
-
-    el.addEventListener('click', (event) => {
-      event.stopPropagation();
-      this.ngZone.run(() => this.openFriendStopSheet(friend, post));
-    });
-
-    this.friendPinMarkers.push(marker);
-    this.updateFriendPinsVisibility();
-  }
-
-  private openFriendStopSheet(friend: FriendData, post: FeedPost): void {
-    if (!post.stopId) {
-      this.router.navigate(['/post', post.id]);
-      return;
-    }
-
-    this.selectedFriend = friend;
-    this.activeStopOwnerId = friend.friend_id;
-    this.activeStopOwnerName = friend.username;
-    this.activeStopOwnerProfilePicture = friend.profile_picture || '';
-    this.isFriendTripsSidebarOpen = false;
-    this.isTripSidebarOpen = false;
-    this.selectedStop = {
-      id: post.stopId,
-      trip_id: post.tripId,
-      title: post.location || post.description || 'Travel stop',
-      description: post.description,
-      city: { lat: post.lat, long: post.long },
-    };
-    this.cdr.detectChanges();
-  }
-
   onSeeFriendTrip(tripId: number): void {
     this.onTripSelected(tripId);
-  }
-
-  clearFriendPins(): void {
-    this.friendPinMarkers.forEach(m => m.remove());
-    this.friendPinMarkers = [];
-    this.friendPinsVisible = false;
-  }
-
-  updateFriendPinsVisibility(): void {
-    const query = (this.searchControl.value || '').trim().toLowerCase();
-    this.friendPinMarkers.forEach((marker) => {
-      const fId = (marker as any).friendId;
-      const friendName = ((marker as any).friendName || '').toLowerCase();
-      const el = marker.getElement();
-
-      const matchesSearch = !query || friendName.includes(query);
-
-      if (!matchesSearch) {
-        el.style.display = 'none';
-        return;
-      }
-
-      if (!this.selectedFriend) {
-        el.style.display = 'block';
-      } else {
-        if (fId === this.selectedFriend.friend_id) {
-          el.style.display = 'block';
-        } else {
-          el.style.display = 'none';
-        }
-      }
-    });
-  }
-
-  filterMapElements(query: string): void {
-    const term = query.trim();
-    if (!term) {
-      this.lastSearchedTerm = '';
-      this.updateFriendPinsVisibility();
-      return;
-    }
-
-    if (term === this.lastSearchedTerm) {
-      return;
-    }
-
-    this.lastSearchedTerm = term;
-
-    this.updateFriendPinsVisibility();
-
-    const matchingMarker = this.friendPinMarkers.find(marker => {
-      const friendName = ((marker as any).friendName || '').toLowerCase();
-      return friendName.includes(term.toLowerCase());
-    });
-
-    if (matchingMarker && this.map) {
-      const lngLat = matchingMarker.getLngLat();
-      this.map.flyTo({
-        center: [lngLat.lng, lngLat.lat],
-        zoom: 8,
-        essential: true
-      });
-    }
   }
 
   clearActiveTripRoute(): void {
@@ -362,29 +173,6 @@ export class Map implements AfterViewInit, OnInit {
     }
   }
 
-  onFriendPinClicked(friend: FriendData, tripId?: number, stop?: any): void {
-    if (this.selectedFriend && this.selectedFriend.friend_id === friend.friend_id && !stop) {
-      this.selectedFriend = undefined;
-      this.isFriendTripsSidebarOpen = false;
-      this.clearActiveTripRoute();
-    } else {
-      this.selectedFriend = friend;
-      this.activeStopOwnerId = friend.friend_id;
-      this.activeStopOwnerName = friend.username;
-      this.activeStopOwnerProfilePicture = friend.profile_picture || '';
-      this.isFriendTripsSidebarOpen = true;
-      this.isTripSidebarOpen = false;
-      if (tripId) {
-        this.selectedTripId = tripId;
-      }
-      if (stop) {
-        this.selectedStop = stop;
-      }
-    }
-    this.updateFriendPinsVisibility();
-    setTimeout(() => this.resizeMap(), 300);
-  }
-
   onNavTabChanged(tab: NavTab): void {
     this.selectedFriend = undefined;
     this.clearActiveTripRoute();
@@ -394,7 +182,6 @@ export class Map implements AfterViewInit, OnInit {
         this.isTripSidebarOpen = false;
         this.isFriendTripsSidebarOpen = false;
         this.showStopPanel = false;
-        this.clearFriendPins();
         if (this.draggableMarker) {
           this.draggableMarker.remove();
           this.draggableMarker = null;
@@ -410,7 +197,6 @@ export class Map implements AfterViewInit, OnInit {
 
       case 'my-trips':
         this.isFriendTripsSidebarOpen = false;
-        this.clearFriendPins();
         if (this.currentUser) {
           this.activeStopOwnerId = this.currentUser.id;
           this.activeStopOwnerName = (this.currentUser.firstname ? `${this.currentUser.firstname} ${this.currentUser.lastname || ''}`.trim() : this.currentUser.username) || '';

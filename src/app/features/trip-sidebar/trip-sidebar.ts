@@ -316,10 +316,12 @@ export class TripSidebarComponent implements OnInit, OnChanges {
         }
         this.deletingTrip = false;
         this.tripPendingDeletion = null;
+        this.cdr.detectChanges();
       },
       error: () => {
         this.tripsError = 'Could not delete this trip. Please try again.';
         this.deletingTrip = false;
+        this.cdr.detectChanges();
       }
     });
   }

@@ -54,6 +54,8 @@ export class FeedComponent implements OnInit {
 
   posts: FeedPost[] = [];
   isLoading = true;
+  isLoadingMore = false;
+  hasMore = true;
 
   activeView: 'timeline' | 'map' = 'timeline';
   mapSearchControl = new FormControl('');
@@ -135,6 +137,16 @@ export class FeedComponent implements OnInit {
       this.cdr.detectChanges();
     });
 
+    this.feedService.getLoadingMore().subscribe(loadingMore => {
+      this.isLoadingMore = loadingMore;
+      this.cdr.detectChanges();
+    });
+
+    this.feedService.getHasMore().subscribe(hasMore => {
+      this.hasMore = hasMore;
+      this.cdr.detectChanges();
+    });
+
     this.feedService.getPosts().subscribe(posts => {
       this.posts = posts;
       this.cdr.detectChanges();
@@ -166,6 +178,18 @@ export class FeedComponent implements OnInit {
 
   loadFeed(): void {
     this.feedService.loadPosts();
+  }
+
+  onScroll(event: Event): void {
+    const element = event.target as HTMLElement;
+    if (!element) return;
+
+    const threshold = 350; // pixels from the bottom
+    const atBottom = element.scrollTop + element.clientHeight >= element.scrollHeight - threshold;
+
+    if (atBottom && this.hasMore && !this.isLoading && !this.isLoadingMore) {
+      this.feedService.loadNextPage();
+    }
   }
 
 

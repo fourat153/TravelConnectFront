@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import {
   FriendsOut,
   FriendshipRequest,
@@ -69,20 +70,35 @@ export class FriendService {
     );
   }
 
-  getIncomingFriendRequests(): Observable<IncomingFriendshipRequest[]> {
-    return this.http.get<IncomingFriendshipRequest[]>(
+  getIncomingFriendRequests(pageNumber: number = 1, pageSize: number = 20): Observable<IncomingFriendshipRequest[]> {
+    return this.http.get<any>(
       `${this.baseUrl}/friend-requests/incoming`,
-      { withCredentials: true }
+      {
+        params: { page_number: pageNumber, page_size: pageSize },
+        withCredentials: true
+      }
+    ).pipe(
+      map((res: any) => res?.requests ?? [])
     );
   }
 
-  searchUsers(query: string): Observable<UserSearchResult[]> {
-    return this.http.get<UserSearchResult[]>(
+  searchUsers(query: string, pageNumber: number = 1, pageSize: number = 20): Observable<UserSearchResult[]> {
+    return this.http.get<any>(
       `${this.baseUrl}/users/search`,
       {
-        params: { query },
+        params: { query, page_number: pageNumber, page_size: pageSize },
         withCredentials: true
       }
+    ).pipe(
+      map((res: any) => {
+        const users = res?.users ?? [];
+        return users.map((u: any) => ({
+          id: u.id,
+          name: u.name,
+          avatarUrl: u.avatar_url ?? u.avatarUrl ?? null,
+          relationshipStatus: u.relationship_status ?? u.relationshipStatus ?? 'none'
+        }));
+      })
     );
   }
 
