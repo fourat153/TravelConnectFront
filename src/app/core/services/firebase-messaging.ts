@@ -27,6 +27,10 @@ export class FirebaseMessagingService {
     }
 
     async getFCMToken(): Promise<string | null> {
+        if (!messaging || typeof Notification === 'undefined') {
+            return null;
+        }
+
         const permission = await Notification.requestPermission();
 
         if (permission !== 'granted') {
@@ -56,6 +60,10 @@ export class FirebaseMessagingService {
      * Listens for incoming FCM messages while the app is in the foreground.
      */
     listenToForegroundMessages(): void {
+        if (!messaging) {
+            return;
+        }
+
         try {
             onMessage(messaging, (payload: MessagePayload) => {
                 const title = payload.notification?.title || payload.data?.['title'] || 'New Notification';
@@ -88,9 +96,7 @@ export class FirebaseMessagingService {
         } catch (error) {}
     }
 
-    /**
-     * Handles click event on PrimeNG toast message.
-     */
+
     handleToastClick(message: any): void {
         const postId = message?.data?.postId;
         const rawTripId = message?.data?.tripId;
