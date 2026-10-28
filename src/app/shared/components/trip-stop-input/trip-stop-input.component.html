@@ -1,16 +1,13 @@
 <div class="stop-input-wrapper">
 
-  <!-- ── Stop rows ─────────────────────────────────────────── -->
   <div cdkDropList [cdkDropListData]="rows" (cdkDropListDropped)="drop($event)" class="stop-list">
 
     <div *ngFor="let row of rows; let i = index; let last = last" cdkDrag [cdkDragData]="row" class="stop-row">
 
-      <!-- drag handle -->
       <div cdkDragHandle class="drag-handle" title="Drag to reorder">
         <i class="pi pi-bars"></i>
       </div>
 
-      <!-- stop icon -->
       <div class="stop-icon">
         <ng-container *ngIf="isOrigin(i)">
           <span class="icon-circle"></span>
@@ -23,10 +20,8 @@
         </ng-container>
       </div>
 
-      <!-- connecting line (not on last row) -->
       <div *ngIf="!last" class="stop-line"></div>
 
-      <!-- input wrapper -->
       <div class="stop-input-group">
         <div class="stop-input-inner" [class.resolved]="row.resolved">
 
@@ -35,19 +30,15 @@
             [placeholder]="isOrigin(i) ? 'Starting point' : isDestination(i) ? 'Destination' : 'Add stop'"
             class="stop-input" autocomplete="off" />
 
-          <!-- loading spinner -->
           <i *ngIf="row.loading" class="pi pi-spin pi-spinner input-icon"></i>
 
-          <!-- resolved check -->
           <i *ngIf="row.resolved && !row.loading" class="pi pi-check-circle input-icon resolved-icon"></i>
 
-          <!-- clear button -->
           <button *ngIf="row.query && !row.loading" type="button" class="clear-btn" (click)="clearRow(row)">
             <i class="pi pi-times"></i>
           </button>
         </div>
 
-        <!-- suggestions dropdown -->
         <ul *ngIf="row.showDropdown" class="suggestions">
           <li *ngFor="let s of row.suggestions" (mousedown)="selectSuggestion(row, s)" class="suggestion-item">
             <i class="pi pi-map-marker suggestion-icon"></i>
@@ -58,7 +49,6 @@
           </li>
         </ul>
 
-        <!-- Stop photos section -->
         <div class="stop-photos-section" *ngIf="allowPhotos">
           <input #stopFileInput type="file" (change)="onStopFilesSelected(row, $event)" accept="image/*" multiple
             style="display: none;" />
@@ -83,18 +73,15 @@
         </div>
       </div>
 
-      <!-- remove button (only if more than 2 rows) -->
       <button *ngIf="rows.length > 2" type="button" class="remove-btn" (click)="removeStop(i)" title="Remove stop">
         <i class="pi pi-times"></i>
       </button>
 
-      <!-- drag placeholder -->
       <div *cdkDragPlaceholder class="drag-placeholder"></div>
     </div>
 
   </div>
 
-  <!-- ── Swap button (only when 2 stops) ───────────────────── -->
   <div *ngIf="showSwap" class="swap-row">
     <button type="button" class="swap-btn" (click)="swap()" title="Swap origin and destination">
       <i class="pi pi-arrow-right-arrow-left"></i>
@@ -102,7 +89,6 @@
     </button>
   </div>
 
-  <!-- ── Add a stop ─────────────────────────────────────────── -->
   <button *ngIf="canAddStop" type="button" class="add-stop-btn" (click)="addStop()">
     <i class="pi pi-plus"></i>
     <span>Add a stop</span>

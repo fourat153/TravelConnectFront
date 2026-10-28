@@ -1,0 +1,28 @@
+<div class="empty-state-card">
+  <div class="empty-state-icon-wrapper">
+    <i [class]="icon"></i>
+  </div>
+
+  <h3 class="empty-state-title">{{ title }}</h3>
+  <p class="empty-state-description" *ngIf="description">{{ description }}</p>
+
+  <div class="empty-state-actions" *ngIf="showPrimaryAction || showSecondaryAction">
+    <button
+      *ngIf="showSecondaryAction"
+      type="button"
+      class="empty-state-btn btn-secondary"
+      (click)="onSecondaryClick()">
+      <i [class]="secondaryActionIcon" *ngIf="secondaryActionIcon"></i>
+      <span>{{ secondaryActionLabel }}</span>
+    </button>
+
+    <button
+      *ngIf="showPrimaryAction"
+      type="button"
+      class="empty-state-btn btn-primary"
+      (click)="onPrimaryClick()">
+      <i [class]="primaryActionIcon" *ngIf="primaryActionIcon"></i>
+      <span>{{ primaryActionLabel }}</span>
+    </button>
+  </div>
+</div>

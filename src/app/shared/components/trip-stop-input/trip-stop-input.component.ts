@@ -4,6 +4,8 @@ import {
   Output,
   EventEmitter,
   OnDestroy,
+  ChangeDetectorRef,
+  inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -22,6 +24,7 @@ import {
 } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
+import { GeocodingCacheService } from '../../../core/services/geocoding-cache';
 
 export interface TripStop {
   id: string;
@@ -70,9 +73,12 @@ export class TripStopInputComponent implements OnDestroy {
   ];
 
   private searchTimeouts = new Map<string, any>();
-  private suggestionCache = new Map<string, NominatimResult[]>();
+  private geocodingCacheService = inject(GeocodingCacheService);
 
-  constructor(private http: HttpClient) { }
+  private http = inject(HttpClient);
+  private cdr = inject(ChangeDetectorRef);
+
+  constructor() { }
 
 
   private makeRow(): StopRow {
@@ -115,8 +121,6 @@ export class TripStopInputComponent implements OnDestroy {
 
   onInput(row: StopRow): void {
     row.resolved = null;
-
-    // Clear any pending timeout for this row
     if (this.searchTimeouts.has(row.id)) {
       clearTimeout(this.searchTimeouts.get(row.id));
     }
@@ -126,20 +130,23 @@ export class TripStopInputComponent implements OnDestroy {
     if (q.length < 2) {
       row.suggestions = [];
       row.showDropdown = false;
+      row.loading = false;
+      this.cdr.markForCheck();
       return;
     }
 
-    // Return cached suggestions instantly if available
-    if (this.suggestionCache.has(q)) {
-      row.suggestions = this.suggestionCache.get(q)!;
+    const cached = this.geocodingCacheService.getCached(q);
+    if (cached) {
+      row.suggestions = cached;
       row.showDropdown = row.suggestions.length > 0;
       row.loading = false;
+      this.cdr.markForCheck();
       return;
     }
 
     row.loading = true;
+    this.cdr.markForCheck();
 
-    // Call Mapbox Geocoding API directly for place suggestions
     const timeoutId = setTimeout(() => {
       this.http
         .get<any>(`https://api.mapbox.com/search/geocode/v6/forward`, {
@@ -167,9 +174,10 @@ export class TripStopInputComponent implements OnDestroy {
           row.loading = false;
           row.suggestions = results;
           row.showDropdown = results.length > 0;
-          this.suggestionCache.set(q, results);
+          this.geocodingCacheService.setCache(q, results);
+          this.cdr.markForCheck();
         });
-    }, 300); // 300ms debounce for extremely responsive autocomplete search
+    }, 300); 
 
     this.searchTimeouts.set(row.id, timeoutId);
   }
@@ -205,14 +213,12 @@ export class TripStopInputComponent implements OnDestroy {
   hideDropdown(row: StopRow): void {
     setTimeout(() => {
       row.showDropdown = false;
+      this.cdr.markForCheck();
     }, 150);
   }
 
-  // ── add / remove / swap ──────────────────────────────────────
-
   addStop(): void {
     if (!this.canAddStop) return;
-    // insert before the last (destination)
     const destination = this.rows.pop()!;
     this.rows.push(this.makeRow());
     this.rows.push(destination);
@@ -239,14 +245,11 @@ export class TripStopInputComponent implements OnDestroy {
     this.emit();
   }
 
-  // ── drag & drop ──────────────────────────────────────────────
 
   drop(event: CdkDragDrop<StopRow[]>): void {
     moveItemInArray(this.rows, event.previousIndex, event.currentIndex);
     this.emit();
   }
-
-  // ── stop photo actions ───────────────────────────────────────
 
   onStopFilesSelected(row: StopRow, event: any): void {
     const files = event.target.files;
@@ -275,8 +278,6 @@ export class TripStopInputComponent implements OnDestroy {
     this.emit();
   }
 
-  // ── emit resolved stops ──────────────────────────────────────
-
   emit(): void {
     const resolved = this.rows
       .filter((r) => r.resolved !== null)
@@ -289,8 +290,6 @@ export class TripStopInputComponent implements OnDestroy {
       });
     this.stopsChange.emit(resolved);
   }
-
-  // ── cleanup ──────────────────────────────────────────────────
 
   ngOnDestroy(): void {
     this.searchTimeouts.forEach((timeout) => clearTimeout(timeout));

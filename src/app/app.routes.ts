@@ -18,37 +18,51 @@ export const routes: Routes = [
     redirectTo: 'auth/login',
     pathMatch: 'full',
   },
-  { 
-  path: 'confirm-account',
-  loadComponent: () => import('./features/auth/confirm-account/confirm-account')
-  .then(m => m.ConfirmAccountComponent) 
-}
+  {
+    path: 'confirm-account',
+    loadComponent: () => import('./features/auth/confirm-account/confirm-account')
+      .then(m => m.ConfirmAccountComponent)
+  }
   ,
-    {
-  path: 'map',
-  loadComponent: () =>
-    import('./features/map/map').then(m => m.Map),
+  {
+    path: 'map',
+    loadComponent: () =>
+      import('./features/map/map').then(m => m.Map),
     canActivate: [authGuard]
-},
-{
-  path: 'feed',
-  loadComponent: () =>
-    import('./features/feed/feed').then(m => m.FeedComponent),
-  canActivate: [authGuard]
-},
-{
-  path: 'profile',
-  loadComponent: () =>
-    import('./features/profile/profile').then(m => m.Profile),
-  canActivate: [authGuard]
-},
-{
-  path: 'profile/:id',
-  loadComponent: () =>
-    import('./features/profile/profile').then(m => m.Profile),
-  canActivate: [authGuard]
-},
-{
+  },
+  {
+    path: 'feed',
+    loadComponent: () =>
+      import('./features/feed/feed').then(m => m.FeedComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'profile',
+    loadComponent: () =>
+      import('./features/profile/profile').then(m => m.Profile),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'profile/:id',
+    loadComponent: () =>
+      import('./features/profile/profile').then(m => m.Profile),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'friend-requests',
+    loadComponent: () =>
+      import('./features/friend-requests/friend-requests').then(m => m.FriendRequests),
+    canActivate: [authGuard]
+  },
+
+  {
+    path: 'post/:id',
+    loadComponent: () =>
+      import('./features/post-detail/post-detail').then(m => m.PostDetailComponent),
+    canActivate: [authGuard]
+  },
+
+  {
     path: '**',
     redirectTo: 'auth/login',
   }

@@ -14,14 +14,14 @@
       <span class="item-label">Home</span>
     </button>
 
-    <button class="sidebar-item" [class.active]="active === 'friends'" (click)="select('friends')">
-      <i class="pi pi-users"></i>
-      <span class="item-label">Friends</span>
-    </button>
-
-    <button class="sidebar-item" [class.active]="active === 'add-stop'" (click)="select('add-stop')">
-      <i class="pi pi-plus-circle"></i>
-      <span class="item-label">Add Stop</span>
+    <button #notifBtn class="sidebar-item notification-btn" (click)="openNotifications($event, notifBtn)">
+      <div class="icon-badge-wrapper">
+        <i class="pi pi-bell"></i>
+        <span class="notification-badge" *ngIf="(unreadCount$ | async) as count">
+          {{ count > 99 ? '99+' : count }}
+        </span>
+      </div>
+      <span class="item-label">Notifications</span>
     </button>
 
     <button class="sidebar-item" [class.active]="active === 'my-trips'" (click)="select('my-trips')">
@@ -36,3 +36,6 @@
 
   </div>
 </nav>
+
+<app-notifications-panel #notifPanel></app-notifications-panel>
+

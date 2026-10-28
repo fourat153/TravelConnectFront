@@ -1,0 +1,103 @@
+<div class="app-shell">
+  <app-bottom-nav active="feed" (tabChanged)="onNavTabChanged($event)"></app-bottom-nav>
+
+  <div class="feed-content">
+    <div class="feed-main-container">
+
+      <header class="feed-header">
+        <div class="header-left">
+          <button class="back-btn" (click)="goBack()">
+            <i class="pi pi-arrow-left"></i>
+          </button>
+          <span class="logo-text">Post</span>
+        </div>
+      </header>
+
+      <div class="loading-container" *ngIf="loading">
+        <i class="pi pi-spin pi-spinner spinner-icon"></i>
+        <span>Loading post details...</span>
+      </div>
+
+      <div class="error-container" *ngIf="!loading && errorMessage">
+        <i class="pi pi-exclamation-triangle error-icon"></i>
+        <p>{{ errorMessage }}</p>
+        <button pButton label="Go back to Feed" icon="pi pi-arrow-left" (click)="goBack()"></button>
+      </div>
+
+      <div class="post-card" *ngIf="!loading && post">
+
+        <div class="post-header">
+          <div class="post-author-info">
+            <div class="author-avatar-wrapper" (click)="viewProfile(post.authorId)" style="cursor: pointer;">
+              <img [src]="post.authorAvatar" [alt]="post.authorName" class="author-avatar">
+            </div>
+            <div class="author-meta">
+              <span class="author-name" (click)="viewProfile(post.authorId)" style="cursor: pointer;">
+                {{ post.authorName }}
+              </span>
+              <span class="post-location">
+                <i class="pi pi-map-marker"></i> {{ post.location }}
+                <ng-container *ngIf="post.tripTitle"> · {{ post.tripTitle }}</ng-container>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="post-image-container" *ngIf="post.imageUrls && post.imageUrls.length > 0">
+          <p-carousel [value]="post.imageUrls" [numVisible]="1" [numScroll]="1" [circular]="true"
+            [showIndicators]="post.imageUrls.length > 1" [showNavigators]="post.imageUrls.length > 1">
+            <ng-template let-imgUrl pTemplate="item">
+              <img [src]="imgUrl" [alt]="post.location" class="post-image" (dblclick)="onImageDoubleClicked()">
+            </ng-template>
+          </p-carousel>
+
+          <div class="heart-animation-overlay" *ngIf="heartOverlay">
+            <i class="pi pi-heart-fill animated-heart"></i>
+          </div>
+        </div>
+
+        <div class="post-image-container post-video-container" *ngIf="post.videoUrls && post.videoUrls.length > 0">
+          <p-carousel [value]="post.videoUrls" [numVisible]="1" [numScroll]="1" [circular]="true"
+            [showIndicators]="post.videoUrls.length > 1" [showNavigators]="post.videoUrls.length > 1">
+            <ng-template let-videoUrl pTemplate="item">
+              <video [src]="videoUrl" [attr.aria-label]="post.location + ' video'" class="post-video"
+                controls playsinline></video>
+            </ng-template>
+          </p-carousel>
+        </div>
+
+        <div class="post-actions">
+          <div class="left-actions">
+            <button class="action-btn like-btn" [class.liked]="post.hasLiked" (click)="toggleLike()">
+              <i [class]="post.hasLiked ? 'pi pi-heart-fill' : 'pi pi-heart'"></i>
+            </button>
+            <button class="action-btn comment-btn" (click)="detailCommentsComp.focusInput()">
+              <i class="pi pi-comment"></i>
+            </button>
+          </div>
+          <button class="action-btn bookmark-btn">
+            <i class="pi pi-bookmark"></i>
+          </button>
+        </div>
+
+        <div class="post-likes-info">
+          <span class="likes-text">{{ post.likesCount }} likes</span>
+        </div>
+
+        <div class="post-caption">
+          <span class="caption-author" (click)="viewProfile(post.authorId)" style="cursor: pointer;">
+            {{ post.authorName }}
+          </span>
+          <span class="caption-text">{{ post.description }}</span>
+        </div>
+
+        <app-post-comments #detailCommentsComp [postId]="post.id" [comments]="post.comments"
+          [currentUsername]="currentUser ? (currentUser.firstname + ' ' + currentUser.lastname).trim() : 'Traveler'"
+          (authorClicked)="viewProfile($event)">
+        </app-post-comments>
+
+      </div>
+
+    </div>
+  </div>
+</div>

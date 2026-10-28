@@ -1,6 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/services/auth';
 
 @Component({
@@ -9,16 +9,25 @@ import { AuthService } from '../../../core/services/auth';
   templateUrl: './login.html',
   styleUrl: './login.scss',
 })
-export class Login {
+export class Login implements OnInit {
   isLoading = false;
   errorMessage = '';
+  successMessage = '';
 
   loginForm: FormGroup;
 
-  constructor(private fb: FormBuilder, private authService: AuthService, private router: Router) {
+  constructor(private fb: FormBuilder, private authService: AuthService, private router: Router, private route: ActivatedRoute) {
     this.loginForm = this.fb.group({
       username: ['', [Validators.required, Validators.email]],
       password: ['', Validators.required],
+    });
+  }
+
+  ngOnInit() {
+    this.route.queryParams.subscribe(params => {
+      if (params['registered']?.toLowerCase() === 'true') {
+        this.successMessage = 'Your account was created successfully! Please check your email to confirm your account before signing in.';
+      }
     });
   }
 
@@ -26,6 +35,7 @@ export class Login {
     if (this.loginForm.invalid) return;
     this.isLoading = true;
     this.errorMessage = '';
+    this.successMessage = '';
     this.authService.login(this.loginForm.value).subscribe({
       next: (res: any) => {
         this.isLoading = false;

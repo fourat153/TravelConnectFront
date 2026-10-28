@@ -4,20 +4,32 @@ export interface ImageOut {
   caption: string | null;
 }
 
+export interface VideoOut {
+  id: number;
+  link: string;
+}
+
 export interface CommentData {
   id?: number;
   userId?: number;
+  postId?: number;
+  parentId?: number | null;
   username: string;
   text: string;
   createdAt?: string;
+  replyToUsername?: string;
 }
 
 export interface PostOut {
   id: number;
   stop_id: number;
+  user_id?: number;
+  author_id?: number;
+  owner_id?: number;
   title: string;
   created_at: string;
   images: ImageOut[];
+  videos?: VideoOut[];
   likes_count?: number;
   has_liked?: boolean;
   comments?: CommentData[];

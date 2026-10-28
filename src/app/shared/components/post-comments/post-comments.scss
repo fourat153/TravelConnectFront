@@ -1,0 +1,243 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.post-comments-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.post-comments-section {
+  padding: 0;
+  background: transparent;
+}
+
+.comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+  overflow-y: auto;
+}
+
+.comment-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  line-height: 1.4;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: rgba(241, 245, 249, 0.7);
+  }
+
+  &.is-reply {
+    margin-left: 20px;
+    padding-left: 10px;
+    background: #f1f5f9;
+    border-left: 2px solid #3b82f6;
+  }
+}
+
+.comment-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px;
+
+  .comment-author {
+    font-weight: 700;
+    color: #0f172a;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  .reply-target-tag {
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: #eff6ff;
+    color: #2563eb;
+    font-weight: 600;
+    font-size: 0.78rem;
+  }
+
+  .comment-text {
+    color: #334155;
+    word-break: break-word;
+  }
+}
+
+.comment-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.72rem;
+
+  .comment-time {
+    color: #94a3b8;
+  }
+
+  .reply-action-btn {
+    padding: 0;
+    border: none;
+    background: none;
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: color 0.15s ease;
+
+    &:hover {
+      color: #2563eb;
+      text-decoration: underline;
+    }
+  }
+}
+
+.no-comments-msg {
+  padding: 8px 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.add-comment-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.reply-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  margin-bottom: 6px;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  background: #eff6ff;
+  font-size: 0.8rem;
+  color: #1e40af;
+
+  .reply-username {
+    color: #1d4ed8;
+  }
+
+  .cancel-reply-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 6px;
+    border: none;
+    border-radius: 4px;
+    background: none;
+    color: #3b82f6;
+    font-size: 0.85rem;
+    cursor: pointer;
+
+    &:hover {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+  }
+}
+
+.add-comment-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.emoji-picker-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  .comment-emoji-icon {
+    font-size: 1.1rem;
+    color: #64748b;
+    cursor: pointer;
+    transition: color 0.15s ease, transform 0.1s ease;
+
+    &:hover {
+      color: #f59e0b;
+      transform: scale(1.1);
+    }
+  }
+
+  .emoji-picker-popover {
+    position: absolute;
+    bottom: 30px;
+    left: 0;
+    z-index: 50;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    width: 180px;
+    padding: 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    user-select: none;
+
+    .emoji-item {
+      padding: 4px;
+      border-radius: 6px;
+      font-size: 1.25rem;
+      text-align: center;
+      cursor: pointer;
+      transition: background-color 0.1s ease, transform 0.1s ease;
+
+      &:hover {
+        background-color: #f1f5f9;
+        transform: scale(1.25);
+      }
+    }
+  }
+}
+
+.comment-input-field {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.88rem;
+  color: #1e293b;
+
+  &::placeholder {
+    color: #94a3b8;
+  }
+}
+
+.comment-post-btn {
+  padding: 2px 4px;
+  border: none;
+  background: none;
+  color: #3b82f6;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: color 0.15s ease;
+
+  &:hover {
+    color: #1d4ed8;
+  }
+
+  &:disabled {
+    color: #bfdbfe;
+    cursor: not-allowed;
+  }
+}

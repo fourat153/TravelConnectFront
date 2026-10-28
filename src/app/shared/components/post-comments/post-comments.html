@@ -1,0 +1,48 @@
+<div class="post-comments-wrapper">
+  <div class="post-comments-section" *ngIf="comments && comments.length > 0">
+    <div class="comments-list" [style.max-height]="maxListHeight">
+      <div class="comment-item" *ngFor="let comment of comments" [class.is-reply]="comment.parentId">
+        <div class="comment-body">
+          <span class="comment-author" (click)="onAuthorClick(comment.userId)" style="cursor: pointer;">
+            {{ comment.username }}
+          </span>
+          <span class="reply-target-tag" *ngIf="comment.replyToUsername">@{{ comment.replyToUsername }}</span>
+          <span class="comment-text">{{ comment.text }}</span>
+        </div>
+        <div class="comment-meta">
+          <span class="comment-time" *ngIf="comment.createdAt">{{ comment.createdAt }}</span>
+          <button class="reply-action-btn" type="button" (click)="replyToComment(comment, commentInputElem)">Reply</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="no-comments-msg" *ngIf="!comments || comments.length === 0">
+    No comments yet.
+  </div>
+
+  <div class="add-comment-wrapper">
+    <div class="reply-banner" *ngIf="activeReplyComment">
+      <span>Replying to <strong class="reply-username">@{{ activeReplyComment.username }}</strong></span>
+      <button class="cancel-reply-btn" type="button" (click)="cancelReply()" title="Cancel reply">
+        <i class="pi pi-times"></i>
+      </button>
+    </div>
+    <div class="add-comment-container">
+      <div class="emoji-picker-wrapper">
+        <i class="pi pi-face-smile comment-emoji-icon" (click)="toggleEmojiPicker()"></i>
+
+        <div class="emoji-picker-popover" *ngIf="activeEmojiPicker">
+          <span class="emoji-item" *ngFor="let emoji of popularEmojis" (click)="addEmoji(emoji)">
+            {{ emoji }}
+          </span>
+        </div>
+      </div>
+      <input #commentInputElem type="text" [placeholder]="activeReplyComment ? 'Add a reply...' : 'Add a comment...'" class="comment-input-field"
+        [(ngModel)]="commentInput" (keyup.enter)="submitComment()">
+      <button class="comment-post-btn" [disabled]="!commentInput || !commentInput.trim()" (click)="submitComment()">
+        Post
+      </button>
+    </div>
+  </div>
+</div>

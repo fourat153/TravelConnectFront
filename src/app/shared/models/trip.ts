@@ -1,44 +1,50 @@
 export interface CityData {
-  id:    number;
-  lat?:  number;
+  id: number;
+  lat?: number;
   long?: number;
 }
 export interface StopInput {
   label: string;
-  lat:   number;
-  lon:   number;
+  lat: number;
+  lon: number;
   order: number;
 }
 
-    
-export interface TripCreate {
-  title:             string;
-  privacy:           'public' | 'friends_only' | 'private';
-  include_home_city: boolean;
-  stops:             StopInput[];
+
+export interface CityInput {
+  label: string;
+  lat: number;
+  lon: number;
 }
- 
+
+export interface TripCreate {
+  title: string;
+  privacy?: 'public' | 'friends_only' | 'private' | null;
+  from_city: CityInput;
+  to_city: CityInput;
+}
 
 
-    export interface TripOut {
-    id: number;
-    title: string;
-    city?: CityData;
-    privacy_id?: number;
-    created_at?: string;
-    }
 
-    export interface TripBaseOut {
-    id?: number;
-    title?: string;
-    city?: CityData;
-    status_code: number;
-    message: string;
-    created_at?: string;
-    }
+export interface TripOut {
+  id: number;
+  title: string;
+  city?: CityData;
+  privacy_id?: number;
+  created_at?: string;
+}
 
-    export interface TripsOut {
-    trips: TripOut[];
-    status_code: number;
-    message: string;
-    }
+export interface TripBaseOut {
+  id?: number;
+  title?: string;
+  city?: CityData;
+  status_code: number;
+  message: string;
+  created_at?: string;
+}
+
+export interface TripsOut {
+  trips: TripOut[];
+  status_code: number;
+  message: string;
+}

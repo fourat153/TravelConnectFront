@@ -5,6 +5,7 @@ export interface StopCreate {
   long: number,
   title: string,
   description: string,
+  order: number,
 }
 
 export interface StopOut {

@@ -2,11 +2,10 @@
 
   <app-bottom-nav active="feed" (tabChanged)="onNavTabChanged($event)"></app-bottom-nav>
 
-  <div class="feed-content">
+  <div class="feed-content" (scroll)="onScroll($event)">
 
     <div class="feed-main-container">
 
-      <!-- Top header bar for Feed -->
       <header class="feed-header">
         <div class="logo-wrapper">
           <i class="pi pi-compass logo-icon"></i>
@@ -16,7 +15,6 @@
           (onClick)="openCreateModal()"></p-button>
       </header>
 
-      <!-- View Toggle at the top -->
       <div class="feed-view-toggle">
         <button class="toggle-btn" [class.active]="activeView === 'timeline'" (click)="setActiveView('timeline')">
           <i class="pi pi-list"></i>
@@ -28,17 +26,55 @@
         </button>
       </div>
 
-      <!-- Map View -->
-      <div class="feed-map-container" [style.display]="activeView === 'map' ? 'block' : 'none'">
-        <div id="feed-map" class="feed-map-element"></div>
-      </div>
+      <ng-container *ngIf="activeView === 'map'">
+        <div class="feed-empty-container" *ngIf="!isLoading && posts.length === 0">
+          <app-empty-state
+            icon="pi pi-map"
+            title="No activity yet"
+            description="Find friends to see their trips on the map, or start your own"
+            secondaryActionLabel="Find Friends"
+            secondaryActionIcon="pi pi-user-plus"
+            primaryActionLabel="Create a Trip"
+            primaryActionIcon="pi pi-plus"
+            (secondaryAction)="onFindFriends()"
+            (primaryAction)="openCreateModal()">
+          </app-empty-state>
+        </div>
 
-      <!-- Feed Posts list -->
-      <div class="posts-list" *ngIf="activeView === 'timeline'">
+        <div class="feed-map-container" *ngIf="posts.length > 0">
+          <div class="search-overlay">
+            <div class="search-bar p-input-icon-left">
+              <i class="pi pi-search"></i>
+              <input
+                type="text"
+                pInputText
+                [formControl]="mapSearchControl"
+                placeholder="Search by friend name "
+              />
+            </div>
+          </div>
+          <div id="feed-map" class="feed-map-element"></div>
+        </div>
+      </ng-container>
 
+      <ng-container *ngIf="activeView === 'timeline'">
+        <div class="feed-empty-container" *ngIf="!isLoading && posts.length === 0">
+          <app-empty-state
+            icon="pi pi-compass"
+            title="No activity yet"
+            description="Find friends to see their trips, or start your own"
+            secondaryActionLabel="Find Friends"
+            secondaryActionIcon="pi pi-user-plus"
+            primaryActionLabel="Create a Trip"
+            primaryActionIcon="pi pi-plus"
+            (secondaryAction)="onFindFriends()"
+            (primaryAction)="openCreateModal()">
+          </app-empty-state>
+        </div>
+
+        <div class="posts-list" *ngIf="posts.length > 0">
         <div class="post-card" *ngFor="let post of posts">
 
-          <!-- Post Header -->
           <div class="post-header">
             <div class="post-author-info">
               <div class="author-avatar-wrapper" (click)="viewProfile(post.authorId)" style="cursor: pointer;">
@@ -58,8 +94,7 @@
             </button>
           </div>
 
-          <!-- Post Photo Container (Double click to like) -->
-          <div class="post-image-container">
+          <div class="post-image-container" *ngIf="post.imageUrls && post.imageUrls.length > 0">
             <p-carousel [value]="post.imageUrls" [numVisible]="1" [numScroll]="1" [circular]="true"
               [showIndicators]="post.imageUrls.length > 1" [showNavigators]="post.imageUrls.length > 1">
               <ng-template let-imgUrl pTemplate="item">
@@ -67,82 +102,70 @@
               </ng-template>
             </p-carousel>
 
-            <!-- Large floating heart double click animation overlay -->
             <div class="heart-animation-overlay" *ngIf="heartOverlayPostId === post.id">
               <i class="pi pi-heart-fill animated-heart"></i>
             </div>
           </div>
 
-          <!-- Action buttons (Like, Comment, Share) -->
+          <div class="post-image-container post-video-container" *ngIf="post.videoUrls && post.videoUrls.length > 0">
+            <p-carousel [value]="post.videoUrls" [numVisible]="1" [numScroll]="1" [circular]="true"
+              [showIndicators]="post.videoUrls.length > 1" [showNavigators]="post.videoUrls.length > 1">
+              <ng-template let-videoUrl pTemplate="item">
+                <video [src]="videoUrl" [attr.aria-label]="post.location + ' video'" class="post-video"
+                  controls playsinline></video>
+              </ng-template>
+            </p-carousel>
+          </div>
+
           <div class="post-actions">
             <div class="left-actions">
               <button class="action-btn like-btn" [class.liked]="post.hasLiked" (click)="toggleLike(post)">
                 <i [class]="post.hasLiked ? 'pi pi-heart-fill' : 'pi pi-heart'"></i>
               </button>
-              <button class="action-btn comment-btn" (click)="commentInput.focus()">
+              <button class="action-btn comment-btn" (click)="timelineCommentsComp.focusInput()">
                 <i class="pi pi-comment"></i>
               </button>
-
             </div>
             <button class="action-btn bookmark-btn">
               <i class="pi pi-bookmark"></i>
             </button>
           </div>
 
-          <!-- Likes Count -->
           <div class="post-likes-info">
             <span class="likes-text">{{ post.likesCount }} likes</span>
           </div>
 
-          <!-- Post Caption -->
           <div class="post-caption">
             <span class="caption-author" (click)="viewProfile(post.authorId)" style="cursor: pointer;">{{
               post.authorName }}</span>
             <span class="caption-text">{{ post.description }}</span>
           </div>
 
-          <!-- Comments Area -->
-          <div class="post-comments-section" *ngIf="post.comments.length > 0">
-            <div class="comments-list">
-              <div class="comment-item" *ngFor="let comment of post.comments">
-                <span class="comment-author">{{ comment.username }}</span>
-                <span class="comment-text">{{ comment.text }}</span>
-                <span class="comment-time">{{ comment.createdAt }}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="post-time-ago">
-            <span>{{ post.createdAt }}</span>
-          </div>
-
-          <!-- Add Comment Input Box -->
-          <div class="add-comment-container">
-            <div class="emoji-picker-wrapper">
-              <i class="pi pi-face-smile comment-emoji-icon" (click)="toggleEmojiPicker(post.id)"></i>
-
-              <!-- Popover Emoji Picker -->
-              <div class="emoji-picker-popover" *ngIf="activeEmojiPickerPostId === post.id">
-                <span class="emoji-item" *ngFor="let emoji of popularEmojis" (click)="addEmoji(post.id, emoji)">
-                  {{ emoji }}
-                </span>
-              </div>
-            </div>
-            <input #commentInput type="text" placeholder="Add a comment..." class="comment-input-field"
-              [(ngModel)]="commentInputs[post.id]" (keyup.enter)="submitComment(post)">
-            <button class="comment-post-btn" [disabled]="!commentInputs[post.id] || !commentInputs[post.id].trim()"
-              (click)="submitComment(post)">
-              Post
-            </button>
-          </div>
-
+          <app-post-comments
+            #timelineCommentsComp
+            [postId]="post.id"
+            [comments]="post.comments"
+            [currentUsername]="getDisplayName(currentUser)"
+            (authorClicked)="viewProfile($event)">
+          </app-post-comments>
+        </div>
         </div>
 
-      </div>
+        <!-- Infinite Scroll Loading Indicator -->
+        <div class="feed-loading-more" *ngIf="isLoadingMore">
+          <i class="pi pi-spin pi-spinner feed-spinner"></i>
+          <span>Loading more adventures...</span>
+        </div>
+
+        <!-- End of Feed Message -->
+        <div class="feed-end-notice" *ngIf="!hasMore && posts.length > 0 && !isLoading">
+          <i class="pi pi-check-circle"></i>
+          <span>You're all caught up!</span>
+        </div>
+      </ng-container>
 
     </div>
 
-    <!-- Right suggestions sidebar (desktop only) -->
     <aside class="feed-right-sidebar">
 
       <div class="user-profile-row">
@@ -158,48 +181,7 @@
         <button class="switch-profile-btn" (click)="onNavTabChanged('profile')">Profile</button>
       </div>
 
-      <div class="suggestions-header">
-        <span class="suggestions-title">Suggestions for you</span>
-        <button class="see-all-btn">See All</button>
-      </div>
 
-      <div class="suggestions-list">
-
-        <!-- skeleton — only while loading -->
-        <ng-container *ngIf="suggestionsLoading">
-          <div class="suggestion-row skeleton" *ngFor="let i of [1,2,3]">
-            <div class="sug-avatar-wrapper"></div>
-            <div class="sug-info">
-              <div class="name-skel"></div>
-              <div class="sub-skel"></div>
-            </div>
-          </div>
-        </ng-container>
-
-        <!-- real data -->
-        <ng-container *ngIf="!suggestionsLoading">
-          <div class="suggestion-row" *ngFor="let sug of suggestions">
-            <div class="sug-avatar-wrapper" (click)="viewProfile(sug.id)" style="cursor: pointer;">
-              <img *ngIf="sug.profile_picture" [src]="sug.profile_picture" [alt]="getFullName(sug)"
-                class="sug-avatar" />
-              <div *ngIf="!sug.profile_picture" class="sug-initials">
-                {{ sug.firstname[0] }}{{ sug.lastname[0] }}
-              </div>
-            </div>
-            <div class="sug-info">
-              <span class="sug-name" (click)="viewProfile(sug.id)" style="cursor: pointer;">{{ getFullName(sug)
-                }}</span>
-              <span class="sug-subtext">
-                Followed by {{ sug.mutual_friends_count }}
-                {{ sug.mutual_friends_count === 1 ? 'friend' : 'friends' }}
-              </span>
-            </div>
-            <button class="connect-btn" (click)="connect(sug.id)">Connect</button>
-          </div>
-
-          <p class="no-suggestions" *ngIf="suggestions.length === 0">No suggestions right now.</p>
-        </ng-container>
-      </div>
 
       <footer class="feed-sidebar-footer">
         <p>About • Help • Press • API • Jobs • Privacy • Terms</p>
@@ -212,19 +194,16 @@
 
 </div>
 
-<!-- PrimeNG Modal Dialog for Sharing a New Trip Post -->
 <p-dialog [(visible)]="showCreateModal" [modal]="true" [draggable]="false" [resizable]="false" header="Create New Trip"
   [style]="{ width: '500px', 'max-width': '95vw', 'border-radius': '20px', overflow: 'hidden' }">
 
   <div class="create-post-form">
 
-    <!-- Image Error message -->
     <div class="form-error-msg" *ngIf="imageError">
       <i class="pi pi-exclamation-triangle"></i> {{ imageError }}
     </div>
 
     <div [formGroup]="createForm">
-      <!-- Trip Title -->
       <div class="form-field">
         <label for="title">Trip Title</label>
         <input pInputText id="title" formControlName="title" placeholder="e.g. Weekend in Tunis"
@@ -234,7 +213,6 @@
         </small>
       </div>
 
-      <!-- Privacy -->
       <div class="form-field">
         <label>Privacy</label>
         <div class="seg">
@@ -246,60 +224,31 @@
         </div>
       </div>
 
-      <!-- Route -->
       <div class="form-field">
         <label>Route</label>
         <app-trip-stop-input [allowPhotos]="false" [maxStops]="2" (stopsChange)="onStopsChange($event)" />
       </div>
 
-      <!-- Photos Upload -->
-      <div class="form-field" style="margin-top: 12px;">
-        <label>Photos (Optional)</label>
-        <div class="image-select-area" (click)="triggerImageUpload(fileInput)">
-          <input #fileInput type="file" (change)="onFileSelected($event)" accept="image/*" multiple
-            style="display: none;" />
 
-          <div class="placeholder-content" *ngIf="newImageUrlsBase64.length === 0">
-            <i class="pi pi-camera upload-icon"></i>
-            <span>Upload Trip Photos</span>
-            <span class="upload-hint">Upload photos of your trip (optional)</span>
-          </div>
-
-          <div class="multi-preview-container" *ngIf="newImageUrlsBase64.length > 0" (click)="$event.stopPropagation()">
-            <div class="preview-thumb-card" *ngFor="let img of newImageUrlsBase64; let idx = index">
-              <img [src]="img" class="preview-thumbnail" alt="preview" />
-              <button class="remove-thumb-btn" (click)="removeUploadedImage(idx)">
-                <i class="pi pi-times"></i>
-              </button>
-            </div>
-            <div class="add-more-card" (click)="triggerImageUpload(fileInput)">
-              <i class="pi pi-plus"></i>
-              <span>Add More</span>
-            </div>
-          </div>
-        </div>
-      </div>
 
     </div>
 
-    <!-- Actions Footer -->
     <div class="form-actions-footer">
       <button class="dialog-cancel-btn" (click)="showCreateModal = false">Cancel</button>
-      <p-button label="Save" icon="pi pi-check" styleClass="share-trip-btn dialog-submit-btn" [disabled]="tripStops.length < 2 || createForm.invalid" (onClick)="submitPost()"></p-button>
+      <p-button label="Save" icon="pi pi-check" styleClass="share-trip-btn dialog-submit-btn"
+        [disabled]="tripStops.length < 2 || createForm.invalid" (onClick)="submitPost()"></p-button>
     </div>
 
   </div>
 
 </p-dialog>
 
-<!-- Post Detail Modal (when clicked from map) -->
 <p-dialog [(visible)]="showPostDetailModal" [modal]="true" [draggable]="false" [resizable]="false"
   [header]="selectedPostForModal?.tripTitle || 'Trip Details'"
   [style]="{ width: '550px', 'max-width': '95vw', 'border-radius': '20px', overflow: 'hidden' }">
 
   <div class="post-card detail-modal-card" *ngIf="selectedPostForModal"
     style="border: none; box-shadow: none; margin: 0; padding: 0;">
-    <!-- Post Header -->
     <div class="post-header" style="padding: 0 0 12px 0;">
       <div class="post-author-info">
         <div class="author-avatar-wrapper" (click)="viewProfile(selectedPostForModal.authorId)"
@@ -318,9 +267,8 @@
       </div>
     </div>
 
-    <!-- Post Photo Container (Double click to like) -->
-    <div class="post-image-container"
-      style="height: 380px; border-radius: 12px; overflow: hidden; background: #0f172a; position: relative;">
+    <div class="post-image-container" *ngIf="selectedPostForModal.imageUrls && selectedPostForModal.imageUrls.length > 0"
+      style="border-radius: 12px; overflow: hidden; position: relative;">
       <p-carousel [value]="selectedPostForModal.imageUrls" [numVisible]="1" [numScroll]="1" [circular]="true"
         [showIndicators]="selectedPostForModal.imageUrls.length > 1"
         [showNavigators]="selectedPostForModal.imageUrls.length > 1">
@@ -330,20 +278,31 @@
         </ng-template>
       </p-carousel>
 
-      <!-- Large floating heart double click animation overlay -->
       <div class="heart-animation-overlay" *ngIf="heartOverlayPostId === selectedPostForModal.id">
         <i class="pi pi-heart-fill animated-heart"></i>
       </div>
     </div>
 
-    <!-- Action buttons (Like, Comment) -->
+    <div class="post-image-container post-video-container"
+      *ngIf="selectedPostForModal.videoUrls && selectedPostForModal.videoUrls.length > 0"
+      style="height: 380px; border-radius: 12px; overflow: hidden; background: #0f172a; position: relative;">
+      <p-carousel [value]="selectedPostForModal.videoUrls" [numVisible]="1" [numScroll]="1" [circular]="true"
+        [showIndicators]="selectedPostForModal.videoUrls.length > 1"
+        [showNavigators]="selectedPostForModal.videoUrls.length > 1">
+        <ng-template let-videoUrl pTemplate="item">
+          <video [src]="videoUrl" [attr.aria-label]="selectedPostForModal.location + ' video'"
+            class="post-video" controls playsinline></video>
+        </ng-template>
+      </p-carousel>
+    </div>
+
     <div class="post-actions" style="padding: 12px 0 6px 0;">
       <div class="left-actions">
         <button class="action-btn like-btn" [class.liked]="selectedPostForModal.hasLiked"
           (click)="toggleLike(selectedPostForModal)">
           <i [class]="selectedPostForModal.hasLiked ? 'pi pi-heart-fill' : 'pi pi-heart'"></i>
         </button>
-        <button class="action-btn comment-btn" (click)="modalCommentInput.focus()">
+        <button class="action-btn comment-btn" (click)="modalCommentsComp.focusInput()">
           <i class="pi pi-comment"></i>
         </button>
       </div>
@@ -352,54 +311,29 @@
       </button>
     </div>
 
-    <!-- Likes Count -->
     <div class="post-likes-info" style="padding: 0 0 4px 0;">
       <span class="likes-text">{{ selectedPostForModal.likesCount }} likes</span>
     </div>
 
-    <!-- Post Caption -->
     <div class="post-caption" style="padding: 4px 0 8px 0;">
       <span class="caption-author">{{ selectedPostForModal.authorName }}</span>
       <span class="caption-text">{{ selectedPostForModal.description }}</span>
     </div>
 
-    <!-- Comments Area -->
-    <div class="post-comments-section" *ngIf="selectedPostForModal.comments.length > 0"
-      style="padding: 0; max-height: 150px; overflow-y: auto;">
-      <div class="comments-list">
-        <div class="comment-item" *ngFor="let comment of selectedPostForModal.comments">
-          <span class="comment-author">{{ comment.username }}</span>
-          <span class="comment-text">{{ comment.text }}</span>
-          <span class="comment-time">{{ comment.createdAt }}</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="post-time-ago" style="padding: 8px 0 12px 0;">
-      <span>{{ selectedPostForModal.createdAt }}</span>
-    </div>
-
-    <!-- Add Comment Input Box -->
-    <div class="add-comment-container" style="padding: 12px 0 0 0; border-top: 1px solid #f1f5f9;">
-      <div class="emoji-picker-wrapper">
-        <i class="pi pi-face-smile comment-emoji-icon" (click)="toggleEmojiPicker(selectedPostForModal.id)"></i>
-
-        <!-- Popover Emoji Picker -->
-        <div class="emoji-picker-popover" *ngIf="activeEmojiPickerPostId === selectedPostForModal.id">
-          <span class="emoji-item" *ngFor="let emoji of popularEmojis"
-            (click)="addEmoji(selectedPostForModal.id, emoji)">
-            {{ emoji }}
-          </span>
-        </div>
-      </div>
-      <input #modalCommentInput type="text" placeholder="Add a comment..." class="comment-input-field"
-        [(ngModel)]="commentInputs[selectedPostForModal.id]" (keyup.enter)="submitComment(selectedPostForModal)">
-      <button class="comment-post-btn"
-        [disabled]="!commentInputs[selectedPostForModal.id] || !commentInputs[selectedPostForModal.id].trim()"
-        (click)="submitComment(selectedPostForModal)">
-        Post
+    <div class="modal-trip-action" *ngIf="selectedPostTripId">
+      <button class="view-trip-route-btn" type="button" (click)="viewSelectedPostTrip()">
+        <i class="pi pi-map"></i>
+        View trip route
       </button>
     </div>
+
+    <app-post-comments
+      #modalCommentsComp
+      [postId]="selectedPostForModal.id"
+      [comments]="selectedPostForModal.comments"
+      [currentUsername]="getDisplayName(currentUser)"
+      (authorClicked)="viewProfile($event)">
+    </app-post-comments>
 
   </div>
 </p-dialog>

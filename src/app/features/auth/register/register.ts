@@ -47,11 +47,10 @@ export class Register {
     this.authService.register(this.registerForm.value).subscribe({
       next: () => {
         this.isLoading = false;
-        this.router.navigate(['/users']);
+        this.router.navigate(['/auth/login'], { queryParams: { registered: 'true' } });
       },
-      error: (err) => {
+      error: () => {
         this.isLoading = false;
-        console.error(err);
       }
     });
   }

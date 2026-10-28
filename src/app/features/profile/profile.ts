@@ -11,10 +11,14 @@ import { DialogModule } from 'primeng/dialog';
 import { CarouselModule } from 'primeng/carousel';
 import { environment } from '../../../environments/environment';
 
+import { PostCommentsComponent } from '../../shared/components/post-comments/post-comments';
+import { FriendService } from '../../core/services/friends';
+import { RelationshipStatus } from '../../shared/models/friends';
+
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule, BottomNavComponent, ButtonModule, DialogModule, CarouselModule],
+  imports: [CommonModule, FormsModule, BottomNavComponent, ButtonModule, DialogModule, CarouselModule, PostCommentsComponent],
   templateUrl: './profile.html',
   styleUrl: './profile.scss',
 })
@@ -24,26 +28,25 @@ export class Profile implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   private route = inject(ActivatedRoute);
   private feedService = inject(FeedService);
+  private friendService = inject(FriendService);
 
   user: User | null = null;
   userInitials = '';
 
-  // Visited profile state
   isOwnProfile = true;
   visitedUser: User | null = null;
   visitedUserInitials = '';
   posts: FeedPost[] = [];
   postsLoading = false;
+  relationshipStatus: RelationshipStatus | null = null;
+  relationshipLoading = false;
+  relationshipActionLoading = false;
+  relationshipRequestId: number | null = null;
 
-  // Post detail modal state
   showPostDetailModal = false;
   selectedPostForModal: FeedPost | null = null;
-  commentInputs: { [postId: number]: string } = {};
-  activeEmojiPickerPostId: number | null = null;
-  popularEmojis = ['😀', '✈️', '🌍', '🏖️', '📸', '😍', '❤️', '🔥', '🙌', '✨', '🍕', '🗺️', '🥳', '😎', '👍', '👏', '🌟', '🍹', '🚗', '🏔️'];
   heartOverlayPostId: number | null = null;
 
-  // Edit Mode state
   isEditMode = false;
   editForm = {
     firstname: '',
@@ -55,13 +58,11 @@ export class Profile implements OnInit {
     city_lon: null as number | null,
   };
 
-  // City Autocomplete state
   citySearchQuery = '';
   citySuggestions: any[] = [];
   selectedCity: any = null;
   private searchTimeout: any;
 
-  // Image Upload state
   selectedFile: File | null = null;
   imagePreview: string | null = null;
   errorMessage = '';
@@ -76,7 +77,6 @@ export class Profile implements OnInit {
       this.authService.currentUser$.subscribe((currentUser) => {
         if (currentUser) {
           if (!visitedUserId || visitedUserId === currentUser.id) {
-            // Own profile
             this.isOwnProfile = true;
             this.user = currentUser;
             this.userInitials =
@@ -85,16 +85,17 @@ export class Profile implements OnInit {
             this.fetchUserCity();
             this.loadUserPosts(currentUser.id);
           } else {
-            // Visited friend profile
             this.isOwnProfile = false;
-            this.user = currentUser; // current logged in user
+            this.user = currentUser;
             this.userInitials =
               (currentUser.firstname?.[0] ?? '') + (currentUser.lastname?.[0] ?? '');
             this.fetchVisitedUser(visitedUserId);
           }
         } else {
           // Fetch current user if not loaded in BehaviorSubject
-          this.authService.fetchCurrentUser();
+          this.authService.fetchCurrentUser().subscribe({
+            error: () => {}
+          });
         }
       });
     });
@@ -110,9 +111,7 @@ export class Profile implements OnInit {
           this.reverseGeocode(res.lat, res.long);
         }
       },
-      error: () => {
-        console.log('City coordinates not found or set yet.');
-      },
+      error: () => {},
     });
   }
 
@@ -127,7 +126,7 @@ export class Profile implements OnInit {
           this.cdr.detectChanges();
         }
       })
-      .catch((err) => console.error('Error reverse geocoding:', err));
+      .catch(() => {});
   }
 
   resetForm() {
@@ -175,7 +174,7 @@ export class Profile implements OnInit {
           }));
           this.cdr.detectChanges();
         })
-        .catch((err) => console.error('Error searching city:', err));
+        .catch(() => {});
     }, 400);
   }
 
@@ -258,22 +257,96 @@ export class Profile implements OnInit {
         this.authService.currentUser$.next(null);
         this.router.navigate(['/auth/login']);
       },
-      error: (err) => {
-        console.error('Logout failed:', err);
+      error: () => {
+        this.authService.currentUser$.next(null);
+        this.router.navigate(['/auth/login']);
       }
     });
   }
 
+  findFriends(): void {
+    this.router.navigate(['/friend-requests']);
+  }
+
   fetchVisitedUser(userId: number) {
+    this.relationshipLoading = true;
     this.authService.getUserById(userId).subscribe({
       next: (user: User) => {
         this.visitedUser = user;
         this.visitedUserInitials = (user.firstname?.[0] ?? '') + (user.lastname?.[0] ?? '');
         this.loadUserPosts(userId);
+        this.loadRelationshipStatus(userId);
       },
       error: (err: any) => {
         this.errorMessage = 'Failed to load user profile.';
-        console.error(err);
+      }
+    });
+  }
+
+  loadRelationshipStatus(userId: number): void {
+    this.friendService.getRelationshipStatus(userId).subscribe({
+      next: (relationship) => {
+        this.relationshipStatus = relationship.status;
+        this.relationshipRequestId = null;
+        this.relationshipLoading = false;
+        if (relationship.status === 'pending_received' && !this.relationshipRequestId) {
+          this.friendService.getIncomingFriendRequests().subscribe({
+            next: (requests) => {
+              this.relationshipRequestId =
+                requests.find(request => request.sender_id === userId)?.id ?? null;
+              this.cdr.detectChanges();
+            },
+            error: () => {}
+          });
+        }
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.relationshipLoading = false;
+        this.errorMessage = 'Failed to load friendship status.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  respondToFriendRequest(action: 'accept' | 'decline'): void {
+    if (!this.relationshipRequestId || this.relationshipActionLoading) return;
+
+    this.relationshipActionLoading = true;
+    const request$ = action === 'accept'
+      ? this.friendService.acceptFriendRequest(this.relationshipRequestId)
+      : this.friendService.declineFriendRequest(this.relationshipRequestId);
+
+    request$.subscribe({
+      next: () => {
+        this.relationshipStatus = action === 'accept' ? 'friends' : 'none';
+        this.relationshipRequestId = null;
+        this.relationshipActionLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.relationshipActionLoading = false;
+        this.errorMessage = `Failed to ${action} friend request. Please try again.`;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  sendFriendRequest(): void {
+    if (!this.visitedUser || this.relationshipActionLoading) return;
+
+    this.relationshipActionLoading = true;
+    this.errorMessage = '';
+    this.friendService.sendFriendRequest(this.visitedUser.id).subscribe({
+      next: () => {
+        this.relationshipStatus = 'pending_sent';
+        this.relationshipActionLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.relationshipActionLoading = false;
+        this.errorMessage = err.error?.message || 'Failed to send friend request. Please try again.';
+        this.cdr.detectChanges();
       }
     });
   }
@@ -287,7 +360,6 @@ export class Profile implements OnInit {
         this.cdr.detectChanges();
       },
       error: (err) => {
-        console.error('Failed to load user posts', err);
         this.postsLoading = false;
         this.cdr.detectChanges();
       }
@@ -315,8 +387,6 @@ export class Profile implements OnInit {
 
     request$.subscribe({
       error: (err) => {
-        // Rollback on error
-        console.error('Failed to update like status', err);
         post.hasLiked = originalHasLiked;
         post.likesCount = originalLikesCount;
         this.cdr.detectChanges();
@@ -334,43 +404,6 @@ export class Profile implements OnInit {
         this.heartOverlayPostId = null;
       }
     }, 800);
-  }
-
-  submitComment(post: FeedPost): void {
-    const text = this.commentInputs[post.id];
-    if (!text || !text.trim()) return;
-
-    const userFullName = `${this.user?.firstname} ${this.user?.lastname}`;
-    const newComment = {
-      username: userFullName,
-      text: text,
-      createdAt: 'Just now'
-    };
-    post.comments = [...post.comments, newComment];
-    this.commentInputs[post.id] = '';
-    this.cdr.detectChanges();
-
-    this.feedService.addComment(post.id, text).subscribe({
-      error: (err) => {
-        console.error('Failed to submit comment', err);
-        post.comments = post.comments.filter(c => c !== newComment);
-        this.commentInputs[post.id] = text;
-        this.cdr.detectChanges();
-      }
-    });
-  }
-
-  toggleEmojiPicker(postId: number): void {
-    if (this.activeEmojiPickerPostId === postId) {
-      this.activeEmojiPickerPostId = null;
-    } else {
-      this.activeEmojiPickerPostId = postId;
-    }
-  }
-
-  addEmoji(postId: number, emoji: string): void {
-    this.commentInputs[postId] = (this.commentInputs[postId] || '') + emoji;
-    this.activeEmojiPickerPostId = null;
   }
 
   goBack() {

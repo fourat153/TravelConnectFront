@@ -1,7 +1,7 @@
 import { Component, AfterViewInit, NgZone, ChangeDetectorRef, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import * as L from 'leaflet';
+import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
+import mapboxgl from 'mapbox-gl';
 import { Onboarding } from '../profile/onboarding/onboarding';
 import { inject } from '@angular/core';
 import { TripSidebarComponent } from '../trip-sidebar/trip-sidebar';
@@ -16,20 +16,24 @@ import { ButtonModule } from 'primeng/button';
 
 import { StopSheetComponent } from './stop-sheet/stop-sheet';
 import { AuthService } from '../../core/services/auth';
-import { filter, take, forkJoin, of, map, switchMap, catchError } from 'rxjs';
+import { filter, take, of, map, switchMap, catchError, debounceTime, distinctUntilChanged } from 'rxjs';
 import { OnboardingStatus } from '../../shared/enums/onboarding';
 import { PrivacyType } from '../../shared/enums/PrivacyType';
 import { OnboardingService } from '../../core/services/onboarding';
 import { BottomNavComponent, NavTab } from '../../shared/components/bottom-nav/bottom-nav';
-import { FriendService } from '../../core/services/friends';
 import { FriendData } from '../../shared/models/friends';
 
 import { environment } from '../../../environments/environment';
 
+interface LatLng {
+  lat: number;
+  lng: number;
+}
+
 @Component({
   selector: 'app-map',
   imports: [
-    CommonModule, FormsModule, AutoCompleteModule, DialogModule,
+    CommonModule, FormsModule, ReactiveFormsModule, AutoCompleteModule, DialogModule,
     InputTextModule, TextareaModule, ButtonModule,
     Onboarding, TripSidebarComponent, StopSheetComponent,
     BottomNavComponent,
@@ -39,12 +43,11 @@ import { environment } from '../../../environments/environment';
 })
 export class Map implements AfterViewInit, OnInit {
   @ViewChild(TripSidebarComponent) tripSidebar?: TripSidebarComponent;
-  private map!: L.Map;
-  private markers: L.CircleMarker[] = [];
-  private polyline!: L.Polyline;
-  private draggableMarker: L.Marker | null = null;
-  private friendPinMarkers: L.Marker[] = [];
-  private friendPolylines: L.Polyline[] = [];
+  private map!: mapboxgl.Map;
+  private markers: mapboxgl.Marker[] = [];
+  private activeRouteLayerId = 'trip-route-layer';
+  private activeRouteSourceId = 'trip-route-source';
+  private draggableMarker: mapboxgl.Marker | null = null;
   private ngZone = inject(NgZone);
 
   selectedStop: any = null;
@@ -60,13 +63,13 @@ export class Map implements AfterViewInit, OnInit {
   currentUser: any = null;
 
   private StopService = inject(StopsService);
-  private friendService = inject(FriendService);
   private searchTimeout: any;
   private cdr = inject(ChangeDetectorRef);
   userInitials = '';
   errorMessage: any;
   selectedTripId: number | null = null;
   selectedTrip: any = null;
+  private pendingTripId: number | null = null;
   private AuthService = inject(AuthService);
   private onboardingService = inject(OnboardingService);
   private router: Router = inject(Router);
@@ -74,8 +77,10 @@ export class Map implements AfterViewInit, OnInit {
 
   selectedFriend?: FriendData;
   isFriendTripsSidebarOpen = false;
-  friendPinsVisible = false;
 
+  activeStopOwnerId?: number;
+  activeStopOwnerName = '';
+  activeStopOwnerProfilePicture = '';
 
   ngOnInit() {
     this.AuthService.currentUser$
@@ -84,6 +89,11 @@ export class Map implements AfterViewInit, OnInit {
         this.currentUser = user;
         this.showOnboarding = user!.has_completed_onboarding !== OnboardingStatus.Onboarded;
         this.userInitials = (user.firstname?.[0] ?? '') + (user.lastname?.[0] ?? '');
+        if (this.activeStopOwnerId === undefined && !this.selectedFriend) {
+          this.activeStopOwnerId = user.id;
+          this.activeStopOwnerName = (user.firstname ? `${user.firstname} ${user.lastname || ''}`.trim() : user.username) || '';
+          this.activeStopOwnerProfilePicture = user.profile_picture || '';
+        }
       });
 
     this.route.queryParams.subscribe(params => {
@@ -93,322 +103,75 @@ export class Map implements AfterViewInit, OnInit {
           this.onNavTabChanged(tab);
         }, 400);
       }
+
+      const ownerId = params['ownerId'] ? Number(params['ownerId']) : undefined;
+      const ownerName = params['ownerName'] || params['friendName'] || '';
+      const ownerProfilePicture = params['ownerProfilePicture'] || params['friendProfilePicture'] || '';
+      if (ownerId !== undefined && !isNaN(ownerId)) {
+        this.activeStopOwnerId = ownerId;
+        this.activeStopOwnerName = ownerName;
+        this.activeStopOwnerProfilePicture = ownerProfilePicture;
+      }
+
+      const tripId = Number(params['tripId']);
+      if (Number.isInteger(tripId) && tripId > 0) {
+        if (this.map && this.map.isStyleLoaded()) {
+          this.onTripSelected(tripId);
+        } else {
+          this.pendingTripId = tripId;
+        }
+      }
     });
   }
 
   ngAfterViewInit() {
-    this.map = L.map('map', {
-      zoomAnimation: true,
-      fadeAnimation: true,
-      minZoom: 3,
-      markerZoomAnimation: true,
-    }).setView([36.8065, 10.1815], 5);
+    mapboxgl.accessToken = environment.mapboxToken;
 
-    L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${environment.mapboxToken}`, {
-      attribution: '© <a href="https://www.mapbox.com/">Mapbox</a> © <a href="https://www.openstreetmap.org/">OpenStreetMap</a>',
-      tileSize: 512,
-      zoomOffset: -1,
-      maxZoom: 22,
-    }).addTo(this.map);
-  }
+    this.map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [10.1815, 36.8065],
+      zoom: 5,
+      minZoom: 3
+    });
 
-  // ── Friend pins ──────────────────────────────────────────────
-
-  loadFriendPins(): void {
-    this.clearFriendPins();
-    this.friendPinsVisible = true;
-
-    this.friendService.getMyFriends(1, 50).pipe(
-      switchMap((res) => {
-        if (!res.data?.length) {
-          return of([]);
-        }
-
-        const colors = ['#f43f5e', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899', '#06b6d4', '#14b8a6', '#3b82f6'];
-
-        const friendStopsObservables = res.data.map((friend) => {
-          const friendColor = colors[friend.friend_id % colors.length];
-          return this.friendService.getFriendTrips(friend.friend_id).pipe(
-            switchMap((tripRes) => {
-              const trips = tripRes.trips;
-              if (!trips || trips.length === 0) {
-                return of({ friend, stops: [], color: friendColor });
-              }
-              const lastTrip = trips[trips.length - 1];
-              return this.StopService.getTripStops(lastTrip.id).pipe(
-                map((stopsRes) => {
-                  const stops = stopsRes.stops || [];
-                  stops.sort((a, b) => a.order - b.order);
-                  return { friend, stops, color: friendColor };
-                }),
-                catchError(() => of({ friend, stops: [], color: friendColor }))
-              );
-            }),
-            catchError(() => of({ friend, stops: [], color: friendColor }))
-          );
-        });
-
-        return forkJoin(friendStopsObservables);
-      })
-    ).subscribe({
-      next: (friendsDataList) => {
-        this.renderFriendPins(friendsDataList);
-      },
-      error: () => {
-        this.errorMessage = 'Could not load friends.';
+    this.map.on('load', () => {
+      if (this.pendingTripId) {
+        const tripId = this.pendingTripId;
+        this.pendingTripId = null;
+        this.onTripSelected(tripId);
       }
     });
   }
 
-  private renderFriendPins(friendsDataList: Array<{ friend: FriendData; stops: any[]; color: string }>): void {
-    const avatarsToPlace: Array<{
-      friend: FriendData;
-      lat: number;
-      lon: number;
-      stopTitle: string;
-      color: string;
-      tripId: number;
-      stop: any;
-    }> = [];
-
-    friendsDataList.forEach(({ friend, stops, color }) => {
-      if (!stops || stops.length === 0) return;
-
-      stops.forEach((stop, index) => {
-        const lat = stop.city?.lat;
-        const lon = stop.city?.long;
-        if (lat === undefined || lon === undefined) return;
-
-        if (index === stops.length - 1) {
-          avatarsToPlace.push({
-            friend,
-            lat,
-            lon,
-            stopTitle: stop.title,
-            color,
-            tripId: stop.trip_id,
-            stop,
-          });
-        } else {
-          this.ngZone.run(() => {
-            this.placeFriendStopPin(friend, lat, lon, stop.title, color, stop.trip_id, stop);
-          });
-        }
-      });
-    });
-
-    const groups: Array<typeof avatarsToPlace> = [];
-
-    avatarsToPlace.forEach((avatar) => {
-      let grouped = false;
-      for (const group of groups) {
-        const first = group[0];
-        const dist = this.map.distance([avatar.lat, avatar.lon], [first.lat, first.lon]);
-        if (dist < 15000) {
-          group.push(avatar);
-          grouped = true;
-          break;
-        }
-      }
-      if (!grouped) {
-        groups.push([avatar]);
-      }
-    });
-
-    groups.forEach((group) => {
-      const N = group.length;
-      if (N === 1) {
-        const a = group[0];
-        this.ngZone.run(() => {
-          this.placeFriendPin(a.friend, a.lat, a.lon, a.stopTitle, a.color, a.tripId, a.stop);
-        });
-      } else {
-        const centerLat = group.reduce((sum, a) => sum + a.lat, 0) / N;
-        const centerLon = group.reduce((sum, a) => sum + a.lon, 0) / N;
-
-        const radius = 0.15;
-
-        group.forEach((a, i) => {
-          const angle = (2 * Math.PI * i) / N;
-          const offsetLat = Math.sin(angle) * radius;
-          const offsetLon = (Math.cos(angle) * radius) / Math.cos((centerLat * Math.PI) / 180);
-
-          this.ngZone.run(() => {
-            this.placeFriendPin(a.friend, centerLat + offsetLat, centerLon + offsetLon, a.stopTitle, a.color, a.tripId, a.stop);
-          });
-        });
-      }
-    });
-  }
-
-  private placeFriendPin(friend: FriendData, lat: number, lon: number, stopTitle: string, color: string, tripId: number, stop: any): void {
-    const initials = friend.username.slice(0, 2).toUpperCase();
-
-    const icon = L.divIcon({
-      className: '',
-      html: `
-        <div class="friend-pin">
-          <div class="friend-pin__avatar" style="background: ${color}; border-color: #fff;">${initials}</div>
-          <div class="friend-pin__tail" style="border-top-color: ${color};"></div>
-          <div class="friend-pin__label" style="background: ${color};">${friend.username}</div>
-        </div>
-      `,
-      iconSize: [90, 72],
-      iconAnchor: [45, 50],
-      popupAnchor: [0, -72],
-    });
-
-    const marker = L.marker([lat, lon], { icon }).addTo(this.map);
-    (marker as any).friendId = friend.friend_id;
-    (marker as any).isAvatar = true;
-
-    marker.bindTooltip(stopTitle, {
-      direction: 'top',
-      offset: [0, -60],
-      className: 'friend-stop-tooltip',
-    });
-
-    marker.on('click', () => {
-      this.ngZone.run(() => {
-        this.onFriendPinClicked(friend);
-      });
-    });
-
-    this.friendPinMarkers.push(marker);
-    this.updateFriendPinsVisibility();
-  }
-
-  private placeFriendStopPin(friend: FriendData, lat: number, lon: number, stopTitle: string, color: string, tripId: number, stop: any): void {
-    const circle = L.circleMarker([lat, lon], {
-      radius: 6,
-      fillColor: color,
-      color: 'white',
-      weight: 2.5,
-      opacity: 1,
-      fillOpacity: 1,
-    }).addTo(this.map);
-    (circle as any).friendId = friend.friend_id;
-    (circle as any).isAvatar = false;
-
-    circle.bindTooltip(`${friend.username}: ${stopTitle}`, {
-      direction: 'top',
-      offset: [0, -10],
-      className: 'friend-stop-tooltip',
-    });
-
-    circle.on('click', () => {
-      this.ngZone.run(() => {
-        this.onFriendPinClicked(friend, tripId, stop);
-      });
-    });
-
-    this.friendPinMarkers.push(circle as any);
-    this.updateFriendPinsVisibility();
-  }
-
-  private async drawFriendRoute(points: L.LatLng[], color: string): Promise<L.Polyline | null> {
-    if (points.length < 2) return null;
-
-    try {
-      const routePoints = await this.getOsrmRoute(points);
-
-      const line: L.LatLngTuple[] = routePoints.length > 0
-        ? routePoints
-        : points.map(p => [p.lat, p.lng] as L.LatLngTuple);
-
-      return L.polyline(line, {
-        color,
-        weight: 4,
-        opacity: 0.8,
-      }).addTo(this.map);
-
-    } catch {
-      return L.polyline(
-        points.map(p => [p.lat, p.lng] as L.LatLngTuple),
-        { color, weight: 3, dashArray: '6, 8', opacity: 0.7 }
-      ).addTo(this.map);
+  private resizeMap(): void {
+    if (this.map) {
+      this.map.resize();
     }
   }
 
-  clearFriendPins(): void {
-    this.friendPinMarkers.forEach(m => this.map.removeLayer(m));
-    this.friendPinMarkers = [];
-    this.friendPolylines.forEach(p => this.map.removeLayer(p));
-    this.friendPolylines = [];
-    this.friendPinsVisible = false;
-  }
-
-  updateFriendPinsVisibility(): void {
-    this.friendPinMarkers.forEach((marker) => {
-      const fId = (marker as any).friendId;
-      if (!this.selectedFriend) {
-        // No friend is selected, so all should be on the map
-        if (!this.map.hasLayer(marker)) {
-          marker.addTo(this.map);
-        }
-        this.updateAvatarHighlight(marker, false);
-      } else {
-        // A friend is selected. Only show this friend's markers.
-        if (fId === this.selectedFriend.friend_id) {
-          if (!this.map.hasLayer(marker)) {
-            marker.addTo(this.map);
-          }
-          const isAvatar = (marker as any).isAvatar;
-          this.updateAvatarHighlight(marker, isAvatar);
-        } else {
-          if (this.map.hasLayer(marker)) {
-            this.map.removeLayer(marker);
-          }
-        }
-      }
-    });
-  }
-
-  private updateAvatarHighlight(marker: L.Marker, highlight: boolean): void {
-    const el = marker.getElement();
-    if (!el) return;
-    const pinEl = el.querySelector('.friend-pin');
-    if (pinEl) {
-      if (highlight) {
-        pinEl.classList.add('friend-pin--selected');
-      } else {
-        pinEl.classList.remove('friend-pin--selected');
-      }
-    }
+  onSeeFriendTrip(tripId: number): void {
+    this.onTripSelected(tripId);
   }
 
   clearActiveTripRoute(): void {
     this.selectedTripId = null;
     this.selectedTrip = null;
     this.selectedStop = null;
-    this.markers.forEach(m => this.map.removeLayer(m));
+    this.selectedFriend = undefined;
+    this.markers.forEach(m => m.remove());
     this.markers = [];
-    if (this.polyline) {
-      this.map.removeLayer(this.polyline);
-    }
+    this.clearRouteLine();
   }
 
-  onFriendPinClicked(friend: FriendData, tripId?: number, stop?: any): void {
-    if (this.selectedFriend && this.selectedFriend.friend_id === friend.friend_id && !stop) {
-      this.selectedFriend = undefined;
-      this.isFriendTripsSidebarOpen = false;
-      this.clearActiveTripRoute();
-    } else {
-      this.selectedFriend = friend;
-      this.isFriendTripsSidebarOpen = true;
-      this.isTripSidebarOpen = false;
-      if (tripId) {
-        this.selectedTripId = tripId;
-      }
-      if (stop) {
-        this.selectedStop = stop;
-      }
+  private clearRouteLine(): void {
+    if (this.map.getLayer(this.activeRouteLayerId)) {
+      this.map.removeLayer(this.activeRouteLayerId);
     }
-    this.updateFriendPinsVisibility();
-    setTimeout(() => this.map.invalidateSize({ animate: false }), 300);
+    if (this.map.getSource(this.activeRouteSourceId)) {
+      this.map.removeSource(this.activeRouteSourceId);
+    }
   }
-
-  // ── Navigation ───────────────────────────────────────────────
 
   onNavTabChanged(tab: NavTab): void {
     this.selectedFriend = undefined;
@@ -419,18 +182,11 @@ export class Map implements AfterViewInit, OnInit {
         this.isTripSidebarOpen = false;
         this.isFriendTripsSidebarOpen = false;
         this.showStopPanel = false;
-        this.clearFriendPins();
         if (this.draggableMarker) {
-          this.map.removeLayer(this.draggableMarker);
+          this.draggableMarker.remove();
           this.draggableMarker = null;
         }
-        setTimeout(() => this.map.invalidateSize({ animate: false }), 300);
-        break;
-
-      case 'friends':
-        this.isTripSidebarOpen = false;
-        this.isFriendTripsSidebarOpen = false;
-        this.loadFriendPins();
+        setTimeout(() => this.resizeMap(), 300);
         break;
 
       case 'add-stop':
@@ -441,7 +197,11 @@ export class Map implements AfterViewInit, OnInit {
 
       case 'my-trips':
         this.isFriendTripsSidebarOpen = false;
-        this.clearFriendPins();
+        if (this.currentUser) {
+          this.activeStopOwnerId = this.currentUser.id;
+          this.activeStopOwnerName = (this.currentUser.firstname ? `${this.currentUser.firstname} ${this.currentUser.lastname || ''}`.trim() : this.currentUser.username) || '';
+          this.activeStopOwnerProfilePicture = this.currentUser.profile_picture || '';
+        }
         if (this.isTripSidebarOpen) {
           this.tripSidebar?.loadTrips();
         } else {
@@ -459,29 +219,25 @@ export class Map implements AfterViewInit, OnInit {
     }
   }
 
-  // ── Sidebar ──────────────────────────────────────────────────
-
   onAnySidebarClosed(): void {
     this.isTripSidebarOpen = false;
     this.isFriendTripsSidebarOpen = false;
-    setTimeout(() => this.map.invalidateSize({ animate: false }), 350);
+    setTimeout(() => this.resizeMap(), 350);
   }
 
   onBackToList(): void {
     this.selectedTripId = null;
     this.selectedTrip = null;
     this.selectedStop = null;
-    this.markers.forEach(m => this.map.removeLayer(m));
+    this.markers.forEach(m => m.remove());
     this.markers = [];
-    if (this.polyline) {
-      this.map.removeLayer(this.polyline);
-    }
+    this.clearRouteLine();
   }
 
   openTripSidebar(): void {
     this.isTripSidebarOpen = true;
     setTimeout(() => {
-      this.map.invalidateSize({ animate: false });
+      this.resizeMap();
       window.dispatchEvent(new Event('resize'));
     }, 250);
   }
@@ -490,48 +246,20 @@ export class Map implements AfterViewInit, OnInit {
     this.selectedTripId = tripId;
     this.selectedStop = null;
 
-    this.markers.forEach(m => this.map.removeLayer(m));
-    this.markers = [];
-    if (this.polyline) this.map.removeLayer(this.polyline);
+    if (this.selectedFriend) {
+      this.activeStopOwnerId = this.selectedFriend.friend_id;
+      this.activeStopOwnerName = this.selectedFriend.username;
+      this.activeStopOwnerProfilePicture = this.selectedFriend.profile_picture || '';
+    } else if (this.activeStopOwnerId === undefined && this.currentUser) {
+      this.activeStopOwnerId = this.currentUser.id;
+      this.activeStopOwnerName = (this.currentUser.firstname ? `${this.currentUser.firstname} ${this.currentUser.lastname || ''}`.trim() : this.currentUser.username) || '';
+      this.activeStopOwnerProfilePicture = this.currentUser.profile_picture || '';
+    }
 
     this.StopService.getTripStops(this.selectedTripId).subscribe({
       next: async (res: any) => {
         if (res.status_code === 200) {
-          const cities: L.LatLngTuple[] = [];
-          const stops = res.stops;
-
-          for (let i = 0; i < stops.length; i++) {
-            const stop = stops[i];
-            const circle = L.circleMarker([stop.city.lat, stop.city.long], {
-              radius: 8,
-              fillColor: '#3b82f6',
-              color: 'white',
-              weight: 3,
-              opacity: 1,
-              fillOpacity: 1,
-            }).addTo(this.map);
-
-            this.markers.push(circle);
-            cities.push([stop.city.lat, stop.city.long]);
-
-            circle.on('click', () => {
-              this.ngZone.run(() => {
-                this.selectedStop = stop;
-                this.cdr.detectChanges();
-              });
-            });
-          }
-
-          if (cities.length > 1) {
-            const points = this.markers.map(m => m.getLatLng());
-            await this.drawRoute(points, '#3b82f6');
-          }
-
-          if (cities.length > 0) {
-            this.map.fitBounds(cities, { padding: [50, 50] });
-          }
-
-
+          await this.renderTripStops(res.stops ?? []);
         } else {
           this.errorMessage = res.message;
         }
@@ -542,38 +270,81 @@ export class Map implements AfterViewInit, OnInit {
     });
   }
 
-  onTripCreated(trip: any): void {
-    this.isTripSidebarOpen = false;
-    setTimeout(() => this.map.invalidateSize(), 300);
+  private async renderTripStops(stops: any[]): Promise<void> {
+    this.markers.forEach(marker => marker.remove());
+    this.markers = [];
+    this.clearRouteLine();
+
+    const points: LatLng[] = [];
+    const bounds = new mapboxgl.LngLatBounds();
+
+    stops.forEach(stop => {
+      const lat = stop.city?.lat;
+      const lng = stop.city?.long;
+      if (lat === undefined || lng === undefined) return;
+
+      this.markers.push(this.createTripStopMarker(stop, lat, lng));
+      points.push({ lat, lng });
+      bounds.extend([lng, lat]);
+    });
+
+    if (points.length > 1) {
+      await this.drawRoute(points, '#3b82f6');
+    }
+    if (points.length > 0) {
+      this.map.fitBounds(bounds, { padding: 50 });
+    }
   }
 
-  // ── Stop panel ───────────────────────────────────────────────
+  private createTripStopMarker(stop: any, lat: number, lng: number): mapboxgl.Marker {
+    const element = document.createElement('div');
+    element.style.width = '16px';
+    element.style.height = '16px';
+    element.style.borderRadius = '50%';
+    element.style.backgroundColor = '#3b82f6';
+    element.style.border = '3px solid white';
+    element.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+    element.style.cursor = 'pointer';
+
+    const marker = new mapboxgl.Marker({ element })
+      .setLngLat([lng, lat])
+      .addTo(this.map);
+
+    element.addEventListener('click', () => {
+      this.ngZone.run(() => {
+        this.selectedStop = stop;
+        this.cdr.detectChanges();
+      });
+    });
+
+    return marker;
+  }
+
+  onTripCreated(trip: any): void {
+    this.isTripSidebarOpen = false;
+    setTimeout(() => this.resizeMap(), 300);
+  }
 
   addDraggablePin(): void {
     if (this.draggableMarker) return;
 
     const center = this.map.getCenter();
 
-    const icon = L.divIcon({
-      className: '',
-      html: `
-        <div style="
-          background: #3b82f6;
-          width: 18px; height: 18px;
-          border-radius: 50%;
-          border: 3px solid white;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-          cursor: grab;
-        "></div>
-      `,
-      iconSize: [18, 18],
-      iconAnchor: [9, 9],
-    });
+    const el = document.createElement('div');
+    el.style.background = '#3b82f6';
+    el.style.width = '18px';
+    el.style.height = '18px';
+    el.style.borderRadius = '50%';
+    el.style.border = '3px solid white';
+    el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.4)';
+    el.style.cursor = 'grab';
 
-    this.draggableMarker = L.marker(center, { icon, draggable: true }).addTo(this.map);
+    this.draggableMarker = new mapboxgl.Marker({ element: el, draggable: true })
+      .setLngLat([center.lng, center.lat])
+      .addTo(this.map);
 
     this.draggableMarker.on('dragend', () => {
-      const pos = this.draggableMarker!.getLatLng();
+      const pos = this.draggableMarker!.getLngLat();
       this.pendingLatLng = { lat: pos.lat, lng: pos.lng };
     });
 
@@ -588,27 +359,31 @@ export class Map implements AfterViewInit, OnInit {
     const { lat, lng } = this.pendingLatLng;
 
     if (this.draggableMarker) {
-      this.map.removeLayer(this.draggableMarker);
+      this.draggableMarker.remove();
       this.draggableMarker = null;
     }
 
-    const circle = L.circleMarker([lat, lng], {
-      radius: 8,
-      fillColor: '#ef4444',
-      color: 'white',
-      weight: 3,
-      opacity: 1,
-      fillOpacity: 1,
-    }).addTo(this.map);
+    const el = document.createElement('div');
+    el.style.width = '16px';
+    el.style.height = '16px';
+    el.style.borderRadius = '50%';
+    el.style.backgroundColor = '#ef4444';
+    el.style.border = '3px solid white';
+    el.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+
+    const marker = new mapboxgl.Marker({ element: el })
+      .setLngLat([lng, lat])
+      .addTo(this.map);
 
     const stopData = {
       lat: this.pendingLatLng.lat,
       long: this.pendingLatLng.lng,
       title: this.stopTitle,
       description: this.stopDescription,
+      order: Math.max(1, this.markers.length - 1),
     };
 
-    this.markers.push(circle);
+    this.markers.push(marker);
     await this.updatePolyline();
 
     this.StopService.createStop(stopData, this.selectedTripId!).subscribe({
@@ -626,16 +401,14 @@ export class Map implements AfterViewInit, OnInit {
 
   cancelStop(): void {
     if (this.draggableMarker) {
-      this.map.removeLayer(this.draggableMarker);
+      this.draggableMarker.remove();
       this.draggableMarker = null;
     }
     this.showStopPanel = false;
     this.pendingLatLng = null;
   }
 
-  // ── Route / polyline ─────────────────────────────────────────
-
-  private async getOsrmRoute(points: L.LatLng[]): Promise<L.LatLngTuple[]> {
+  private async getOsrmRoute(points: LatLng[]): Promise<[number, number][]> {
     const coords = points.map(p => `${p.lng},${p.lat}`).join(';');
     const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
 
@@ -644,46 +417,64 @@ export class Map implements AfterViewInit, OnInit {
 
     if (data.code !== 'Ok' || !data.routes?.[0]) return [];
 
-    return data.routes[0].geometry.coordinates.map(
-      ([lng, lat]: [number, number]) => [lat, lng] as L.LatLngTuple
-    );
+    return data.routes[0].geometry.coordinates as [number, number][];
   }
 
-  private async drawRoute(points: L.LatLng[], color = '#3b82f6'): Promise<void> {
-    if (this.polyline) this.map.removeLayer(this.polyline);
+  private async drawRoute(points: LatLng[], color = '#3b82f6'): Promise<void> {
+    this.clearRouteLine();
     if (points.length < 2) return;
 
+    let coordinates: [number, number][] = [];
     try {
-      const routePoints = await this.getOsrmRoute(points);
-
-      const line: L.LatLngTuple[] = routePoints.length > 0
-        ? routePoints
-        : points.map(p => [p.lat, p.lng] as L.LatLngTuple);
-
-      this.polyline = L.polyline(line, {
-        color,
-        weight: 4,
-        opacity: 0.75,
-      }).addTo(this.map);
-
+      coordinates = await this.getOsrmRoute(points);
+      if (coordinates.length === 0) {
+        coordinates = points.map(p => [p.lng, p.lat]);
+      }
     } catch {
-      this.polyline = L.polyline(
-        points.map(p => [p.lat, p.lng] as L.LatLngTuple),
-        { color, weight: 3, dashArray: '6, 8', opacity: 0.7 }
-      ).addTo(this.map);
+      coordinates = points.map(p => [p.lng, p.lat]);
     }
+
+    const geojson = {
+      type: 'Feature' as const,
+      properties: {},
+      geometry: {
+        type: 'LineString' as const,
+        coordinates: coordinates
+      }
+    };
+
+    this.map.addSource(this.activeRouteSourceId, {
+      type: 'geojson',
+      data: geojson
+    });
+
+    this.map.addLayer({
+      id: this.activeRouteLayerId,
+      type: 'line',
+      source: this.activeRouteSourceId,
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round'
+      },
+      paint: {
+        'line-color': color,
+        'line-width': 4,
+        'line-opacity': 0.8
+      }
+    });
   }
 
   async updatePolyline(): Promise<void> {
     if (this.markers.length < 2) {
-      if (this.polyline) this.map.removeLayer(this.polyline);
+      this.clearRouteLine();
       return;
     }
-    const points = this.markers.map(m => m.getLatLng());
+    const points = this.markers.map(m => {
+      const pos = m.getLngLat();
+      return { lat: pos.lat, lng: pos.lng };
+    });
     await this.drawRoute(points);
   }
-
-  // ── Search ───────────────────────────────────────────────────
 
   onSearch(): void {
     clearTimeout(this.searchTimeout);
@@ -703,57 +494,78 @@ export class Map implements AfterViewInit, OnInit {
             lon: f.geometry?.coordinates[0]?.toString() || '0'
           }));
         })
-        .catch((err) => console.error('Error searching location:', err));
+        .catch(() => { });
     }, 400);
   }
 
   selectSuggestion(suggestion: any): void {
     if (!suggestion) return;
-    this.map.setView([parseFloat(suggestion.lat), parseFloat(suggestion.lon)], 12);
+    this.map.flyTo({
+      center: [parseFloat(suggestion.lon), parseFloat(suggestion.lat)],
+      zoom: 12
+    });
     this.searchQuery = suggestion.display_name;
     this.suggestions = [];
   }
-
-  // ── Profile ──────────────────────────────────────────────────
 
   toggleProfileMenu(): void {
     this.showProfileMenu = !this.showProfileMenu;
   }
 
   logout(): void {
-    this.AuthService.logout().subscribe((res: any) => {
-      this.AuthService.currentUser$.next(null);
-      this.showProfileMenu = false;
-      this.router.navigateByUrl('/auth/login');
+    this.AuthService.logout().subscribe({
+      next: () => {
+        this.AuthService.currentUser$.next(null);
+        this.showProfileMenu = false;
+        this.router.navigateByUrl('/auth/login');
+      },
+      error: () => {
+        this.AuthService.currentUser$.next(null);
+        this.showProfileMenu = false;
+        this.router.navigateByUrl('/auth/login');
+      }
     });
   }
 
   onOnboardingComplete(data: { lat: number; lon: number; privacy: PrivacyType }): void {
     this.onboardingService.complete(data).subscribe(() => {
       this.showOnboarding = false;
-      this.map.setView([data.lat, data.lon], 10);
+      this.map.flyTo({ center: [data.lon, data.lat], zoom: 10 });
     });
   }
-  onStopAdded(stop: { lat: number; lon: number; title: string }): void {
-    const circle = L.circleMarker([stop.lat, stop.lon], {
-      radius: 8,
-      fillColor: '#3b82f6',
-      color: 'white',
-      weight: 3,
-      opacity: 1,
-      fillOpacity: 1,
-    }).addTo(this.map);
 
-    circle.on('click', () => {
+  onStopAdded(stop: any): void {
+    const lat = stop.city?.lat ?? stop.lat ?? 0;
+    const lon = stop.city?.long ?? stop.long ?? stop.lon ?? 0;
+
+    const el = document.createElement('div');
+    el.style.width = '16px';
+    el.style.height = '16px';
+    el.style.borderRadius = '50%';
+    el.style.backgroundColor = '#3b82f6';
+    el.style.border = '3px solid white';
+    el.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+    el.style.cursor = 'pointer';
+
+    const marker = new mapboxgl.Marker({ element: el })
+      .setLngLat([lon, lat])
+      .addTo(this.map);
+
+    el.addEventListener('click', () => {
       this.ngZone.run(() => {
-        this.selectedStop = { title: stop.title, city: { lat: stop.lat, long: stop.lon } };
+        this.selectedStop = stop;
         this.cdr.detectChanges();
       });
     });
 
-    this.markers.push(circle);
+    this.markers.push(marker);
     this.updatePolyline();
-    this.map.panTo([stop.lat, stop.lon]);
+    if (lon && lat) {
+      this.map.panTo([lon, lat]);
+    }
+
+    this.selectedStop = stop;
+    this.cdr.markForCheck();
   }
 
   onTripObjectSelected(trip: any): void {
@@ -766,26 +578,33 @@ export class Map implements AfterViewInit, OnInit {
   }
 
   async onStopsReordered(stops: any[]): Promise<void> {
-    this.markers.forEach(m => this.map.removeLayer(m));
+    this.markers.forEach(m => m.remove());
     this.markers = [];
-    if (this.polyline) this.map.removeLayer(this.polyline);
+    this.clearRouteLine();
 
-    const cities: L.LatLngTuple[] = [];
+    const points: LatLng[] = [];
     for (let i = 0; i < stops.length; i++) {
       const stop = stops[i];
-      const circle = L.circleMarker([stop.city.lat, stop.city.long], {
-        radius: 8,
-        fillColor: '#3b82f6',
-        color: 'white',
-        weight: 3,
-        opacity: 1,
-        fillOpacity: 1,
-      }).addTo(this.map);
+      const lat = stop.city.lat;
+      const lng = stop.city.long;
 
-      this.markers.push(circle);
-      cities.push([stop.city.lat, stop.city.long]);
+      const el = document.createElement('div');
+      el.style.width = '16px';
+      el.style.height = '16px';
+      el.style.borderRadius = '50%';
+      el.style.backgroundColor = '#3b82f6';
+      el.style.border = '3px solid white';
+      el.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+      el.style.cursor = 'pointer';
 
-      circle.on('click', () => {
+      const marker = new mapboxgl.Marker({ element: el })
+        .setLngLat([lng, lat])
+        .addTo(this.map);
+
+      this.markers.push(marker);
+      points.push({ lat, lng });
+
+      el.addEventListener('click', () => {
         this.ngZone.run(() => {
           this.selectedStop = stop;
           this.cdr.detectChanges();
@@ -793,17 +612,24 @@ export class Map implements AfterViewInit, OnInit {
       });
     }
 
-    if (cities.length > 1) {
-      const points = this.markers.map(m => m.getLatLng());
+    if (points.length > 1) {
       await this.drawRoute(points, '#3b82f6');
     }
   }
 
+  onStopSheetClosed(): void {
+    this.selectedStop = null;
+  }
+
+  get isCurrentStopOwner(): boolean {
+    return !this.selectedFriend;
+  }
+
   get activeStopFriendName(): string {
-    if (this.isFriendTripsSidebarOpen && this.selectedFriend) {
+    if (this.selectedFriend) {
       return this.selectedFriend.username;
     }
-    return this.currentUser?.username || '';
+    return '';
   }
 
   get activeStopTripDate(): string {

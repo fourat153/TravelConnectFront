@@ -1,20 +1,16 @@
-<aside class="sidebar" [style.transform]="translateY" [style.transition]="transition" (click)="$event.stopPropagation()">
-  <!-- Drag Handle for Mobile Bottom Sheet -->
-  <div class="drag-handle-mobile" 
-       (touchstart)="onTouchStart($event)" 
-       (touchmove)="onTouchMove($event)" 
-       (touchend)="onTouchEnd($event)">
+<aside class="sidebar" [style.transform]="translateY" [style.transition]="transition"
+  (click)="$event.stopPropagation()">
+  <div class="drag-handle-mobile" (touchstart)="onTouchStart($event)" (touchmove)="onTouchMove($event)"
+    (touchend)="onTouchEnd($event)">
     <span class="drag-handle-line"></span>
   </div>
-  <!-- ══════════════════════════════════════════════════════════
-       LIST VIEW
-  ══════════════════════════════════════════════════════════ -->
   <ng-container *ngIf="view === 'list'">
     <div class="sidebar-header">
       <div>
         <h2>{{ headerTitle }}</h2>
         <p>{{ headerSubtitle }}</p>
-        <button *ngIf="isFriendMode && friend" class="view-profile-btn" (click)="viewFriendProfile()" style="display: flex; align-items: center; gap: 0.35rem; margin-top: 0.5rem; padding: 0.3rem 0.6rem; border: 1px solid #3b82f6; border-radius: 6px; background: transparent; color: #3b82f6; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;">
+        <button *ngIf="isFriendMode && friend" class="view-profile-btn" (click)="viewFriendProfile()"
+          style="display: flex; align-items: center; gap: 0.35rem; margin-top: 0.5rem; padding: 0.3rem 0.6rem; border: 1px solid #3b82f6; border-radius: 6px; background: transparent; color: #3b82f6; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;">
           <i class="pi pi-user"></i> View Profile
         </button>
       </div>
@@ -29,21 +25,32 @@
       <p-message *ngIf="tripsError" severity="error" variant="simple">{{ tripsError }}</p-message>
 
       <div *ngIf="!tripsLoading && trips.length > 0" class="trip-list">
-        <div
-          *ngFor="let trip of trips"
-          class="trip-item"
-          [class.active]="trip.id === selectedTripId"
-          (click)="selectTrip(trip)">
-          <div class="trip-item__icon">
-            <i class="pi pi-map"></i>
+        <div *ngFor="let trip of trips" class="trip-item-shell"
+          (touchstart)="onTripTouchStart($event, trip)"
+          (touchmove)="onTripTouchMove($event, trip)"
+          (touchend)="onTripTouchEnd($event, trip)">
+          <button *ngIf="!isFriendMode" type="button" class="trip-item__swipe-delete"
+            [class.revealed]="tripOffset(trip) < 0"
+            (click)="requestTripDeletion(trip, $event)" aria-label="Delete trip">
+            <i class="pi pi-trash"></i>
+          </button>
+          <div class="trip-item" [class.active]="trip.id === selectedTripId"
+            [style.transform]="'translateX(' + tripOffset(trip) + 'px)'" (click)="selectTrip(trip)">
+            <div class="trip-item__icon">
+              <i class="pi pi-map"></i>
+            </div>
+            <div class="trip-info">
+              <strong>{{ trip.title }}</strong>
+              <span class="trip-date" *ngIf="trip.created_at">
+                Created on {{ trip.created_at | date:'mediumDate' }}
+              </span>
+            </div>
+            <button *ngIf="!isFriendMode" type="button" class="trip-item__menu" (click)="requestTripDeletion(trip, $event)"
+              aria-label="Trip options">
+              <i class="pi pi-ellipsis-v"></i>
+            </button>
+            <i class="pi pi-chevron-right trip-item__arrow"></i>
           </div>
-          <div class="trip-info">
-            <strong>{{ trip.title }}</strong>
-            <span class="trip-date" *ngIf="trip.created_at">
-              Created on {{ trip.created_at | date:'mediumDate' }}
-            </span>
-          </div>
-          <i class="pi pi-chevron-right trip-item__arrow"></i>
         </div>
       </div>
 
@@ -58,9 +65,6 @@
     </div>
   </ng-container>
 
-  <!-- ══════════════════════════════════════════════════════════
-       DETAIL VIEW
-   ══════════════════════════════════════════════════════════ -->
   <ng-container *ngIf="view === 'detail'">
     <div class="sidebar-header">
       <div>
@@ -73,21 +77,16 @@
 
     <div class="sidebar-body">
 
-      <!-- loading -->
       <div *ngIf="detailLoading" class="state-msg">
         <p-progressSpinner strokeWidth="4" />
       </div>
 
       <ng-container *ngIf="!detailLoading">
 
-        <!-- ── existing stops list ── -->
         <div class="stop-list" *ngIf="detailStops.length > 0" cdkDropList (cdkDropListDropped)="onStopDrop($event)">
-          <div *ngFor="let stop of detailStops; let i = index" 
-               class="stop-card" 
-               [class.stop-card--fixed]="i === 0 || (i === detailStops.length - 1 && i !== 0)"
-               [cdkDragDisabled]="i === 0 || i === detailStops.length - 1"
-               (click)="onStopClick(stop)" 
-               cdkDrag>
+          <div *ngFor="let stop of detailStops; let i = index" class="stop-card"
+            [class.stop-card--fixed]="i === 0 || (i === detailStops.length - 1 && i !== 0)"
+            [cdkDragDisabled]="i === 0 || i === detailStops.length - 1" (click)="onStopClick(stop)" cdkDrag>
             <div class="stop-card__badge stop-card__badge--from" *ngIf="i === 0">From</div>
             <div class="stop-card__badge stop-card__badge--to" *ngIf="i === detailStops.length - 1 && i !== 0">To</div>
             <div class="stop-card__index" *ngIf="i > 0 && i < detailStops.length - 1">{{ i }}</div>
@@ -95,6 +94,10 @@
               <span class="stop-card__title">{{ stop.title }}</span>
             </div>
             <i class="pi pi-bars stop-card__drag-handle" *ngIf="i > 0 && i < detailStops.length - 1"></i>
+            <button *ngIf="!isFriendMode" type="button" class="stop-card__delete" (click)="requestStopDeletion(stop, $event)"
+              aria-label="Delete stop">
+              <i class="pi pi-trash"></i>
+            </button>
           </div>
         </div>
 
@@ -105,7 +108,6 @@
 
         <p-message *ngIf="detailError" severity="error" variant="simple">{{ detailError }}</p-message>
 
-        <!-- ── add stop input (own trips only) ── -->
         <ng-container *ngIf="!isFriendMode">
           <div class="detail-divider"></div>
           <div class="detail-section-label">Add a stop</div>
@@ -113,28 +115,20 @@
           <div class="add-stop-search">
             <div class="add-stop-input-wrap" [class.resolved]="resolvedPlace">
               <i class="pi pi-map-marker add-stop-icon"></i>
-              <input
-                type="text"
-                [(ngModel)]="stopQuery"
-                (input)="onStopInput()"
-                (focus)="stopShowDropdown = stopSuggestions.length > 0"
-                (blur)="hideStopDropdown()"
-                placeholder="Search for a city or place..."
-                class="add-stop-input"
-                autocomplete="off" />
+              <input type="text" [(ngModel)]="stopQuery" (input)="onStopInput()"
+                (focus)="stopShowDropdown = stopSuggestions.length > 0" (blur)="hideStopDropdown()"
+                placeholder="Search for a city or place..." class="add-stop-input" autocomplete="off" />
               <i *ngIf="stopSearchLoading" class="pi pi-spin pi-spinner add-stop-status"></i>
-              <i *ngIf="resolvedPlace && !stopSearchLoading" class="pi pi-check-circle add-stop-status resolved-icon"></i>
-              <button *ngIf="stopQuery && !stopSearchLoading" class="add-stop-clear" type="button" (click)="clearStopInput()">
+              <i *ngIf="resolvedPlace && !stopSearchLoading"
+                class="pi pi-check-circle add-stop-status resolved-icon"></i>
+              <button *ngIf="stopQuery && !stopSearchLoading" class="add-stop-clear" type="button"
+                (click)="clearStopInput()">
                 <i class="pi pi-times"></i>
               </button>
             </div>
 
-            <!-- suggestions dropdown -->
             <ul *ngIf="stopShowDropdown" class="stop-suggestions">
-              <li
-                *ngFor="let s of stopSuggestions"
-                class="stop-suggestion-item"
-                (mousedown)="selectStopSuggestion(s)">
+              <li *ngFor="let s of stopSuggestions" class="stop-suggestion-item" (mousedown)="selectStopSuggestion(s)">
                 <i class="pi pi-map-marker"></i>
                 <div class="stop-suggestion-text">
                   <span class="stop-suggestion-name">{{ s.display_name.split(',')[0] }}</span>
@@ -144,59 +138,48 @@
             </ul>
           </div>
 
-          <!-- ── photo and description inputs ── -->
-          <div class="add-stop-post-section" *ngIf="resolvedPlace">
-            <div class="detail-section-label" style="margin-top: 12px; margin-bottom: 4px;">Post details (Optional)</div>
-            <textarea
-              [(ngModel)]="stopDescription"
-              placeholder="Write a description for this stop..."
-              class="add-stop-desc-input"
-              rows="3"
-            ></textarea>
 
-            <div class="stop-photos-upload-wrap">
-              <input #stopFileInput type="file" (change)="onStopFilesSelected($event)" accept="image/*" multiple style="display: none;" />
-              
-              <button type="button" class="add-photos-btn" (click)="stopFileInput.click()">
-                <i class="pi pi-camera"></i>
-                <span>Add photos</span>
-              </button>
 
-              <div class="stop-photos-thumbnails" *ngIf="stopPhotoPreviews.length > 0">
-                <div class="photo-thumbnail" *ngFor="let preview of stopPhotoPreviews; let imgIdx = index">
-                  <img [src]="preview" class="thumb-img" alt="Stop photo preview">
-                  <button type="button" class="remove-photo-btn" (click)="removeStopPhoto(imgIdx); $event.stopPropagation()">
-                    <i class="pi pi-times"></i>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <p-message
-            *ngIf="addStopError"
-            severity="error"
-            [text]="addStopError"
-            styleClass="w-full mt-2" />
+          <p-message *ngIf="addStopError" severity="error" [text]="addStopError" styleClass="w-full mt-2" />
         </ng-container>
 
       </ng-container>
     </div>
 
-    <!-- footer: add stop button -->
     <div class="sidebar-footer" *ngIf="!isFriendMode">
-      <p-button
-        label="Add stop"
-        styleClass="w-full"
-        [loading]="addStopLoading"
-        [disabled]="!resolvedPlace"
+      <p-button label="Add stop" styleClass="w-full" [loading]="addStopLoading" [disabled]="!resolvedPlace"
         (click)="addStop()" />
     </div>
   </ng-container>
 
-  <!-- ══════════════════════════════════════════════════════════
-       CREATE VIEW
-  ══════════════════════════════════════════════════════════ -->
+  <p-dialog [visible]="!!tripPendingDeletion" [modal]="true" [closable]="!deletingTrip"
+    [dismissableMask]="!deletingTrip" [showHeader]="false" [style]="{ width: 'min(92vw, 440px)' }"
+    (onHide)="cancelDeletion()">
+    <div class="delete-dialog">
+      <h2>Delete trip?</h2>
+      <p><strong>{{ tripPendingDeletion?.title }}</strong> and all its stops and posts/photos will be permanently deleted.</p>
+      <div class="delete-dialog__actions">
+        <p-button label="Cancel" severity="secondary" [outlined]="true" [disabled]="deletingTrip"
+          (click)="cancelDeletion()" />
+        <p-button label="Delete" severity="danger" [loading]="deletingTrip" (click)="confirmTripDeletion()" />
+      </div>
+    </div>
+  </p-dialog>
+
+  <p-dialog [visible]="!!stopPendingDeletion" [modal]="true" [closable]="!deletingStop"
+    [dismissableMask]="!deletingStop" [showHeader]="false" [style]="{ width: 'min(92vw, 400px)' }"
+    (onHide)="cancelDeletion()">
+    <div class="delete-dialog">
+      <h2>Delete stop?</h2>
+      <p>Delete this stop and its posts?</p>
+      <div class="delete-dialog__actions">
+        <p-button label="Cancel" severity="secondary" [outlined]="true" [disabled]="deletingStop"
+          (click)="cancelDeletion()" />
+        <p-button label="Delete" severity="danger" [loading]="deletingStop" (click)="confirmStopDeletion()" />
+      </div>
+    </div>
+  </p-dialog>
+
   <ng-container *ngIf="view === 'create'">
     <div class="sidebar-header">
       <div>
@@ -220,10 +203,7 @@
         <div class="field">
           <label>Privacy</label>
           <div class="seg">
-            <button
-              type="button"
-              *ngFor="let opt of privacyOptions"
-              [class.active]="selectedPrivacy === opt.value"
+            <button type="button" *ngFor="let opt of privacyOptions" [class.active]="selectedPrivacy === opt.value"
               (click)="setPrivacy(opt.value)">
               <span class="dot" [style.background]="opt.color"></span>
               {{ opt.label }}
@@ -243,11 +223,7 @@
 
     <div class="sidebar-footer">
       <p-button label="Cancel" severity="secondary" [outlined]="true" type="button" (click)="goToList()" />
-      <p-button
-        label="Create trip"
-        [loading]="createLoading"
-        [disabled]="createForm.invalid"
-        type="button"
+      <p-button label="Create trip" [loading]="createLoading" [disabled]="createForm.invalid" type="button"
         (click)="submitCreate()" />
     </div>
   </ng-container>

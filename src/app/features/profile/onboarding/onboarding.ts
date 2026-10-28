@@ -13,21 +13,21 @@ import { environment } from '../../../../environments/environment';
 })
 export class Onboarding {
   @Output() completed = new EventEmitter<{ lat: number; lon: number; privacy: PrivacyType }>();
-  
+
   step = 1;
   searchQuery = '';
   suggestions: any[] = [];
   selectedCity: any = null;
-  selectedPrivacy : PrivacyType | null = null;;
+  selectedPrivacy: PrivacyType | null = null;;
   private searchTimeout: any;
   protected readonly PrivacyType = PrivacyType;
 
 
   privacyOptions = [
-  { value: PrivacyType.public, label: 'Public', desc: 'Anyone can see your trips' },
-  { value: PrivacyType.friends_only, label: 'Friends only', desc: 'Only people you follow' },
-  { value: PrivacyType.private, label: 'Private', desc: 'Only you' },
-];
+    { value: PrivacyType.public, label: 'Public', desc: 'Anyone can see your trips' },
+    { value: PrivacyType.friends_only, label: 'Friends only', desc: 'Only people you follow' },
+    { value: PrivacyType.private, label: 'Private', desc: 'Only you' },
+  ];
 
 
   onSearch() {
@@ -48,7 +48,7 @@ export class Onboarding {
             lon: f.geometry?.coordinates[0]?.toString() || '0'
           }));
         })
-        .catch((err) => console.error('Error searching onboarding location:', err));
+        .catch(() => {});
     }, 400);
   }
 
@@ -62,13 +62,13 @@ export class Onboarding {
     if (this.step === 1 && this.selectedCity) this.step = 2;
   }
 
-complete() {
-  if (!this.selectedPrivacy) return;
-  this.completed.emit({
+  complete() {
+    if (!this.selectedPrivacy) return;
+    this.completed.emit({
 
-    lat: parseFloat(this.selectedCity.lat),
-    lon: parseFloat(this.selectedCity.lon),
-    privacy: this.selectedPrivacy,
-  });
-}
+      lat: parseFloat(this.selectedCity.lat),
+      lon: parseFloat(this.selectedCity.lon),
+      privacy: this.selectedPrivacy,
+    });
+  }
 }
