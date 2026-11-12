@@ -6,6 +6,7 @@ import { Onboarding } from '../profile/onboarding/onboarding';
 import { inject } from '@angular/core';
 import { TripSidebarComponent } from '../trip-sidebar/trip-sidebar';
 import { StopsService } from '../../core/services/stop';
+import { configureMapboxWorker } from '../../core/mapbox-worker';
 import { Router, ActivatedRoute } from '@angular/router';
 
 import { AutoCompleteModule } from 'primeng/autocomplete';
@@ -125,6 +126,7 @@ export class Map implements AfterViewInit, OnInit {
   }
 
   ngAfterViewInit() {
+    configureMapboxWorker();
     mapboxgl.accessToken = environment.mapboxToken;
 
     this.map = new mapboxgl.Map({

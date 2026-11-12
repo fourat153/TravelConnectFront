@@ -36,6 +36,22 @@ ng build
 
 This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
 
+## Running with Docker
+
+Build and start the production container:
+
+```bash
+docker build -t travelconnect-frontend .
+docker run --rm -p 8080:80 travelconnect-frontend
+```
+
+Open `http://localhost:8080/` in your browser.
+
+The production build sends API requests to `/api`. When running with Docker
+Compose, the backend service must be named `backend` and listen on port `8000`
+inside the Compose network, or the `proxy_pass` target in the
+[Dockerfile](./Dockerfile) must be changed to match the service name.
+
 ## Running unit tests
 
 To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:

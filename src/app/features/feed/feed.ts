@@ -21,6 +21,7 @@ import mapboxgl from 'mapbox-gl';
 import { environment } from '../../../environments/environment';
 import { PostCommentsComponent } from '../../shared/components/post-comments/post-comments';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
+import { configureMapboxWorker } from '../../core/mapbox-worker';
 
 @Component({
   selector: 'app-feed',
@@ -341,6 +342,7 @@ export class FeedComponent implements OnInit {
     if (!container) return;
 
     if (!this.mapInitialized) {
+      configureMapboxWorker();
       mapboxgl.accessToken = environment.mapboxToken;
 
       this.feedMap = new mapboxgl.Map({
