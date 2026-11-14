@@ -17,6 +17,7 @@ RUN printf '%s\n' \
     '    listen 80;' \
     '    server_name _;' \
     '    root /usr/share/nginx/html;' \
+    '    client_max_body_size 50M;' \
     '' \
     '    location /api/ {' \
     '        proxy_pass http://backend:8000/;' \
